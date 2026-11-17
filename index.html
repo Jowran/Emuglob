@@ -305,7 +305,9 @@
 <dialog id="dlg-upd">
   <h2>Mettre à jour Emuglob</h2>
   <p id="up-ver"></p><p id="up-note" class="muted"></p>
-  <p class="muted">Télécharge le nouveau fichier <b>app.asar</b>, puis choisis-le ici : Emuglob se ferme, le remplace et se relance tout seul. L'ancienne version est gardée pour pouvoir revenir en arrière.</p>
+  <div id="up-online"><p id="up-st">Recherche de mises à jour…</p><pre id="up-notes" class="muted" hidden style="white-space:pre-wrap;max-height:180px;overflow:auto;font:inherit"></pre>
+  <div class="row" style="justify-content:flex-start"><button id="up-install" hidden style="background:#5b46d6">Installer la mise à jour</button><button id="up-web" hidden>Voir sur GitHub</button><button id="up-check">Rechercher à nouveau</button></div></div>
+  <p class="muted">Sinon, à la main : télécharge le nouveau fichier <b>app.asar</b>, puis choisis-le ici : Emuglob se ferme, le remplace et se relance tout seul. L'ancienne version est gardée pour pouvoir revenir en arrière.</p>
   <div class="row" style="justify-content:flex-start"><button id="up-pick">Choisir un nouvel app.asar…</button><button id="up-back">Revenir à la version précédente</button></div>
   <div class="row"><button id="up-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
@@ -1093,7 +1095,27 @@ async function openBackups() {
 async function openUpdate() {
   const d = $('#dlg-upd');
   const info = await api.appInfo();
-  $('#up-ver').textContent = info.built ? 'Version installée : ' + new Date(info.built).toLocaleString('fr-FR') : 'Version installée : date inconnue';
+  $('#up-ver').textContent = 'Version installée : ' + (info.version || '?') + (info.built ? ' (' + new Date(info.built).toLocaleString('fr-FR') + ')' : '');
+  const check = async () => {
+    $('#up-st').textContent = 'Recherche de mises à jour…'; $('#up-install').hidden = $('#up-web').hidden = $('#up-notes').hidden = true;
+    const u = await api.updateCheck();
+    if (!u.ok) { $('#up-st').textContent = 'Recherche impossible : ' + u.error; return; }
+    if (!u.available) { $('#up-st').textContent = `Emuglob est à jour (dernière version : ${u.latest}).`; return; }
+    $('#up-st').textContent = `Nouvelle version disponible : ${u.latest}` + (u.auto ? ` (${Math.max(1, Math.round(u.size / 1024))} Ko)` : '') + '.';
+    if (u.notes) { $('#up-notes').textContent = u.notes; $('#up-notes').hidden = false; }
+    $('#up-install').hidden = !u.auto; $('#up-web').hidden = false;
+    if (!u.auto) $('#up-st').textContent += info.packaged ? ' Elle doit être installée à la main (pas de app.asar attaché).' : '';
+  };
+  $('#up-check').onclick = check;
+  $('#up-web').onclick = () => api.updatePage();
+  $('#up-install').onclick = async () => {
+    if (!confirm("Emuglob va télécharger la mise à jour, se fermer puis se relancer tout seul. L'ancienne version est gardée. Continuer ?")) return;
+    $('#up-install').disabled = true; $('#up-st').textContent = 'Téléchargement…';
+    const a = await api.updateDownload();
+    $('#up-install').disabled = false;
+    if (a.ok) { $('#up-st').textContent = 'Installation en cours, Emuglob va redémarrer…'; } else { $('#up-st').textContent = 'Mise à jour impossible : ' + a.error; }
+  };
+  check();
   $('#up-note').textContent = info.packaged ? '' : "Disponible seulement dans l'application installée (pas en mode développement).";
   $('#up-pick').disabled = !info.packaged;
   $('#up-back').disabled = !info.hasBackup;
@@ -1140,7 +1162,7 @@ const SET_ITEMS = [
   { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
   { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
-  { ic:'download', t:'Mettre à jour Emuglob', s:'Depuis un fichier app.asar', act:() => openUpdate() },
+  { ic:'download', t:'Mettre à jour Emuglob', s:'En ligne ou depuis un fichier app.asar', act:() => openUpdate() },
   { ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
 ];
 function openSettingsPanel() {
@@ -1613,6 +1635,12 @@ function pad() {
   render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs();
   checkFiles();
   setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
+  setTimeout(async () => {   // recherche de mise à jour au lancement : propose une seule fois chaque nouvelle version
+    const u = await api.updateCheck();
+    if (!u.ok || !u.available || cfg.updateSeen === u.latest) return;
+    cfg.updateSeen = u.latest; save();
+    if (!playing) openUpdate(); else toast(`Emuglob ${u.latest} est disponible (Paramètres › Mettre à jour Emuglob).`);
+  }, 6000);
   const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
   tick(); setInterval(tick, 15000);
   pad();
