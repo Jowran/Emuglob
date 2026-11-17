@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Emuglob</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https://media.retroachievements.org; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https://media.retroachievements.org https://static.retroachievements.org https://retroachievements.org; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
 <style>
   :root { --t:clamp(110px,9vw,150px); --T:clamp(200px,17.3vw,290px); --muted:#b9b4d4; --glass:rgba(24,18,48,.6); --glow:rgba(95,180,255,.75); }
   * { box-sizing:border-box; }
@@ -101,7 +101,16 @@
   .fbrand { min-width:190px; }
   .fbrand b { display:block; font-size:22px; letter-spacing:3px; font-weight:800; text-transform:uppercase; }
   .fbrand small { color:rgba(255,255,255,.65); letter-spacing:2px; font-size:11px; text-transform:uppercase; }
-  .ftabs { flex:1; display:flex; gap:6px; justify-content:center; overflow-x:auto; scrollbar-width:none; }
+  .ftabs { flex:1; display:flex; gap:6px; justify-content:safe center; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+  .ftabs::-webkit-scrollbar { display:none; }
+  .ftabs-wrap { position:relative; display:flex; align-items:center; min-width:0; }
+  .ftabs-wrap .ftabs { --fl:0px; --fr:0px; -webkit-mask-image:linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%); }
+  .ftabs-wrap.cl .ftabs { --fl:48px; }
+  .ftabs-wrap.cr .ftabs { --fr:48px; }
+  .farr { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:26px; height:26px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:rgba(20,14,40,.75); color:#fff; font:inherit; font-size:15px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; }
+  .farr:hover { background:rgba(255,255,255,.25); }
+  .farr.l { left:0; } .farr.r { right:0; }
+  .ftabs-wrap.cl .farr.l, .ftabs-wrap.cr .farr.r { display:flex; }
   .ftab { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e8f5ea; padding:5px 14px; border-radius:16px; font:inherit; font-size:12px; white-space:nowrap; cursor:pointer; }
   .ftab:hover { background:rgba(255,255,255,.2); }
   .ftab.on { background:rgba(255,255,255,.92); color:#111; }
@@ -124,7 +133,66 @@
   .hk { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:rgba(255,255,255,.2); font-weight:700; font-size:11px; line-height:1; font-family:inherit; font-style:normal; color:#fff; }
   #home { flex:1; min-height:0; display:flex; flex-direction:column; }
   #tint { position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--fcc,#5b46d6) 58%, transparent) 0%, transparent 62%); }
-  #home .ftabs { flex:none; justify-content:center; padding:10px 56px 0; }
+  #home .ftabs-wrap { flex:none; margin:10px 56px 0; }
+  #home .ftabs { padding:2px 0; }
+  /* modes verticaux de la barre des consoles (Paramètres › Affichage des consoles) */
+  #home.tv { display:grid; grid-template-columns:270px minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto auto; column-gap:8px; }
+  #home.tv.tc { grid-template-columns:76px minmax(0,1fr); }
+  #home.tv > .fstage, #home.tv > .finfo, #home.tv > #bottom { grid-column:2; }
+  #home.tv .ftabs-wrap { grid-column:1; grid-row:1 / -1; margin:14px 0 16px 40px; flex-direction:column; align-items:stretch; min-height:0;
+    background:rgba(16,11,36,.55); border:1px solid rgba(255,255,255,.08); border-radius:14px; backdrop-filter:blur(8px); }
+  #home.tv .farr { display:none !important; }
+  #home.tv .ftabs { flex:1; flex-direction:column; justify-content:flex-start; gap:2px; overflow-x:hidden; overflow-y:auto; padding:8px 6px; -webkit-mask-image:none; scrollbar-width:none; }
+  #home.tv .fcat { flex:none; padding:12px 8px 4px; font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  #home.tv .fcat:first-child { padding-top:4px; }
+  #home.tv .ftab { flex:none; display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:0; border-radius:10px; padding:5px 8px 5px 5px; font-size:14px; color:rgba(255,255,255,.66); }
+  #home.tv .ftab .nm { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  #home.tv .ftab .ct { font-size:11px; color:rgba(255,255,255,.4); }
+  #home.tv .ftab:hover { background:rgba(255,255,255,.07); color:#fff; }
+  #home.tv .ftab.on { background:rgba(255,255,255,.14); color:#fff; font-weight:600; }
+  .cbadge { display:none; flex:none; width:32px; height:32px; border-radius:9px; align-items:center; justify-content:center; background:var(--cc,#475569); color:#fff; font-size:10px; font-weight:800; letter-spacing:.2px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); transition:border-radius .15s; }
+  .cbadge .ico { width:17px; height:17px; }
+  #home.tv .cbadge { display:flex; }
+  #home.tv .ftab.on .cbadge { box-shadow:inset 0 0 0 2px rgba(255,255,255,.85); }
+  .cbadge.img { background:center/cover no-repeat; background-color:rgba(255,255,255,.08); }
+  .cbadge.img.ra { background-size:74%; background-color:color-mix(in srgb, var(--cc) 45%, #120d2a); image-rendering:auto; }
+  .ftab { position:relative; }
+  .fnew { position:absolute; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2px #1a1236; top:3px; right:3px; }
+  #home.tv .fnew { top:4px; left:34px; right:auto; }
+  #home.tc .fnew { top:0; left:36px; }
+  #home:not(.tv) .fcat { display:none; }
+  #home:not(.tv) .ftab .ct { display:none; }
+  /* compact : icônes seules, comme la colonne des serveurs Discord */
+  #home.tc .ftabs-wrap { margin-left:24px; }
+  #home.tc .ftabs { align-items:center; gap:6px; padding:10px 0; }
+  #home.tc .fcat { padding:0; width:28px; height:2px; margin:4px 0; background:rgba(255,255,255,.15); font-size:0; }
+  #home.tc .fcat:first-child { display:none; }
+  #home.tc .ftab { width:auto; padding:0; border-radius:12px; background:none !important; }
+  #home.tc .ftab .nm, #home.tc .ftab .ct { display:none; }
+  #home.tc .cbadge { width:44px; height:44px; border-radius:22px; font-size:11px; }
+  #home.tc .ftab:hover .cbadge, #home.tc .ftab.on .cbadge { border-radius:14px; }
+  #home.tc.th .ftabs-wrap { width:68px; z-index:20; transition:width .18s ease, background .18s; }
+  #home.tc.th .ftabs-wrap:hover { width:250px; background:rgba(16,11,36,.92); }
+  #home.tc.th .ftabs-wrap:hover .ftabs { align-items:stretch; padding:10px 8px; }
+  #home.tc.th .ftabs-wrap:hover .ftab { width:100%; display:flex; gap:12px; padding:3px 8px 3px 3px; }
+  #home.tc.th .ftabs-wrap:hover .ftab:hover { background:rgba(255,255,255,.07) !important; }
+  #home.tc.th .ftabs-wrap:hover .ftab.on { background:rgba(255,255,255,.14) !important; }
+  #home.tc.th .ftabs-wrap:hover .nm, #home.tc.th .ftabs-wrap:hover .ct { display:block; white-space:nowrap; }
+  #home.tc.th .ftabs-wrap:hover .nm { flex:1; color:#fff; font-size:14px; }
+  #home.tc.th .ftabs-wrap:hover .fcat { width:auto; align-self:stretch; margin:4px 8px; }
+  /* fenêtre « Barre des consoles » */
+  #dlg-tabs { width:min(560px, 92vw); }
+  .tmodes { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .tmodes label { margin:0; display:flex; gap:8px; align-items:center; padding:8px 10px; border-radius:10px; background:#262046; color:#fff; font-size:13px; cursor:pointer; }
+  .tmodes input, #tb-hover { width:auto !important; margin:0; flex:none; }
+  #tb-list { max-height:46vh; overflow:auto; margin-top:4px; }
+  .trow { display:flex; align-items:center; gap:10px; padding:5px 4px; border-bottom:1px solid #2a2550; font-size:13px; }
+  .trow.drag { opacity:.4; }
+  .trow.off .tl { opacity:.45; text-decoration:line-through; }
+  .trow .grip { cursor:grab; color:var(--muted); user-select:none; }
+  .trow .tl { flex:1; min-width:0; }
+  .trow .cbadge { display:flex; width:28px; height:28px; border-radius:8px; }
+  .trow button { padding:4px 8px !important; font-size:12px; }
   #home .fstage { flex:1; min-height:0; }
   #home .finfo { flex:none; padding:4px 56px 0; }
   #prog { justify-content:center; }
@@ -189,7 +257,7 @@
 </div>
 
 <div id="home">
-  <div class="ftabs" id="f-tabs"></div>
+  <div class="ftabs-wrap" id="f-tabs-wrap"><button class="farr l" id="f-tl" title="Précédent">‹</button><div class="ftabs" id="f-tabs"></div><button class="farr r" id="f-tr" title="Suivant">›</button></div>
   <div class="fstage" id="f-stage"><div class="floor"></div><div id="f-items"></div></div>
   <div class="finfo">
     <div id="f-title"></div>
@@ -292,6 +360,16 @@
   <label>Doublons</label><div id="mt-dup" class="muted"></div>
   <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="mt-rmdup">Retirer les doublons</button></div>
   <div class="row"><button id="mt-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-tabs">
+  <h2>Barre des consoles</h2>
+  <label>Affichage</label>
+  <div class="tmodes" id="tb-modes"></div>
+  <label style="display:flex;gap:8px;align-items:center;color:#fff;font-size:13px"><input type="checkbox" id="tb-hover"> En mode « Icônes seules », afficher les noms au survol</label>
+  <label>Consoles (glisser ou ↑ ↓ pour l'ordre · « Icône » pour mettre ton propre logo)</label>
+  <div id="tb-list"></div>
+  <div class="row"><button id="tb-reset">Ordre alphabétique, tout afficher</button><button id="tb-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
 <dialog id="dlg-bak">
@@ -708,8 +786,41 @@ function flowColor(g) {
   const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
   return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
 }
+// mode d'affichage effectif : « auto » passe en vertical au-delà de 10 consoles
+const tabsModeNow = () => {
+  const m = cfg.tabsMode || 'horizontal';
+  return m === 'auto' ? (fcons.filter((t) => !t.key.startsWith('__')).length > 10 ? 'vertical' : 'horizontal') : m;
+};
+// pastille « nouveau » : jeu ajouté depuis moins de 7 jours et jamais lancé
+const isNew = (g) => g.added && !g.lastPlayed && Date.now() - g.added < 7 * 864e5;
+const hasNew = (t) => !t.key.startsWith('__') && t.games.some(isNew);
+// logos des consoles fournis par RetroAchievements (nécessite un compte RA lié), sinon abréviation
+let consoleIcons = {};
+async function loadConsoleIcons() {
+  if (!raOn()) return;
+  const r = await api.ra('GetConsoleIDs', {}, 604800);
+  if (!r.ok || !Array.isArray(r.data)) return;
+  r.data.forEach((c) => { const u = c.IconURL || c.iconUrl; if (u && /^https:\/\/[a-z.]*retroachievements\.org\//.test(u)) consoleIcons[c.ID] = u; });
+  render();
+}
+// icône d'onglet : pastille colorée (couleur de la console) avec son abréviation
+const TAB_ABBR = { 'Game Boy':'GB', 'Game Boy Color':'GBC', 'Game Boy Advance':'GBA', 'Nintendo 64':'N64', 'Nintendo DS':'DS', 'Nintendo 3DS':'3DS',
+  'Super Nintendo':'SNES', 'NES':'NES', 'Mega Drive / Genesis':'MD', 'Master System':'SMS', 'Game Gear':'GG', 'PlayStation':'PS1', 'PlayStation 2':'PS2',
+  'PSP':'PSP', 'PC Engine':'PCE', 'Atari 2600':'A26', 'Atari Lynx':'LNX', 'Neo Geo Pocket':'NGP', 'Arcade':'ARC', 'Wii':'Wii', 'GameCube':'GC',
+  'Nintendo Switch':'NSW', 'Saturn':'SAT', 'Dreamcast':'DC', 'Virtual Boy':'VB', 'WonderSwan':'WS' };
+function tabBadge(t) {
+  if (t.key === '__recent') return `<span class="cbadge" style="--cc:#5b46d6">${ic('clock')}</span>`;
+  if (t.key === '__fav') return `<span class="cbadge" style="--cc:#d97706">${ic('star')}</span>`;
+  const img = (cfg.tabIcons || {})[t.key];
+  if (img) return `<span class="cbadge img" style="background-image:url('${fileUrl(img)}')"></span>`;
+  const rs = t.games[0] ? raSys(t.games[0]) : 0;
+  if (consoleIcons[rs]) return `<span class="cbadge img ra" style="--cc:${t.games[0] ? flowColor(t.games[0]) : '#475569'};background-image:url('${esc(consoleIcons[rs])}')"></span>`;
+  const ab = TAB_ABBR[t.label] || t.label.split(/[\s/-]+/).filter(Boolean).map((w) => (/\d/.test(w) ? w : w[0])).join('').slice(0, 4).toUpperCase();
+  const col = t.games[0] ? flowColor(t.games[0]) : '#475569';
+  return `<span class="cbadge" style="--cc:${col}">${esc(ab)}</span>`;
+}
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
-function tabsList() {
+function tabsList(all) {
   const gs = cfg.games;
   const played = gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
   const rest = gs.filter((g) => !g.lastPlayed).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || alpha(a, b));
@@ -718,7 +829,10 @@ function tabsList() {
   if (fav.length) tabs.push({ key: '__fav', label: 'Favoris', games: fav });
   const by = new Map();
   gs.forEach((g) => { const k = labelOf(g); if (!by.has(k)) by.set(k, []); by.get(k).push(g); });
-  [...by].sort((a, b) => a[0].localeCompare(b[0])).forEach(([k, list]) => tabs.push({ key: k, label: k, games: list.sort(alpha) }));
+  const ord = cfg.tabOrder || [], hid = new Set(cfg.tabHidden || []);
+  const rank = (k) => { const i = ord.indexOf(k); return i < 0 ? 1e6 : i; };
+  [...by].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+    .forEach(([k, list]) => { if (all || !hid.has(k)) tabs.push({ key: k, label: k, games: list.sort(alpha) }); });
   return tabs;
 }
 const cur = () => fgames[fi] || null;
@@ -729,11 +843,27 @@ function render() {
   const t = fcons[fci];
   fgames = t.games;
   fi = Math.max(0, fgames.findIndex((g) => g.id === fpos[t.key]));
-  $('#f-tabs').innerHTML = fcons.map((x, k) => `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}">${esc(x.label)}</button>`).join('');
+  const tm = tabsModeNow();
+  $('#home').classList.toggle('tv', tm === 'vertical' || tm === 'compact');
+  $('#home').classList.toggle('tc', tm === 'compact');
+  $('#home').classList.toggle('th', tm === 'compact' && cfg.tabsHover !== false);
+  $('#f-tabs').innerHTML = fcons.map((x, k) => (k === 0 ? '<div class="fcat">Bibliothèque</div>' : '')
+    + (!x.key.startsWith('__') && (k === 0 || fcons[k - 1].key.startsWith('__')) ? '<div class="fcat">Consoles</div>' : '')
+    + `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}" title="${esc(x.label)} (${x.games.length})${hasNew(x) ? ' · nouveau jeu' : ''}">${tabBadge(x)}${hasNew(x) ? '<i class="fnew"></i>' : ''}<span class="nm">${esc(x.label)}</span><span class="ct">${x.games.length}</span></button>`).join('');
   $('#f-items').innerHTML = fgames.map((g) => `<div class="fi" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}</div>`).join('');
   placeFlow(); renderInfo(); renderBottom(); renderUser();
   const on = $('#f-tabs .on');
   if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  if (on && $('#home').classList.contains('tv')) on.scrollIntoView({ block: 'nearest' });
+  updTabsFade();
+}
+
+// barre des consoles : fondu + flèches selon ce qui reste à faire défiler
+function updTabsFade() {
+  const el = $('#f-tabs'), w = $('#f-tabs-wrap');
+  const max = el.scrollWidth - el.clientWidth;
+  w.classList.toggle('cl', el.scrollLeft > 2);
+  w.classList.toggle('cr', el.scrollLeft < max - 2);
 }
 
 function placeFlow() {
@@ -1153,12 +1283,67 @@ function localStatsHTML() {
 }
 
 /* ---------- onglet Paramètres ---------- */
+const TABS_MODES = { horizontal:'Barre horizontale', vertical:'Liste verticale', compact:'Icônes seules', auto:'Automatique' };
+const TABS_MODES_HELP = { horizontal:'Une ligne en haut', vertical:'Liste à gauche avec icônes', compact:'Colonne d\'icônes à gauche', auto:'Horizontale, verticale au-delà de 10 consoles' };
+function openTabsDlg() {
+  const d = $('#dlg-tabs');
+  const refresh = () => {
+    const m = cfg.tabsMode || 'horizontal';
+    $('#tb-modes').innerHTML = Object.keys(TABS_MODES).map((k) => `<label title="${TABS_MODES_HELP[k]}"><input type="radio" name="tbm" value="${k}" ${k === m ? 'checked' : ''}>${TABS_MODES[k]}</label>`).join('');
+    $('#tb-hover').checked = cfg.tabsHover !== false;
+    $('#tb-hover').disabled = m !== 'compact';
+    const hid = new Set(cfg.tabHidden || []);
+    const cons = tabsList(true).filter((t) => !t.key.startsWith('__'));
+    $('#tb-list').innerHTML = cons.length ? cons.map((t) => `<div class="trow ${hid.has(t.key) ? 'off' : ''}" draggable="true" data-k="${esc(t.key)}">
+      <span class="grip" title="Glisser pour déplacer">⋮⋮</span>${tabBadge(t)}<span class="tl">${esc(t.label)} <span class="muted">(${t.games.length})</span></span>
+      <button data-a="up" title="Monter">↑</button><button data-a="down" title="Descendre">↓</button>
+      <button data-a="icon">Icône</button>${(cfg.tabIcons || {})[t.key] ? '<button data-a="noicon" title="Revenir à l\'icône par défaut">×</button>' : ''}
+      <button data-a="hide">${hid.has(t.key) ? 'Afficher' : 'Masquer'}</button></div>`).join('') : '<p class="muted">Aucune console pour l\'instant.</p>';
+  };
+  const order = () => tabsList(true).filter((t) => !t.key.startsWith('__')).map((t) => t.key);
+  const apply = () => { save(); render(); refresh(); };
+  $('#tb-modes').onchange = (e) => { cfg.tabsMode = e.target.value; apply(); };
+  $('#tb-hover').onchange = (e) => { cfg.tabsHover = e.target.checked; apply(); };
+  $('#tb-list').onclick = async (e) => {
+    const b = e.target.closest('button[data-a]'); if (!b) return;
+    const k = b.closest('.trow').dataset.k, a = b.dataset.a;
+    if (a === 'up' || a === 'down') {
+      const o = order(), i = o.indexOf(k), j = i + (a === 'up' ? -1 : 1);
+      if (j < 0 || j >= o.length) return;
+      [o[i], o[j]] = [o[j], o[i]]; cfg.tabOrder = o;
+    } else if (a === 'hide') {
+      const h = new Set(cfg.tabHidden || []); h.has(k) ? h.delete(k) : h.add(k); cfg.tabHidden = [...h];
+    } else if (a === 'icon') {
+      const p = await api.pickCover('icone-console'); if (!p) return;
+      cfg.tabIcons = { ...(cfg.tabIcons || {}), [k]: p };
+    } else if (a === 'noicon') {
+      cfg.tabIcons = { ...(cfg.tabIcons || {}) }; delete cfg.tabIcons[k];
+    }
+    apply();
+  };
+  let dragK = null;
+  $('#tb-list').ondragstart = (e) => { const r = e.target.closest('.trow'); if (!r) return; dragK = r.dataset.k; r.classList.add('drag'); };
+  $('#tb-list').ondragover = (e) => { if (dragK) e.preventDefault(); };
+  $('#tb-list').ondrop = (e) => {
+    e.preventDefault();
+    const r = e.target.closest('.trow'); if (!r || !dragK || r.dataset.k === dragK) { dragK = null; refresh(); return; }
+    const o = order().filter((x) => x !== dragK);
+    const box = r.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+    o.splice(o.indexOf(r.dataset.k) + (after ? 1 : 0), 0, dragK);
+    cfg.tabOrder = o; dragK = null; apply();
+  };
+  $('#tb-list').ondragend = () => { dragK = null; $('#tb-list').querySelectorAll('.drag').forEach((x) => x.classList.remove('drag')); };
+  $('#tb-reset').onclick = () => { delete cfg.tabOrder; delete cfg.tabHidden; apply(); };
+  $('#tb-ok').onclick = () => d.close();
+  refresh(); d.showModal();
+}
 const SET_ITEMS = [
   { ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
   { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
   { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
   { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
+  { ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · ordre, icônes'; }, act:() => openTabsDlg() },
   { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
   { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
@@ -1239,7 +1424,7 @@ async function identifyDiscs() {
 function makeGame(path) {
   const ext = extOf(path), system = EXT[ext] || 0;
   return { id: uid(), title: stem(path), path, emulator: emuForExt(ext, path), system, core: system ? SYSTEMS[system][1] : '',
-    cover: '', favorite: false, lastPlayed: 0, playCount: 0 };
+    cover: '', favorite: false, lastPlayed: 0, playCount: 0, added: Date.now() };
 }
 async function addFiles() {
   for (const p of await api.pickFiles()) {
@@ -1478,7 +1663,7 @@ $('#set-body').onclick = (e) => {
   if (!t) return;
   const it = SET_ITEMS[Number(t.dataset.i)];
   if (!it.keep) closeOv();
-  it.act();
+  it.act(t);
 };
 $('#tab-tro').onclick = openTrophies;
 $('#tab-jeux').onclick = closeOv;
@@ -1489,6 +1674,16 @@ $('#f-items').onclick = (e) => {
   const i = [...$('#f-items').children].indexOf(el);
   if (i === fi) launch(cur()); else flowSet(i);
 };
+$('#f-tabs').addEventListener('wheel', (e) => {
+  const el = e.currentTarget;
+  if (el.scrollWidth <= el.clientWidth) return;
+  e.preventDefault(); e.stopPropagation();
+  el.scrollLeft += (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX);
+}, { passive: false });
+$('#f-tabs').addEventListener('scroll', updTabsFade, { passive: true });
+window.addEventListener('resize', updTabsFade);
+$('#f-tl').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: -el.clientWidth * 0.7, behavior: 'smooth' }); };
+$('#f-tr').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: el.clientWidth * 0.7, behavior: 'smooth' }); };
 let wheelT = 0;
 $('#f-stage').addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -1632,7 +1827,7 @@ function pad() {
   applyWall();
   render();
   await identifyDiscs();
-  render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs();
+  render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs(); loadConsoleIcons();
   checkFiles();
   setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
   setTimeout(async () => {   // recherche de mise à jour au lancement : propose une seule fois chaque nouvelle version
