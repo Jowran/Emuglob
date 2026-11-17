@@ -1,0 +1,1622 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Emuglob</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https://media.retroachievements.org; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<style>
+  :root { --t:clamp(110px,9vw,150px); --T:clamp(200px,17.3vw,290px); --muted:#b9b4d4; --glass:rgba(24,18,48,.6); --glow:rgba(95,180,255,.75); }
+  * { box-sizing:border-box; }
+  html, body { height:100%; margin:0; overflow:hidden; }
+  body { display:flex; flex-direction:column; color:#fff; font:15px/1.4 "Segoe UI",system-ui,sans-serif;
+    background:var(--wall,none) center/cover, linear-gradient(180deg,#140e3a 0%,#2d1658 40%,#8a3a7a 72%,#e0785a 100%); }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none;
+    background:linear-gradient(90deg,rgba(8,6,24,.7),rgba(8,6,24,.1) 65%), linear-gradient(0deg,rgba(8,6,24,.7),transparent 45%); }
+  #top, #row, #info, #bottom { position:relative; }
+  #top { display:flex; align-items:center; gap:24px; padding:20px 56px 0; height:84px; }
+  .brand { font-weight:800; letter-spacing:4px; font-size:18px; padding-right:24px; border-right:1px solid rgba(255,255,255,.3); }
+  .tab { color:var(--muted); font-size:20px; cursor:pointer; padding:6px 2px; border-bottom:3px solid transparent; margin-right:14px; }
+  .tab.on { color:#fff; border-color:#fff; }
+  .sp { flex:1; }
+  .ib { background:none; border:none; color:#fff; font-size:22px; cursor:pointer; padding:6px; }
+  #avatar { width:46px; height:46px; border-radius:50%; background:#3a2a6a center/cover; display:flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer; }
+  #clock { font-size:26px; margin-left:8px; }
+  .case { position:relative; display:flex; height:100%; border-radius:5px; background:#111; overflow:hidden; box-shadow:0 10px 18px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.7); }
+  .face { position:relative; flex:none; width:calc(var(--h) * var(--r,.72)); height:100%; background:#1b1b26; overflow:hidden; }
+  .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ph { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:calc(var(--h) * .2); color:rgba(255,255,255,.85); }
+  #info { padding:16px 56px 0; max-width:960px; }
+  .pill { display:inline-block; background:rgba(255,255,255,.22); padding:3px 12px; border-radius:8px; font-weight:600; }
+  #title { font-size:clamp(34px,3.2vw,54px); font-weight:700; margin:12px 0 2px; line-height:1.1; }
+  #sub { color:#e5e0f5; font-size:18px; min-height:26px; }
+  #prog { margin-top:6px; color:#e5e0f5; display:flex; align-items:center; gap:12px; min-height:26px; }
+  .bar { width:220px; height:8px; background:rgba(255,255,255,.22); border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#ffc83d; }
+  .actions { display:flex; gap:12px; margin-top:14px; }
+  .btn { background:var(--glass); border:2px solid transparent; color:#fff; border-radius:40px; height:54px; font-size:20px; font-weight:600; font-family:inherit; cursor:pointer; padding:0 64px; backdrop-filter:blur(8px); }
+  .btn.round { width:54px; padding:0; font-size:24px; }
+  .btn:hover { border-color:#fff; }
+  #bottom { margin-top:auto; display:flex; gap:16px; padding:0 56px 32px; }
+  .btile { flex:1; min-width:0; max-width:270px; height:126px; background:var(--glass); border:2px solid transparent; border-radius:18px; padding:14px 16px; cursor:pointer; backdrop-filter:blur(8px); display:flex; flex-direction:column; justify-content:space-between; }
+  .btile:hover { border-color:rgba(255,255,255,.5); }
+  .btile.bsel { border-color:#fff; box-shadow:0 0 16px var(--glow); }
+  .btile .ic { font-size:26px; }
+  .btile b { font-size:17px; }
+  .btile small, .muted { color:var(--muted); }
+  .t3 { display:flex; gap:14px; font-size:15px; margin-top:4px; }
+  .overlay { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; padding:100px 56px 26px; background:linear-gradient(180deg,#0f0b2c 0%,#1a1040 55%,#2a1442 100%); }
+  .overlay[hidden] { display:none; }
+  .ovh { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .ovh h2 { margin:0; flex:1; font-size:24px; }
+  .ovb { overflow:auto; flex:1; padding-right:8px; }
+  .ovh input { padding:9px 14px; border-radius:20px; border:1px solid #3a3560; background:#1a1636; color:#fff; width:280px; font:inherit; }
+  .ovh button, dialog button { background:#262046; color:#fff; border:1px solid #3a3560; padding:8px 14px; border-radius:10px; cursor:pointer; font:inherit; }
+  .ovh button:hover, dialog button:hover { border-color:#8f7bff; }
+  .ovh .on { background:#5b46d6; border-color:#5b46d6; }
+  .ovb h3 { margin:18px 0 10px; } .ovb h3 small { color:var(--muted); font-weight:400; }
+  .lhead { display:flex; align-items:center; gap:10px; margin:12px 0 10px; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.07); cursor:pointer; outline:none; font-size:18px; font-weight:700; }
+  .lhead:hover, .lhead:focus { background:rgba(255,255,255,.15); box-shadow:0 0 0 2px #fff; }
+  .lhead small { color:var(--muted); font-weight:400; }
+  .lhead .ch { width:18px; }
+  .lgrid { display:flex; flex-wrap:wrap; gap:26px 18px; margin:18px 0 26px; }
+  .lcard { --h:190px; width:calc(var(--h) * var(--r,.72)); outline:none; cursor:pointer; }
+  .lcard .case { height:var(--h); }
+  .lcard:hover .case, .lcard:focus .case { box-shadow:0 0 0 3px #fff, 0 0 22px 4px var(--glow), 0 14px 24px rgba(0,0,0,.6); transform:translateY(-4px); }
+  .lt { margin-top:8px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fr { display:flex; gap:14px; align-items:center; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.07); margin-bottom:8px; }
+  .fr .fa { width:44px; height:44px; border-radius:50%; background:#3a2a6a center/cover; flex:none; }
+  .fr img.b { width:48px; height:48px; border-radius:8px; flex:none; background:#2a2350; }
+  .fr .tx { flex:1; min-width:0; } .fr small { display:block; color:var(--muted); }
+  .fr .pts { color:#ffc83d; font-weight:700; white-space:nowrap; }
+  .ach { display:flex; gap:14px; align-items:center; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.07); margin-bottom:8px; }
+  .ach.lock { opacity:.45; }
+  .ach img { width:56px; height:56px; border-radius:8px; flex:none; background:#2a2350; }
+  .ach .tx { flex:1; min-width:0; } .ach small { color:var(--muted); display:block; }
+  .ach .pts { color:#ffc83d; font-weight:700; white-space:nowrap; text-align:right; }
+  .av { width:52px; height:52px; border-radius:50%; background:#3a2a6a center/cover; }
+  dialog { background:#1d1840; color:#fff; border:1px solid #3a3560; border-radius:14px; padding:22px; min-width:440px; }
+  dialog::backdrop { background:rgba(0,0,0,.65); }
+  dialog h2 { margin:0 0 6px; }
+  dialog label { display:block; margin:10px 0 4px; color:var(--muted); font-size:12px; }
+  dialog input, dialog select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #3a3560; background:#120f2a; color:#fff; font:inherit; }
+  .row { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+  #m-list { display:flex; flex-direction:column; gap:8px; min-width:260px; }
+  .ico { width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:-.14em; flex:none; }
+  .ico.fill { fill:currentColor; stroke:none; }
+  .ib .ico { width:25px; height:25px; }
+  .ib { display:inline-flex; align-items:center; }
+  .btn.round .ico { width:26px; height:26px; }
+  .ovh button { display:inline-flex; align-items:center; gap:6px; }
+  .lhead .ch { display:inline-flex; }
+  .t3 span { display:inline-flex; align-items:center; gap:5px; }
+  #set-body { display:grid; grid-template-columns:repeat(auto-fill, minmax(270px,1fr)); gap:16px; padding:8px; }
+  .sset { display:flex; gap:16px; align-items:center; padding:22px; border-radius:18px; background:var(--glass); border:2px solid transparent; cursor:pointer; outline:none; backdrop-filter:blur(8px); }
+  .sset:hover, .sset:focus { border-color:#fff; box-shadow:0 0 16px var(--glow); }
+  .sset .si { font-size:36px; display:flex; }
+  .sset b { display:block; font-size:18px; }
+  .sset small { color:var(--muted); }
+  #ov-flow { padding:0; background:radial-gradient(ellipse at 50% 38%, color-mix(in srgb, var(--fcc,#16a34a) 62%, #000) 0%, color-mix(in srgb, var(--fcc,#16a34a) 20%, #000) 55%, #030504 100%); overflow:hidden; }
+  #ov-flow::before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse 60% 18% at 20% 92%, rgba(255,255,255,.08), transparent), radial-gradient(ellipse 50% 14% at 85% 8%, rgba(255,255,255,.07), transparent); }
+  .fhead { position:relative; display:flex; align-items:center; gap:18px; padding:18px 36px 0; z-index:5; }
+  .fbrand { min-width:190px; }
+  .fbrand b { display:block; font-size:22px; letter-spacing:3px; font-weight:800; text-transform:uppercase; }
+  .fbrand small { color:rgba(255,255,255,.65); letter-spacing:2px; font-size:11px; text-transform:uppercase; }
+  .ftabs { flex:1; display:flex; gap:6px; justify-content:center; overflow-x:auto; scrollbar-width:none; }
+  .ftab { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e8f5ea; padding:5px 14px; border-radius:16px; font:inherit; font-size:12px; white-space:nowrap; cursor:pointer; }
+  .ftab:hover { background:rgba(255,255,255,.2); }
+  .ftab.on { background:rgba(255,255,255,.92); color:#111; }
+  .fb { display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:7px 12px; border-radius:10px; cursor:pointer; font:inherit; }
+  .fb:hover { background:rgba(255,255,255,.22); }
+  .fstage { position:relative; flex:1; perspective:1500px; perspective-origin:50% 38%; overflow:hidden; --FH:300px; }
+  .floor { position:absolute; left:0; right:0; top:74%; bottom:0; background:linear-gradient(rgba(255,255,255,.10), rgba(255,255,255,0) 70%); border-top:1px solid rgba(255,255,255,.12); }
+  #f-items { position:absolute; inset:0; transform-style:preserve-3d; }
+  .fi { --h:var(--FH); position:absolute; left:50%; bottom:26%; height:var(--h); width:calc(var(--h) * var(--r,.72)); margin-left:calc(var(--h) * var(--r,.72) / -2);
+    transform-origin:center bottom; cursor:pointer; transition:transform .38s cubic-bezier(.2,.8,.2,1), filter .38s, opacity .38s;
+    -webkit-box-reflect:below 4px linear-gradient(transparent 58%, rgba(255,255,255,.28)); }
+  .fi .case { height:100%; transition:none; }
+  .fi.rs .case { flex-direction:row-reverse; }
+  .fi.cc .case { box-shadow:0 0 0 2px rgba(255,255,255,.55), 0 20px 40px rgba(0,0,0,.6); }
+  .finfo { position:relative; text-align:center; padding:6px 24px; z-index:5; }
+  #f-title { font-size:28px; font-weight:600; text-shadow:0 2px 10px rgba(0,0,0,.6); }
+  #f-sub { color:rgba(255,255,255,.7); font-size:13px; margin-top:2px; min-height:20px; }
+  .fhints { position:relative; display:flex; gap:18px; justify-content:center; padding:10px 20px 18px; color:rgba(255,255,255,.75); font-size:12px; z-index:5; flex-wrap:wrap; }
+  .fhints span { display:inline-flex; align-items:center; gap:6px; }
+  .hk { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:rgba(255,255,255,.2); font-weight:700; font-size:11px; line-height:1; font-family:inherit; font-style:normal; color:#fff; }
+  #home { flex:1; min-height:0; display:flex; flex-direction:column; }
+  #tint { position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--fcc,#5b46d6) 58%, transparent) 0%, transparent 62%); }
+  #home .ftabs { flex:none; justify-content:center; padding:10px 56px 0; }
+  #home .fstage { flex:1; min-height:0; }
+  #home .finfo { flex:none; padding:4px 56px 0; }
+  #prog { justify-content:center; }
+  .actions { justify-content:center; margin-top:8px; }
+  #home #f-title { font-size:26px; }
+  .btn { height:42px; padding:0 48px; font-size:17px; }
+  .btn.round { width:42px; padding:0; }
+  #bottom { flex:none; display:flex; align-items:center; gap:24px; padding:6px 56px 16px; margin-top:0; }
+  #bottom .btile { flex-direction:row; justify-content:flex-start; align-items:center; gap:14px; height:62px; min-width:230px; max-width:none; padding:0 18px; flex:none; }
+  #bottom .fhints { flex:1; padding:0; justify-content:flex-end; }
+  #top { z-index:30; }
+  #searchbox { position:relative; display:flex; align-items:center; gap:8px; width:260px; height:40px; padding:0 14px; border-radius:22px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); transition:width .2s, background .2s, border-color .2s; }
+  #searchbox:focus-within { width:380px; background:rgba(255,255,255,.2); border-color:#fff; }
+  #searchbox .ico { width:20px; height:20px; opacity:.85; }
+  #q { flex:1; min-width:0; background:none; border:none; outline:none; color:#fff; font:inherit; font-size:15px; }
+  #q::placeholder { color:rgba(255,255,255,.6); }
+  #q-res { position:absolute; top:46px; left:0; right:0; max-height:min(60vh,420px); overflow:auto; background:#1d1840; border:1px solid #3a3560; border-radius:12px; box-shadow:0 14px 30px rgba(0,0,0,.55); padding:4px; }
+  #q-res[hidden] { display:none; }
+  .qr { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:8px; cursor:pointer; }
+  .qr:hover, .qr.on { background:#5b46d6; }
+  .qr.none { cursor:default; color:var(--muted); }
+  .qr.none:hover { background:none; }
+  .qt { width:34px; height:44px; border-radius:4px; background-size:cover; background-position:center; flex:none; }
+  .qx { min-width:0; }
+  .qx b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; font-size:14px; }
+  .qx small { color:var(--muted); font-size:12px; }
+  .pro-head { display:flex; gap:18px; align-items:center; margin-bottom:20px; }
+  .pro-head .av { width:88px; height:88px; flex:none; }
+  .pro-head h3 { margin:0; font-size:26px; }
+  .pro-head small { color:var(--muted); display:block; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; margin-bottom:24px; }
+  .st { background:rgba(255,255,255,.07); border-radius:14px; padding:14px 16px; }
+  .st b { display:block; font-size:26px; color:#ffc83d; }
+  .st small { color:var(--muted); }
+  #game { position:fixed; inset:0; z-index:50; background:#000; display:flex; flex-direction:column; }
+  #game[hidden] { display:none; }
+  #gbar { flex:none; height:48px; display:flex; align-items:center; gap:14px; padding:0 18px; background:#12102a; border-bottom:1px solid #2a2550; }
+  #gbar button { display:inline-flex; align-items:center; gap:6px; background:#262046; color:#fff; border:1px solid #3a3560; padding:6px 12px; border-radius:10px; cursor:pointer; font:inherit; }
+  #gbar button:hover { border-color:#8f7bff; }
+  #g-state { color:var(--muted); font-size:13px; }
+  #gview { flex:1; position:relative; background:#000; }
+  #g-wait { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; }
+  .case.miss { filter:grayscale(1) brightness(.5); }
+  .mrow { display:flex; gap:10px; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #2a2550; font-size:13px; }
+  .mrow span { min-width:0; overflow-wrap:anywhere; }
+  #dlg-maint, #dlg-bak, #dlg-upd { min-width:540px; max-width:min(680px, 92vw); }
+  dialog p { margin:8px 0; }
+  dialog button:disabled { opacity:.4; cursor:default; }
+  #toast { position:fixed; bottom:170px; left:50%; transform:translateX(-50%); background:#5b46d6; padding:10px 18px; border-radius:10px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:30; }
+  #toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div id="tint"></div>
+<div id="top">
+  <div class="brand">EMUGLOB</div>
+  <div><span class="tab on" id="tab-jeux">Jeux</span><span class="tab" id="tab-fr">Amis</span><span class="tab" id="tab-set">Paramètres</span><span class="tab" id="tab-tro">Succès</span></div>
+  <div class="sp"></div>
+  <div id="searchbox"><i data-ic="search"></i><input id="q" placeholder="Rechercher un jeu…" autocomplete="off" spellcheck="false"><div id="q-res" hidden></div></div>
+  <div id="avatar" title="Paramètres"></div>
+  <div id="clock"></div>
+</div>
+
+<div id="home">
+  <div class="ftabs" id="f-tabs"></div>
+  <div class="fstage" id="f-stage"><div class="floor"></div><div id="f-items"></div></div>
+  <div class="finfo">
+    <div id="f-title"></div>
+    <div id="f-sub"></div>
+    <div id="prog"></div>
+    <div class="actions"><button class="btn" id="btn-play">Jouer</button><button class="btn round" id="btn-rand" title="Jeu au hasard (touche R)"><i data-ic="dice"></i></button><button class="btn round" id="btn-more" title="Options"><i data-ic="more"></i></button></div>
+  </div>
+  <div id="bottom"></div>
+</div>
+
+<div class="overlay" id="ov-lib" hidden>
+  <div class="ovh"><h2>Bibliothèque</h2><input id="lib-q" placeholder="Rechercher un jeu…"><button id="lib-less">Tout réduire</button><button id="lib-more">Tout ouvrir</button><button id="lib-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovb" id="lib-body"></div>
+</div>
+
+<div class="overlay" id="ov-tro" hidden>
+  <div class="ovh" id="tro-head"></div>
+  <div class="ovb" id="tro-body"></div>
+</div>
+
+<div id="game" hidden>
+  <div id="gbar"><b id="g-title"></b><span id="g-state"></span><span class="sp"></span>
+    <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
+  <div id="gview"><div id="g-wait"></div></div>
+</div>
+
+<div class="overlay" id="ov-pro" hidden>
+  <div class="ovh"><h2>Mon profil</h2><button id="pro-acc"><i data-ic="user"></i> Compte</button><button id="pro-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovb" id="pro-body"></div>
+</div>
+
+<div class="overlay" id="ov-set" hidden>
+  <div class="ovh"><h2>Paramètres</h2><button id="set-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovb" id="set-body"></div>
+</div>
+
+<div class="overlay" id="ov-fr" hidden>
+  <div class="ovh"><h2>Amis RetroAchievements</h2><button id="fr-refresh"><i data-ic="refresh"></i> Actualiser</button><button id="fr-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovb" id="fr-body"></div>
+</div>
+
+<dialog id="dlg">
+  <h2>Modifier le jeu</h2>
+  <label>Titre</label><input id="f-title">
+  <label>Émulateur</label><select id="f-emu"></select>
+  <div id="f-lib">
+    <label>Système</label><select id="f-system"></select>
+    <label>Core libretro</label><input id="f-core" list="core-list" placeholder="ex : snes9x_libretro"><datalist id="core-list"></datalist>
+  </div>
+  <label>RetroAchievements : ID, lien du jeu ou nom du jeu (vide = automatique)</label><input id="f-raid" type="text" placeholder="ex : 1446, lien retroachievements.org/game/1446, ou Super Mario World">
+  <div class="row" style="justify-content:flex-start"><button id="f-cover">Choisir une jaquette…</button><button id="f-nocover">Retirer la jaquette</button></div>
+  <div class="row"><button id="f-del" style="margin-right:auto">Supprimer</button><button id="f-cancel">Annuler</button><button id="f-ok" style="background:#5b46d6">OK</button></div>
+</dialog>
+
+<dialog id="dlg-emu">
+  <h2>Émulateurs</h2>
+  <label>Émulateur</label><select id="e-list"></select>
+  <label>Nom</label><input id="e-name">
+  <label>Exécutable</label><div style="display:flex;gap:8px"><input id="e-exe"><button id="e-browse">Parcourir…</button></div>
+  <div id="e-args-wrap"><label>Arguments de lancement ({game} = chemin du jeu)</label><input id="e-args" placeholder='-f -g "{game}"'></div>
+  <div id="e-sv-wrap"><label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="e-sv" style="width:auto"> Partager ses sauvegardes de cartouche (même jeu sur RALibretro et cet émulateur)</label>
+  <label>Dossier de ses sauvegardes (vide = à côté du jeu)</label><input id="e-svdir" placeholder="ex : C:\Emus\mGBA\saves">
+  <label>Extension de ses sauvegardes (.sav mGBA / melonDS / SameBoy, .srm Snes9x)</label><input id="e-svext" placeholder=".sav"></div>
+  <div class="row"><button id="e-add">+ Nouvel émulateur</button><button id="e-del" style="margin-right:auto">Supprimer</button><button id="e-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-set">
+  <h2>Compte et affichage</h2>
+  <label>Pseudo RetroAchievements</label><input id="s-user" autocomplete="off">
+  <label>Clé API Web (retroachievements.org, Paramètres, Clés)</label><input id="s-key" type="password" autocomplete="off">
+  <div class="row" style="justify-content:flex-start"><button id="s-test">Tester la connexion</button></div>
+  <label>Jaquettes (récupérées automatiquement d'après le nom du fichier ROM)</label>
+  <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-covers">Rechercher les jaquettes manquantes</button></div>
+  <label>Succès RetroAchievements (identification par empreinte du fichier, puis par titre)</label>
+  <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-rematch">Relancer la détection des jeux</button></div>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-embed" style="width:auto"> Intégrer l'émulateur dans la fenêtre Emuglob (expérimental, Windows)</label>
+  <label>Mode d'intégration</label>
+  <select id="s-mode"><option value="overlay">Superposé : fenêtre sans bordure collée sur Emuglob (recommandé, garde le menu de l'émulateur)</option><option value="child">Enfant : vraie fenêtre dans Emuglob (l'image peut rester noire)</option></select>
+  <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="s-log">Ouvrir le journal d'intégration</button></div>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-hide" style="width:auto"> Sinon, masquer Emuglob pendant le jeu (Ctrl+Maj+E pour le rouvrir)</label>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-fs" style="width:auto"> Démarrer Emuglob en plein écran</label>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-auto" style="width:auto"> Lancer Emuglob au démarrage de Windows</label>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-saves" style="width:auto"> Partager les sauvegardes entre émulateurs (+ copie de secours dans Emuglob)</label>
+  <label>Discord Rich Presence : ID d'application (vide = désactivé)</label>
+  <div style="display:flex;gap:8px"><input id="s-dc" placeholder="ex : 1234567890123456789" autocomplete="off"><button id="s-dctest">Tester</button></div>
+  <small class="muted" id="s-dcst">Crée une application nommée « Emuglob » sur discord.com/developers/applications, copie son « Application ID » ici. Discord (application de bureau) doit être ouvert.</small>
+  <label>Fond d'écran</label>
+  <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-wall">Choisir une image…</button><button id="s-wall-reset">Par défaut</button></div>
+  <label>Manette : A jouer · X options · Y favori · B retour · Start plein écran · LB/RB rien</label>
+  <div class="row"><button id="s-full">Plein écran (F11)</button><button id="s-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-maint">
+  <h2>Entretien de la bibliothèque</h2>
+  <label>Dossiers surveillés (Emuglob y cherche de nouveaux jeux à chaque démarrage)</label>
+  <div id="mt-dirs"></div>
+  <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="mt-now">Chercher de nouveaux jeux maintenant</button></div>
+  <label>Fichiers</label><div id="mt-miss" class="muted"></div>
+  <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="mt-check">Vérifier les fichiers</button><button id="mt-rmmiss">Retirer les jeux introuvables</button></div>
+  <label>Doublons</label><div id="mt-dup" class="muted"></div>
+  <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="mt-rmdup">Retirer les doublons</button></div>
+  <div class="row"><button id="mt-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-bak">
+  <h2>Sauvegardes</h2>
+  <p class="muted">Emuglob sauvegarde ta bibliothèque et tes réglages automatiquement (toutes les 6 heures au plus, 10 gardées).</p>
+  <div id="bk-list"></div>
+  <div class="row" style="justify-content:flex-start"><button id="bk-exp">Exporter…</button><button id="bk-imp">Importer…</button></div>
+  <div class="row"><button id="bk-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-upd">
+  <h2>Mettre à jour Emuglob</h2>
+  <p id="up-ver"></p><p id="up-note" class="muted"></p>
+  <p class="muted">Télécharge le nouveau fichier <b>app.asar</b>, puis choisis-le ici : Emuglob se ferme, le remplace et se relance tout seul. L'ancienne version est gardée pour pouvoir revenir en arrière.</p>
+  <div class="row" style="justify-content:flex-start"><button id="up-pick">Choisir un nouvel app.asar…</button><button id="up-back">Revenir à la version précédente</button></div>
+  <div class="row"><button id="up-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-menu"><div id="m-list"></div></dialog>
+<div id="toast"></div>
+
+<script>
+const SYSTEMS = {
+  1:['Mega Drive / Genesis','picodrive_libretro'], 2:['Nintendo 64','mupen64plus_next_libretro'], 3:['Super Nintendo','snes9x_libretro'],
+  4:['Game Boy','gambatte_libretro'], 5:['Game Boy Advance','mgba_libretro'], 6:['Game Boy Color','gambatte_libretro'], 7:['NES','fceumm_libretro'],
+  8:['PC Engine','mednafen_pce_fast_libretro'], 11:['Master System','genesis_plus_gx_libretro'], 12:['PlayStation','mednafen_psx_libretro'],
+  13:['Atari Lynx','handy_libretro'], 14:['Neo Geo Pocket','mednafen_ngp_libretro'], 15:['Game Gear','genesis_plus_gx_libretro'],
+  18:['Nintendo DS','melondsds_libretro'], 25:['Atari 2600','stella_libretro'], 27:['Arcade','fbneo_libretro'],
+};
+// cores acceptés par RALibretro par console (d'après son cores.json, plateforme Windows 64 bits), du préféré au dernier recours
+const CORE_CANDS = {
+  1:['picodrive_libretro','genesis_plus_gx_libretro'], 2:['mupen64plus_next_libretro','parallel_n64_libretro'],
+  3:['snes9x_libretro','bsnes_mercury_balanced_libretro','bsnes_mercury_performance_libretro','mesen-s_libretro'],
+  4:['gambatte_libretro','mgba_libretro','gearboy_libretro','vbam_libretro'], 5:['mgba_libretro','vba_next_libretro','vbam_libretro','mednafen_gba_libretro'],
+  6:['gambatte_libretro','mgba_libretro','gearboy_libretro','vbam_libretro'], 7:['fceumm_libretro','mesen_libretro','quicknes_libretro'],
+  8:['mednafen_pce_fast_libretro','mednafen_supergrafx_libretro'], 11:['genesis_plus_gx_libretro','picodrive_libretro','gearsystem_libretro'],
+  12:['mednafen_psx_libretro','duckstation_libretro','swanstation_libretro','mednafen_psx_hw_libretro'], 13:['handy_libretro','mednafen_lynx_libretro'],
+  14:['mednafen_ngp_libretro'], 15:['genesis_plus_gx_libretro','picodrive_libretro','gearsystem_libretro'],
+  18:['melondsds_libretro','desmume_libretro'], 25:['stella_libretro'], 27:['fbneo_libretro','fbalpha_libretro'],
+};
+const BAD_CORES = new Set(['mednafen_pce_libretro', 'pcsx_rearmed_libretro', 'stella2014_libretro']);   // anciens réglages par défaut non supportés
+// choisit le core à lancer parmi ceux réellement installés
+function pickCore(g, inst) {
+  const cands = CORE_CANDS[g.system] || [];
+  if (!inst.length) return g.core || cands[0] || '';
+  if (g.coreManual && inst.includes(g.core)) return g.core;
+  return cands.find((c) => inst.includes(c)) || (inst.includes(g.core) ? g.core : '');
+}
+const EXT = {'.md':1,'.gen':1,'.smd':1,'.z64':2,'.n64':2,'.v64':2,'.sfc':3,'.smc':3,'.gb':4,'.gba':5,'.gbc':6,'.nes':7,'.pce':8,'.sms':11,
+  '.cue':12,'.chd':12,'.pbp':12,'.gg':15,'.lnx':13,'.ngp':14,'.ngc':14,'.nds':18,'.a26':25};
+const EXT_EMU = { '.nsp':'switch', '.xci':'switch', '.nsz':'switch', '.xcz':'switch', '.wbfs':'dolphin', '.rvz':'dolphin', '.wia':'dolphin', '.gcz':'dolphin', '.gcm':'dolphin', '.iso':'dolphin', '.cso':'ppsspp', '.3ds':'azahar', '.cci':'azahar', '.cxi':'azahar', '.3dsx':'azahar', '.cia':'azahar' };
+const DEFAULT_EMUS = [
+  { id:'ralibretro', name:'RALibretro', kind:'libretro', exe:'', args:'', builtin:true },
+  { id:'lichii', name:'Lichii (Switch 2)', lab:'Nintendo Switch 2', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
+  { id:'eden', name:'Eden', lab:'Nintendo Switch', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
+  { id:'dolphin', name:'Dolphin', lab:'Wii / GameCube', kind:'standalone', exe:'', args:'-b -e "{game}"', builtin:true },
+  { id:'pcsx2', name:'PCSX2', lab:'PlayStation 2', kind:'standalone', exe:'', args:'-batch -fullscreen -- "{game}"', builtin:true },
+  { id:'ppsspp', name:'PPSSPP', lab:'PSP', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
+  { id:'azahar', name:'Azahar', lab:'Nintendo 3DS', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
+];
+const RAM = 'https://media.retroachievements.org';
+// plateformes détectées dans les images disque : libellé d'onglet et id de console RetroAchievements
+// Switch 1 → Eden, Switch 2 → Lichii : le chemin du fichier doit contenir « Switch 2 » / « NX2 » pour Switch 2 (sinon Switch 1, modifiable par jeu)
+const emuForExt = (ext, path) => {
+  const e = EXT_EMU[ext] || 'ralibretro';
+  return e === 'switch' ? (/switch\s*2|nx2|\bns2\b/i.test(path) ? 'lichii' : 'eden') : e;
+};
+const PLAT = { wii:'Wii', gc:'GameCube', ps2:'PlayStation 2', psp:'PSP' };
+const PLAT_RA = { ps2:21, wii:19, gc:16, psp:41 };
+// dossiers du dépôt libretro-thumbnails (jaquettes "Named_Boxarts"), par id de système RetroAchievements
+const LRT = {
+  1:'Sega - Mega Drive - Genesis', 2:'Nintendo - Nintendo 64', 3:'Nintendo - Super Nintendo Entertainment System',
+  4:'Nintendo - Game Boy', 5:'Nintendo - Game Boy Advance', 6:'Nintendo - Game Boy Color', 7:'Nintendo - Nintendo Entertainment System',
+  8:'NEC - PC Engine - TurboGrafx 16', 11:'Sega - Master System - Mark III', 12:'Sony - PlayStation', 13:'Atari - Lynx',
+  14:'SNK - Neo Geo Pocket', 15:'Sega - Game Gear', 18:'Nintendo - Nintendo DS', 25:'Atari - 2600', 27:'FBNeo - Arcade Games',
+};
+
+// aspect de boîtier (largeur / hauteur de la face avant), couleur de tranche et type de boîtier par console
+const CONS = {
+  1:{n:'MEGA DRIVE',c:'#14141a',ar:.73}, 2:{n:'NINTENDO 64',c:'#2a3a8c',ar:.72}, 3:{n:'SUPER NINTENDO',c:'#7c7a86',ar:.7},
+  4:{n:'GAME BOY',c:'#6f8f3a',ar:.78}, 5:{n:'GAME BOY ADVANCE',c:'#4b3a9a',ar:.72}, 6:{n:'GAME BOY COLOR',c:'#8a3fb4',ar:.78},
+  7:{n:'NES',c:'#b01e1e',ar:.72}, 8:{n:'PC ENGINE',c:'#d9d9d9',t:'#222',ar:.72}, 11:{n:'MASTER SYSTEM',c:'#1b4f9c',ar:.72},
+  12:{n:'PLAYSTATION',c:'#1c2b73',ar:1,k:'disc'}, 13:{n:'LYNX',c:'#d86f00',ar:.72}, 14:{n:'NEO GEO POCKET',c:'#2a7fb0',ar:.75},
+  15:{n:'GAME GEAR',c:'#1b4f9c',ar:.75}, 18:{n:'NINTENDO DS',c:'#b8b8bf',t:'#222',ar:.8,k:'ds'}, 25:{n:'ATARI 2600',c:'#7a4a22',ar:.75},
+  27:{n:'ARCADE',c:'#8f1d1d',ar:.8},
+};
+function styleOf(g) {
+  const e = emuOf(g);
+  if (e.kind === 'libretro') {
+    const c = CONS[g.system];
+    return c ? { k:'box', t:'#fff', ...c } : { n:sysName(g.system).toUpperCase(), c:'#444', t:'#fff', ar:.72, k:'box' };
+  }
+  if (e.id === 'lichii') return { n:'SWITCH 2', c:'#d4202b', t:'#fff', ar:.72, k:'box' };
+  return { n:e.name.toUpperCase().slice(0, 18), c:`hsl(${hue(e.name)},60%,38%)`, t:'#fff', ar:({ dolphin:.71, pcsx2:.71, ppsspp:.6, azahar:.88, eden:.72 })[e.id] || .75, k:'box' };
+}
+
+// icônes vectorielles (traits, couleur = texte)
+function gearPath(n = 8, ro = 9.5, ri = 7.2) {
+  const st = (2 * Math.PI) / n, pts = [];
+  for (let i = 0; i < n; i++) {
+    for (const [da, r] of [[-0.3, ri], [-0.16, ro], [0.16, ro], [0.3, ri]]) {
+      const a = i * st + da * st;
+      pts.push((12 + r * Math.cos(a)).toFixed(2) + ',' + (12 + r * Math.sin(a)).toFixed(2));
+    }
+  }
+  return `<polygon points="${pts.join(' ')}"/><circle cx="12" cy="12" r="3.2"/>`;
+}
+const ICONS = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/>',
+  gear: gearPath(),
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  gamepad: '<rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="16" cy="11.5" r=".8" fill="currentColor"/><circle cx="18.6" cy="13.8" r=".8" fill="currentColor"/>',
+  power: '<path d="M12 3v8"/><path d="M18.4 6.6a8.5 8.5 0 1 1-12.8 0"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a1 1 0 0 0-1 1 3 3 0 0 0 3 3h1M16 6h3a1 1 0 0 1 1 1 3 3 0 0 1-3 3h-1"/><path d="M12 13v4M9 20h6M10 17h4"/>',
+  star: '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  right: '<path d="m9 6 6 6-6 6"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  more: '<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  dice: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
+  download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
+  flow: '<rect x="8.5" y="4" width="7" height="16" rx="1.2"/><path d="M4.5 7v10M19.5 7v10"/>',
+};
+const ic = (n, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+function hydrateIcons() {
+  document.querySelectorAll('[data-ic]').forEach((el) => { el.outerHTML = ic(el.dataset.ic); });
+}
+
+const $ = (s) => document.querySelector(s);
+let cfg = {}, mode = 'home', tab = 'game';
+let prog = {}, lists = {}, profile = null, recent = [];
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const save = () => api.saveConfig(cfg);
+const find = (id) => cfg.games.find((g) => g.id === id);
+const extOf = (p) => { const i = p.lastIndexOf('.'); return i < 0 ? '' : p.slice(i).toLowerCase(); };
+const stem = (p) => p.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+const hue = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+const fileUrl = (p) => {
+  const u = encodeURI(p.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F').replace(/'/g, '%27');
+  return u.startsWith('/') ? 'file://' + u : 'file:///' + u;
+};
+const sysName = (id) => (SYSTEMS[id] ? SYSTEMS[id][0] : 'Système ?');
+const emuOf = (g) => cfg.emulators.find((e) => e.id === g.emulator) || cfg.emulators[0];
+const hasLib = (g) => emuOf(g).kind === 'libretro';
+const labelOf = (g) => (hasLib(g) ? sysName(g.system) : PLAT[g.platform] || emuOf(g).lab || emuOf(g).name);
+const raSys = (g) => (hasLib(g) ? g.system : PLAT_RA[g.platform] || 0);
+const splitArgs = (s) => [...s.matchAll(/"([^"]*)"|(\S+)/g)].map((m) => (m[1] !== undefined ? m[1] : m[2]));
+const raOn = () => !!(cfg.ra && cfg.ra.user && cfg.ra.key);
+const norm = (s) => s.toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').replace(/&/g, 'and').replace(/,\s*the\b/g, '').replace(/^the\s+/, '').replace(/[^a-z0-9]/g, '');
+function artUrl(g) {
+  if (g.cover) return fileUrl(g.cover);
+  if (g.thumb) return fileUrl(g.thumb);
+  if (g.raBox) return RAM + g.raBox;
+  if (g.raIcon) return RAM + g.raIcon;
+  return '';
+}
+function caseHTML(g) {
+  const u = artUrl(g);
+  const ph = `<div class="ph" style="background:linear-gradient(135deg,hsl(${hue(g.title)},55%,38%),hsl(${(hue(g.title) + 50) % 360},55%,22%))">${esc(g.title.slice(0, 2).toUpperCase())}</div>`;
+  const img = u ? `<img src="${esc(u)}" alt="" onload="arLoad(this)" onerror="this.remove()">` : '';
+  return `<div class="case ${g.missing ? 'miss' : ''}"><div class="face">${ph}${img}</div></div>`;
+}
+// adapte la largeur du boîtier aux proportions réelles de la jaquette
+let arT;
+function arLoad(img) {
+  const el = img.closest('[data-gid]');
+  if (!el || !img.naturalHeight) return;
+  const g = find(el.dataset.gid);
+  if (!g) return;
+  const r = Math.max(0.55, Math.min(1.5, +(img.naturalWidth / img.naturalHeight).toFixed(3)));
+  if (Math.abs((g.ar || 0) - r) < 0.01) return;
+  g.ar = r; el.style.setProperty('--r', r);
+  if (mode === 'home') placeFlow();
+  clearTimeout(arT); arT = setTimeout(save, 1500);
+}
+function ago(t) {
+  const m = Math.floor((Date.now() - t) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `il y a ${h} h` : `il y a ${Math.floor(h / 24)} j`;
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), Math.max(2600, msg.length * 55));
+}
+
+/* ---------- identification des jeux (empreinte puis titre) ---------- */
+const ROMAN = new Map([['ii','2'],['iii','3'],['iv','4'],['vi','6'],['vii','7'],['viii','8'],['ix','9']]);
+const STOP = new Set(['the','a','an','of','and','disc','cd']);
+const toks = (s) => s.toLowerCase().replace(/\(.*?\)|\[.*?\]|~[^~]*~/g, ' ').replace(/&/g, ' and ').replace(/['’]/g, '')
+  .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map((t) => ROMAN.get(t) || t).filter((t) => !STOP.has(t));
+const mkKey = (k) => ({ k, set: new Set(k), num: k.filter((t) => /^\d+$/.test(t)).sort().join(',') });
+function dice(a, b) {
+  if (!a.set.size || !b.set.size || a.num !== b.num) return 0;   // "Sonic 2" ne doit jamais correspondre à "Sonic 3"
+  let n = 0;
+  for (const t of a.set) if (b.set.has(t)) n++;
+  return (2 * n) / (a.set.size + b.set.size);
+}
+const HASHABLE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14, 15, 25, 27]);
+const tIdx = {};
+let thumbBusy = false;
+
+async function raList(sys) {
+  if (lists[sys]) return lists[sys];
+  const r = await api.ra('GetGameList', { i: sys, f: 1, h: 1 }, 604800);
+  if (!r.ok || !Array.isArray(r.data)) return null;
+  const rows = [], byHash = new Map();
+  for (const x of r.data) {
+    const title = x.Title || x.title || '';
+    const row = { id: x.ID || x.id, title, icon: x.ImageIcon || x.imageIcon || '', skip: /^~|\[Subset/i.test(title), ...mkKey(toks(title)) };
+    rows.push(row);
+    for (const h of x.Hashes || x.hashes || []) byHash.set(String(h).toLowerCase(), row);
+  }
+  return (lists[sys] = { rows, byHash });
+}
+function fuzzy(g, rows) {
+  if (g.raQuery) {   // nom saisi par l'utilisateur : on cherche le titre le plus proche (seuil plus souple)
+    const q = mkKey(toks(g.raQuery));
+    let best = null, bs = 0;
+    for (const r of rows) { const sc = dice(q, r); if (sc > bs) { bs = sc; best = r; } }
+    return best && bs >= 0.6 ? best : null;
+  }
+  const qs = [stem(g.path), g.title].map((t) => mkKey(toks(t))).filter((q) => q.k.length);
+  let best = null, bs = 0, second = 0;
+  for (const r of rows) {
+    if (r.skip) continue;
+    let s = 0;
+    for (const q of qs) s = Math.max(s, dice(q, r));
+    if (s > bs) { second = bs; bs = s; best = r; } else if (s > second) second = s;
+  }
+  return best && bs >= 0.84 && (bs - second >= 0.03 || bs >= 0.99) ? best : null;
+}
+function matchIn(g, L) {
+  let m = g.hash && !g.raQuery ? L.byHash.get(g.hash) : null;
+  g.raBy = m ? 'empreinte' : 'titre';
+  if (!m) m = fuzzy(g, L.rows);
+  g.raV = 3;
+  g.raId = m ? m.id : -1;
+  if (m) { g.raIcon = m.icon; g.raTitle = m.title; }
+}
+async function matchGame(g) {
+  if (hasLib(g) && HASHABLE.has(g.system) && g.hash === undefined) g.hash = (await api.hashGame(g.path, g.system)) || '';
+  const L = await raList(raSys(g));
+  if (L) matchIn(g, L);
+}
+async function autoMatch() {
+  if (!raOn()) return;
+  const todo = cfg.games.filter((g) => raSys(g) && !g.raManual && (g.raId === undefined || (g.raId === -1 && g.raV !== 3)));
+  if (!todo.length) return;
+  for (const g of todo) await matchGame(g);
+  save(); render(); findThumbs();
+}
+
+/* ---------- jaquettes : libretro-thumbnails (recherche floue) puis RetroAchievements ---------- */
+function thumbFolders(g) {
+  const e = emuOf(g);
+  if (e.kind === 'libretro') return LRT[g.system] ? [LRT[g.system]] : [];
+  const P = { wii:['Nintendo - Wii'], gc:['Nintendo - GameCube'], ps2:['Sony - PlayStation 2'], psp:['Sony - PlayStation Portable'] };
+  if (P[g.platform]) return P[g.platform];
+  if (e.id === 'azahar') return ['Nintendo - Nintendo 3DS'];
+  return e.id === 'dolphin' ? ['Nintendo - Wii', 'Nintendo - GameCube'] : [];
+}
+// jaquettes de secours trouvées grâce au numéro de série / à l'identifiant du jeu
+function gametdbUrls(sys, id) {
+  const reg = { E:['US'], P:['FR','EN','DE'], J:['JA'], K:['KO'], U:['AU'], D:['DE'], F:['FR'], I:['IT'], S:['ES'], H:['NL'], R:['RU'], X:['EN'], Y:['EN'] }[id[3]] || ['US', 'EN'];
+  return ['cover3D', 'cover'].flatMap((t) => reg.map((r) => `https://art.gametdb.com/${sys}/${t}/${r}/${id}.png`));
+}
+function extraCoverUrls(g) {
+  const id = g.serial || '';
+  if (!id) return [];
+  const X = 'https://raw.githubusercontent.com/xlenore/';
+  if (g.platform === 'ps2') return [`${X}ps2-covers/main/covers/3d/${id}.png`, `${X}ps2-covers/main/covers/default/${id}.jpg`];
+  if (g.platform === 'ps1' || (hasLib(g) && g.system === 12)) return [`${X}psx-covers/main/covers/3d/${id}.png`, `${X}psx-covers/main/covers/default/${id}.jpg`];
+  if (g.platform === 'wii' || g.platform === 'gc') return gametdbUrls('wii', id);
+  if (hasLib(g) && g.system === 18) return gametdbUrls('ds', id);
+  return [];
+}
+async function thumbList(folder) {
+  if (folder in tIdx) return tIdx[folder];
+  const names = await api.thumbList(folder);
+  return (tIdx[folder] = names ? names.map((name) => ({ name, ...mkKey(toks(name)) })) : null);
+}
+const thumbUrl = (folder, n) => `https://raw.githubusercontent.com/libretro-thumbnails/${folder.replace(/ /g, '_')}/master/Named_Boxarts/${encodeURIComponent(n)}.png`;
+function pickThumb(list, g) {
+  const qs = [g.raTitle, g.title, stem(g.path)].filter(Boolean).map((t) => mkKey(toks(t))).filter((q) => q.k.length);
+  const full = stem(g.path).toLowerCase();
+  let best = null, bs = 0;
+  for (const c of list) {
+    let d = 0;
+    for (const q of qs) d = Math.max(d, dice(q, c));
+    if (d < 0.85) continue;
+    const s = d * 10 + (c.name.toLowerCase() === full ? 5 : 0) +
+      (/france/i.test(c.name) ? 0.04 : /europe/i.test(c.name) ? 0.03 : /world/i.test(c.name) ? 0.02 : /usa/i.test(c.name) ? 0.01 : 0);
+    if (s > bs) { bs = s; best = c; }
+  }
+  return best && best.name;
+}
+async function findThumbs() {
+  if (thumbBusy) return { tried: 0, found: 0 };
+  const todo = cfg.games.filter((g) => (thumbFolders(g).length || extraCoverUrls(g).length) && !g.cover && !g.thumb && g.thumbV !== 3);
+  thumbBusy = true;
+  let found = 0, i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const g = todo[i++];
+      let ok = false, listsOk = true;
+      for (const folder of thumbFolders(g)) {
+        const list = await thumbList(folder);
+        const urls = [];
+        const name = list ? pickThumb(list, g) : null;
+        if (name) urls.push(thumbUrl(folder, name));
+        else if (!list) {   // liste indisponible (hors ligne, limite GitHub) : essais directs avec les mentions de région usuelles
+          listsOk = false;
+          const b = (g.raTitle || g.title).replace(/\s*[\(\[].*$/, '').trim();
+          for (const t of [stem(g.path), `${b} (Europe)`, `${b} (USA)`, `${b} (World)`, `${b} (Japan)`, `${b} (USA, Europe)`]) urls.push(thumbUrl(folder, t.replace(/[&*\/:`<>?\\|]/g, '_')));
+        }
+        for (const u of [...new Set(urls)]) {
+          const p = await api.downloadCover(u, g.id);
+          if (p) { g.thumb = p; g.thumbUrl = u; found++; ok = true; break; }
+        }
+        if (ok) break;
+      }
+      if (!ok) {   // rien trouvé par le nom : essai par numéro de série
+        for (const u of extraCoverUrls(g)) {
+          const p = await api.downloadCover(u, g.id);
+          if (p) { g.thumb = p; g.thumbUrl = u; found++; ok = true; break; }
+        }
+      }
+      if (ok || listsOk) g.thumbV = 3;
+    }
+  };
+  try { await Promise.all([worker(), worker(), worker()]); } finally { thumbBusy = false; }
+  found += await fillRaBoxes();
+  save();
+  if (found) render();
+  return { tried: todo.length, found };
+}
+// dernier recours : jaquette officielle du jeu sur RetroAchievements
+async function fillRaBoxes() {
+  if (!raOn()) return 0;
+  let n = 0;
+  for (const g of cfg.games.filter((x) => x.raId > 0 && !x.cover && !x.thumb && !x.raBox && !x.raBoxTried).slice(0, 40)) {
+    g.raBoxTried = true;
+    const r = await api.ra('GetGame', { i: g.raId }, 2592000);
+    const box = r.ok && r.data && (r.data.ImageBoxArt || r.data.imageBoxArt);
+    if (box) { g.raBox = box; n++; }
+  }
+  return n;
+}
+
+/* ---------- RetroAchievements : progression ---------- */
+async function loadProg(g, force) {
+  const p = prog[g.raId];
+  if (p && !force && Date.now() - p.t < 300000) return;
+  const r = await api.ra('GetGameInfoAndUserProgress', { g: g.raId }, force ? 0 : 30);
+  if (!r.ok || !r.data || r.data.Achievements === undefined) return;
+  prog[g.raId] = { t: Date.now(), data: r.data };
+  if (r.data.ImageBoxArt && g.raBox !== r.data.ImageBoxArt) { g.raBox = r.data.ImageBoxArt; save(); render(); }
+}
+function stats(g) {
+  const p = g && g.raId > 0 && prog[g.raId];
+  if (!p) return null;
+  const all = Object.values(p.data.Achievements || {});
+  const got = all.filter((a) => a.DateEarned || a.DateEarnedHardcore);
+  return { all, got, total: p.data.NumAchievements || all.length, pts: got.reduce((s, a) => s + (a.Points || 0), 0) };
+}
+async function ensureRA(g) {
+  if (!g || !raOn() || !raSys(g)) return;
+  if (g.raId === undefined) { await matchGame(g); save(); }
+  if (g.raId > 0) await loadProg(g);
+  if (cur() === g) { renderInfo(); renderBottom(); }
+}
+async function refreshRA() {
+  if (!raOn()) { profile = null; recent = []; }
+  else {
+    const [p, r] = await Promise.all([api.ra('GetUserProfile', {}, 0), api.ra('GetUserRecentAchievements', { m: 10080 }, 0)]);
+    profile = p.ok ? p.data : null;
+    recent = r.ok && Array.isArray(r.data) ? r.data : [];
+  }
+  renderUser(); renderBottom();
+}
+let raT;
+const scheduleRA = () => { clearTimeout(raT); raT = setTimeout(() => ensureRA(cur()), 250); };
+
+/* ---------- accueil : cover flow par console ---------- */
+const FLOWC = { 1:'#2563eb', 2:'#16a34a', 3:'#7c3aed', 4:'#84a526', 5:'#4f46e5', 6:'#c026d3', 7:'#dc2626', 8:'#f59e0b', 11:'#2563eb',
+  12:'#3b82f6', 13:'#ea580c', 14:'#0891b2', 15:'#0ea5e9', 18:'#64748b', 25:'#a16207', 27:'#be123c' };
+const FLOW_HINTS = [['A','Jouer'], ['X','Options'], ['Y','Favori'], ['LB / RB','Console'], ['Gauche / Droite','Jeux'], ['Haut / Bas','Console']];
+let fcons = [], fci = 0, fgames = [], fi = 0;
+const fpos = {};
+const alpha = (a, b) => a.title.localeCompare(b.title);
+function fmtDur(sec) {
+  const m = Math.round(sec / 60);
+  if (m < 1) return "moins d'1 min";
+  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
+}
+function flowColor(g) {
+  const e = emuOf(g);
+  if (e.kind === 'libretro') return FLOWC[g.system] || '#475569';
+  if (e.id === 'lichii') return '#a855f7';
+  if (e.id === 'eden') return '#e60012';
+  const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
+  return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
+}
+// onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
+function tabsList() {
+  const gs = cfg.games;
+  const played = gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const rest = gs.filter((g) => !g.lastPlayed).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || alpha(a, b));
+  const tabs = [{ key: '__recent', label: 'Récents', games: [...played, ...rest].slice(0, 80) }];
+  const fav = gs.filter((g) => g.favorite).sort(alpha);
+  if (fav.length) tabs.push({ key: '__fav', label: 'Favoris', games: fav });
+  const by = new Map();
+  gs.forEach((g) => { const k = labelOf(g); if (!by.has(k)) by.set(k, []); by.get(k).push(g); });
+  [...by].sort((a, b) => a[0].localeCompare(b[0])).forEach(([k, list]) => tabs.push({ key: k, label: k, games: list.sort(alpha) }));
+  return tabs;
+}
+const cur = () => fgames[fi] || null;
+
+function render() {
+  fcons = tabsList();
+  fci = Math.max(0, fcons.findIndex((t) => t.key === cfg.flowCons));
+  const t = fcons[fci];
+  fgames = t.games;
+  fi = Math.max(0, fgames.findIndex((g) => g.id === fpos[t.key]));
+  $('#f-tabs').innerHTML = fcons.map((x, k) => `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}">${esc(x.label)}</button>`).join('');
+  $('#f-items').innerHTML = fgames.map((g) => `<div class="fi" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}</div>`).join('');
+  placeFlow(); renderInfo(); renderBottom(); renderUser();
+  const on = $('#f-tabs .on');
+  if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+
+function placeFlow() {
+  const st = $('#f-stage'), cg = fgames[fi];
+  if (!cg) return;
+  const Hc = Math.max(160, Math.min(st.clientHeight * 0.66, 540));
+  st.style.setProperty('--FH', Hc + 'px');
+  const Wc = Hc * (cg.ar || styleOf(cg).ar);
+  [...$('#f-items').children].forEach((el, i) => {
+    const d = i - fi, ah = Math.abs(d), sg = Math.sign(d);
+    let tr, z, f = 'none';
+    if (!d) { tr = 'translateX(0) translateZ(90px) rotateY(0deg) scale(1)'; z = 100; }
+    else {
+      const x = sg * (Wc / 2 + Hc * 0.24 + (ah - 1) * Hc * 0.105);
+      tr = `translateX(${x.toFixed(1)}px) translateZ(${-ah * 6}px) rotateY(${-sg * 66}deg) scale(${Math.max(0.5, 0.74 - ah * 0.01).toFixed(3)})`;
+      z = 100 - ah; f = `brightness(${Math.max(0.4, 1 - ah * 0.07).toFixed(2)})`;
+    }
+    el.style.transform = tr; el.style.zIndex = z; el.style.filter = f;
+    el.style.opacity = ah > 11 ? 0 : 1; el.style.pointerEvents = ah > 11 ? 'none' : '';
+    el.classList.toggle('cc', !d);
+  });
+}
+function flowSet(i) {
+  if (!fgames.length) return;
+  fi = Math.max(0, Math.min(fgames.length - 1, i));
+  fpos[fcons[fci].key] = fgames[fi].id;
+  placeFlow(); renderInfo(); renderBottom(); scheduleRA();
+}
+const flowMove = (d) => flowSet(fi + d);
+function flowCons(step) {
+  cfg.flowCons = fcons[(fci + step + fcons.length) % fcons.length].key;
+  save(); render(); scheduleRA();
+}
+// met un jeu au centre (dans l'onglet de sa console)
+function focusGame(g) {
+  if (!g) return;
+  cfg.flowCons = labelOf(g);
+  fpos[cfg.flowCons] = g.id;
+  render(); scheduleRA();
+}
+
+function raLine(g) {
+  if (!raOn() || !raSys(g)) return '';
+  if (g.raId === -1) return '<span style="opacity:.7">Succès : jeu non reconnu sur RetroAchievements</span>';
+  const s = stats(g);
+  if (!s) return '<span style="opacity:.7">Succès : chargement…</span>';
+  const pc = s.total ? Math.round((100 * s.got.length) / s.total) : 0;
+  return `${ic('trophy')} ${s.got.length}/${s.total} succès · ${s.pts} pts<div class="bar"><i style="width:${pc}%"></i></div>`;
+}
+function renderInfo() {
+  const g = cur(), n = cfg.games.length;
+  $('#btn-play').style.visibility = $('#btn-more').style.visibility = $('#btn-rand').style.visibility = g ? '' : 'hidden';
+  $('#tint').style.setProperty('--fcc', g ? flowColor(g) : '#5b46d6');
+  if (!g) {
+    $('#f-title').textContent = n ? 'Aucun jeu dans cet onglet' : 'Bienvenue dans Emuglob';
+    $('#f-sub').textContent = n ? '' : 'Ajoute tes jeux dans l\'onglet Paramètres';
+    $('#prog').innerHTML = '';
+    return;
+  }
+  $('#f-title').textContent = g.title;
+  const parts = [labelOf(g), extOf(g.path).slice(1).toUpperCase()].filter(Boolean);
+  parts.push(g.lastPlayed ? `Dernière partie ${ago(g.lastPlayed)}` : 'Jamais lancé');
+  if (g.playCount) parts.push(`${g.playCount} partie(s)`);
+  if (g.playSeconds >= 60) parts.push(fmtDur(g.playSeconds) + ' de jeu');
+  if (g.favorite) parts.push('Favori');
+  if (g.missing) parts.push('Fichier introuvable');
+  $('#f-sub').textContent = parts.join(' · ');
+  $('#prog').innerHTML = raLine(g);
+}
+function renderBottom() {
+  const s = stats(cur());
+  $('#bottom').innerHTML = `<div class="btile" data-b="0"><span class="ic">${ic('trophy')}</span><div><b>Trophées</b>` +
+    (raOn()
+      ? `<div class="t3"><span title="Points">${ic('star')} ${profile ? profile.TotalPoints : '–'}</span><span title="Ce jeu">${ic('gamepad')} ${s ? s.got.length + '/' + s.total : '–'}</span><span title="Débloqués (7 jours)">${ic('clock')} ${recent.length}</span></div>`
+      : '<br><small>Lier RetroAchievements</small>') + '</div></div>';
+}
+function renderUser() {
+  const a = $('#avatar');
+  if (profile && profile.UserPic) { a.style.backgroundImage = `url('${RAM}${profile.UserPic}')`; a.textContent = ''; }
+  else { a.style.backgroundImage = ''; a.textContent = ((cfg.ra && cfg.ra.user) || 'E').slice(0, 1).toUpperCase(); }
+}
+function applyWall() {
+  document.body.style.setProperty('--wall', cfg.wallpaper ? `url('${fileUrl(cfg.wallpaper)}')` : 'none');
+}
+function toggleFav(g = cur()) {
+  if (!g) return;
+  g.favorite = !g.favorite; save(); render();
+}
+
+/* ---------- lancement ---------- */
+async function launch(g, opts = {}) {
+  if (!g) return;
+  if (g.missing) {   // disque débranché ? on revérifie avant de refuser
+    const [there] = await api.filesExist([g.path]);
+    if (!there) return toast(`Fichier introuvable : ${g.path}. Disque débranché ?`);
+    g.missing = false; render();
+  }
+  const emu = emuOf(g);
+  if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
+  let args;
+  if (emu.kind === 'libretro') {
+    if (!g.system) return toast('Définis le système (Options, puis Modifier).');
+    const core = pickCore(g, (await api.coresInstalled(emu.exe)) || []);
+    if (!core) return toast(`Aucun core ${sysName(g.system)} dans le dossier Cores de RALibretro. Dans RALibretro : menu Core, Télécharger. Cores possibles : ${(CORE_CANDS[g.system] || []).join(', ')}.`);
+    if (core !== g.core) { g.core = core; save(); }
+    args = ['--core', core, '--system', String(g.system), '--game', g.path];
+  } else {
+    const tpl = emu.args && emu.args.includes('{game}') ? emu.args : (emu.args || '') + ' "{game}"';
+    args = splitArgs(tpl).map((a) => a.split('{game}').join(g.path));
+  }
+  const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
+  if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
+  const sync = cfg.shareSaves !== false ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu) } : null;
+  const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', sync });
+  if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
+  playing = g; playStart = Date.now(); presence(g);
+  if (g.raId > 0) loadProg(g).then(() => { if (playing === g) presence(g); });
+  if (r.saves && r.saves.action === 'copied') setTimeout(() => toast(`Sauvegarde reprise depuis ${r.saves.from} (l'ancienne est gardée en copie).`), 1500);
+  else if (r.saves && r.saves.action === 'error') setTimeout(() => toast('Sauvegardes non synchronisées : ' + r.saves.error), 1500);
+  if (embed && !r.embedding) leaveGame();
+  g.lastPlayed = Date.now(); g.playCount = (g.playCount || 0) + 1; save();
+  toast('Lancement de ' + g.title + '…');
+  render();
+}
+
+/* ---------- Discord Rich Presence ---------- */
+let playing = null, playStart = 0;
+const plainEmu = (e) => ({ id: e.id, name: e.name, kind: e.kind, exe: e.exe || '', shareSaves: !!e.shareSaves, saveDir: e.saveDir || '', saveExt: e.saveExt || '' });
+function presence(g) {
+  const id = cfg.discord && cfg.discord.id;
+  if (!id) return api.discord('', null);
+  if (!g) return api.discord(id, null);
+  const txt = (s) => { s = String(s); return (s.length < 2 ? s + '  ' : s).slice(0, 128); };
+  const st = stats(g);
+  const a = { type: 0, status_display_type: 2, details: txt(g.title), timestamps: { start: playStart || Date.now() },
+    state: txt(labelOf(g) + (st && st.total ? ` · ${st.got.length}/${st.total} succès` : '')) };
+  const img = g.thumbUrl || (g.raBox ? RAM + g.raBox : g.raIcon ? RAM + g.raIcon : '');
+  const assets = {};
+  if (img) { assets.large_image = img; assets.large_text = txt(g.title); }
+  if (profile && profile.UserPic && cfg.ra && cfg.ra.user) { assets.small_image = RAM + profile.UserPic; assets.small_text = txt(cfg.ra.user + (profile.TotalPoints ? ` · ${profile.TotalPoints} pts` : '')); }
+  if (Object.keys(assets).length) a.assets = assets;
+  if (g.raId > 0) a.buttons = [{ label: 'Voir sur RetroAchievements', url: `https://retroachievements.org/game/${g.raId}` }];
+  return api.discord(id, a);
+}
+
+/* ---------- bibliothèque (par console, sections repliables) ---------- */
+function openLibrary(focusSearch) {
+  closeOv();
+  setTop('');
+  mode = 'library'; $('#ov-lib').hidden = false; $('#lib-q').value = ''; renderLib();
+  (focusSearch ? $('#lib-q') : $('.lhead') || $('#lib-q')).focus();
+}
+function libGroups() {
+  const q = $('#lib-q').value.toLowerCase(), by = new Map();
+  cfg.games.filter((g) => g.title.toLowerCase().includes(q)).forEach((g) => {
+    const k = labelOf(g);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(g);
+  });
+  return [...by].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function renderLib() {
+  const q = $('#lib-q').value;
+  cfg.open = cfg.open || {};
+  const groups = libGroups();
+  $('#lib-body').innerHTML = groups.length ? groups.map(([k, gs], idx) => {
+    const open = q ? true : (k in cfg.open ? cfg.open[k] : idx === 0);
+    return `<div class="lhead" tabindex="0" data-k="${esc(k)}" data-open="${open ? 1 : 0}"><span class="ch">${ic(open ? 'down' : 'right')}</span>${esc(k)} <small>${gs.length} jeu(x)</small></div>` +
+      (open ? '<div class="lgrid">' + gs.sort((a, b) => a.title.localeCompare(b.title)).map((g) =>
+        `<div class="lcard" tabindex="0" data-id="${g.id}" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}<div class="lt">${esc(g.title)}</div></div>`).join('') + '</div>' : '');
+  }).join('') : '<p class="muted">Aucun jeu.</p>';
+}
+function setAllOpen(v) {
+  cfg.open = cfg.open || {};
+  libGroups().forEach(([k]) => { cfg.open[k] = v; });
+  save(); renderLib();
+}
+function setTop(name) {
+  ['jeux', 'fr', 'set', 'tro'].forEach((k) => $('#tab-' + k).classList.toggle('on', k === name));
+}
+function closeOv() {
+  $('#ov-pro').hidden = true; setTop('jeux');
+  $('#ov-lib').hidden = true; $('#ov-tro').hidden = true; $('#ov-fr').hidden = true; $('#ov-set').hidden = true; mode = 'home';
+}
+
+/* ---------- trophées = succès RetroAchievements ---------- */
+const achRow = (a) => `<div class="ach ${a.lock ? 'lock' : ''}"><img src="${RAM}/Badge/${esc(a.badge)}${a.lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'">
+  <div class="tx"><b>${esc(a.title)}</b><small>${esc(a.desc)}</small>${a.extra ? `<small>${esc(a.extra)}</small>` : ''}</div><div class="pts">${a.pts} pts</div></div>`;
+
+async function openTrophies() {
+  closeOv();
+  if (!raOn()) { toast('Renseigne ton pseudo et ta clé API RetroAchievements.'); return openSettings(); }
+  mode = 'trophies'; setTop('tro'); $('#ov-tro').hidden = false; renderTro();
+  await refreshRA();
+  const g = cur();
+  if (g && g.raId > 0) await loadProg(g, true);
+  if (mode === 'trophies') renderTro();
+}
+function renderTro() {
+  const g = cur(), s = stats(g);
+  const pic = profile && profile.UserPic ? `style="background-image:url('${RAM}${profile.UserPic}')"` : '';
+  $('#tro-head').innerHTML = `<div class="av" ${pic}></div><h2>${esc(cfg.ra.user)}<br><small class="muted">${profile ? profile.TotalPoints + ' pts hardcore' + (profile.TotalSoftcorePoints ? ' · ' + profile.TotalSoftcorePoints + ' pts softcore' : '') : '…'}</small></h2>
+    <button class="${tab === 'game' ? 'on' : ''}" data-t="game">Jeu sélectionné</button><button class="${tab === 'recent' ? 'on' : ''}" data-t="recent">Débloqués (7 jours)</button><button id="tro-close">${ic('close')} Fermer</button>`;
+  let body;
+  if (tab === 'game') {
+    if (!g) body = '<p class="muted">Sélectionne un jeu sur l\'accueil pour voir ses succès.</p>';
+    else if (!raSys(g)) body = '<p class="muted">Pas de succès RetroAchievements pour cette console.</p>';
+    else if (g.raId === -1) body = '<p class="muted">Ce jeu n\'a pas été reconnu. Renseigne son ID RetroAchievements dans Options, puis Modifier.</p>';
+    else if (!s) body = '<p class="muted">Chargement…</p>';
+    else {
+      const date = (a) => a.DateEarned || a.DateEarnedHardcore;
+      const un = [...s.got].sort((a, b) => date(b).localeCompare(date(a)));
+      const lo = s.all.filter((a) => !date(a)).sort((a, b) => a.DisplayOrder - b.DisplayOrder);
+      body = `<h3>${esc(g.title)} <small>${s.got.length}/${s.total} · ${s.pts} pts</small></h3>` +
+        [...un.map((a) => ({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, extra:'Débloqué le ' + date(a).slice(0, 10) })),
+         ...lo.map((a) => ({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, lock:true }))].map(achRow).join('');
+    }
+  } else {
+    body = recent.length
+      ? recent.map((a) => achRow({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, extra:`${a.GameTitle} · ${a.ConsoleName} · ${a.Date.slice(0, 10)}` })).join('')
+      : '<p class="muted">Aucun succès débloqué ces 7 derniers jours.</p>';
+  }
+  $('#tro-body').innerHTML = body;
+}
+
+/* ---------- profil RetroAchievements (clic sur l'avatar) ---------- */
+let proData = null;
+async function openProfile() {
+  closeOv(); setTop(''); mode = 'profile'; $('#ov-pro').hidden = false;
+  if (!raOn()) { $('#pro-body').innerHTML = '<p class="muted">Lie ton compte RetroAchievements pour voir ton profil.</p><button class="fb" id="pro-link">Lier mon compte</button>' + localStatsHTML(); return; }
+  $('#pro-body').innerHTML = '<p class="muted">Chargement du profil…</p>';
+  const [p, aw, c0] = await Promise.all([api.ra('GetUserProfile', {}, 0), api.ra('GetUserAwards', {}, 300), api.ra('GetUserCompletionProgress', { c: 500, o: 0 }, 600)]);
+  const games = [];
+  let total = 0;
+  const take = (r) => {
+    if (!r || !r.ok || !r.data) return 0;
+    const arr = r.data.Results || r.data.results || [];
+    total = r.data.Total ?? r.data.total ?? total;
+    games.push(...arr);
+    return arr.length;
+  };
+  let n = take(c0);
+  for (let o = 500; n === 500 && games.length < total && o < 2500; o += 500) n = take(await api.ra('GetUserCompletionProgress', { c: 500, o }, 600));
+  proData = { p: p.ok ? p.data : null, a: aw.ok ? aw.data : null, games, total: total || games.length, err: p.error || aw.error };
+  if (mode === 'profile') renderPro();
+}
+function renderPro() {
+  const { p, a, games, total, err } = proData;
+  if (!p && !a) { $('#pro-body').innerHTML = `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`; return; }
+  const num = (v) => (v === undefined || v === null ? '–' : Number(v).toLocaleString('fr-FR'));
+  const kind = (x) => x.HighestAwardKind || x.highestAwardKind || '';
+  const finished = games.filter((x) => kind(x)).length;
+  const mastered = a ? (a.MasteryAwardsCount || 0) + (a.CompletionAwardsCount || 0) : games.filter((x) => /mastered|completed/.test(kind(x))).length;
+  const unlocked = games.reduce((s, x) => s + (x.NumAwarded ?? x.numAwarded ?? 0), 0);
+  const cards = [
+    ['Points (hardcore)', p && p.TotalPoints], ['Points (softcore)', p && p.TotalSoftcorePoints], ['RetroPoints', p && p.TotalTruePoints],
+    ['Jeux terminés', total > games.length && a ? mastered + (a.BeatenHardcoreAwardsCount || 0) + (a.BeatenSoftcoreAwardsCount || 0) : finished],
+    ['Jeux maîtrisés', mastered], ['Jeux joués', total], ['Succès débloqués', unlocked], ['Récompenses', a && a.TotalAwardsCount], ['Succès (7 jours)', recent.length],
+  ];
+  const awards = ((a && a.VisibleUserAwards) || []).filter((x) => /Mastery|Beaten/.test(x.AwardType)).sort((x, y) => (y.AwardedAt || '').localeCompare(x.AwardedAt || '')).slice(0, 12);
+  const label = (x) => (x.AwardType === 'Game Beaten' ? 'Terminé' : x.AwardDataExtra ? 'Maîtrisé' : 'Complété');
+  const pic = p && p.UserPic ? `style="background-image:url('${RAM}${p.UserPic}')"` : '';
+  $('#pro-body').innerHTML = `<div class="pro-head"><div class="av" ${pic}></div><div><h3>${esc((p && p.User) || cfg.ra.user)}</h3>
+    ${p && p.Motto ? `<small>${esc(p.Motto)}</small>` : ''}${p && p.MemberSince ? `<small>Membre depuis le ${esc(String(p.MemberSince).slice(0, 10))}</small>` : ''}${p && p.RichPresenceMsg ? `<small>${esc(p.RichPresenceMsg)}</small>` : ''}</div></div>
+    <div class="stats">${cards.map(([t, v]) => `<div class="st"><b>${num(v)}</b><small>${t}</small></div>`).join('')}</div>` +
+    (awards.length ? `<h3>Derniers jeux terminés</h3>` + awards.map((x) => `<div class="ach"><img src="${RAM}${esc(x.ImageIcon || '')}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="tx"><b>${esc(x.Title)}</b><small>${esc(x.ConsoleName || '')} · ${esc(label(x))} · ${esc((x.AwardedAt || '').slice(0, 10))}</small></div></div>`).join('') : '') + localStatsHTML();
+}
+
+/* ---------- entretien de la bibliothèque : fichiers introuvables, dossiers surveillés, doublons ---------- */
+let lastFileCheck = 0, autoInit = null, checking = false;
+async function checkFiles() {
+  if (checking || !cfg.games.length) return;
+  checking = true;
+  try {
+    const ok = await api.filesExist(cfg.games.map((g) => g.path));
+    let changed = false;
+    cfg.games.forEach((g, i) => { const miss = !ok[i]; if (!!g.missing !== miss) { g.missing = miss; changed = true; } });
+    if (changed) render();
+  } finally { checking = false; }
+}
+async function rescanFolders(silent) {
+  let added = 0;
+  const exts = [...Object.keys(EXT), ...Object.keys(EXT_EMU)];
+  for (const dir of cfg.folders || []) {
+    const res = await api.scanPath(dir, exts);
+    if (res.missing) continue;   // dossier absent (disque débranché) : on ne touche à rien
+    const known = new Set(cfg.games.map((g) => g.path));
+    for (const p of res.files) if (!known.has(p)) { cfg.games.push(makeGame(p)); added++; }
+  }
+  if (added) { await identifyDiscs(); save(); render(); autoMatch(); findThumbs(); toast(`${added} nouveau(x) jeu(x) trouvé(s) dans tes dossiers.`); }
+  else if (!silent) toast((cfg.folders || []).length ? 'Aucun nouveau jeu.' : 'Aucun dossier surveillé : utilise « Scanner un dossier ».');
+  return added;
+}
+function dupGroups() {
+  const by = new Map();
+  cfg.games.forEach((g) => {
+    const t = toks(g.title).join(' ');
+    if (!t) return;
+    const k = t + '|' + labelOf(g);
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(g);
+  });
+  return [...by.values()].filter((a) => a.length > 1);
+}
+function openMaint() {
+  const d = $('#dlg-maint');
+  const refresh = () => {
+    const dirs = cfg.folders || [], miss = cfg.games.filter((g) => g.missing), dups = dupGroups();
+    $('#mt-dirs').innerHTML = dirs.length ? dirs.map((x, i) => `<div class="mrow"><span>${esc(x)}</span><button data-rm="${i}">Retirer</button></div>`).join('') : '<p class="muted">Aucun dossier surveillé. « Scanner un dossier » en ajoute un.</p>';
+    $('#mt-miss').textContent = miss.length ? `${miss.length} jeu(x) dont le fichier est introuvable (disque débranché ?).` : 'Tous les fichiers sont présents.';
+    $('#mt-rmmiss').disabled = !miss.length;
+    $('#mt-dup').textContent = dups.length ? `${dups.length} jeu(x) en double (même titre, même console).` : 'Aucun doublon.';
+    $('#mt-rmdup').disabled = !dups.length;
+  };
+  $('#mt-dirs').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) { cfg.folders.splice(Number(b.dataset.rm), 1); save(); refresh(); } };
+  $('#mt-now').onclick = async () => { await rescanFolders(false); await checkFiles(); refresh(); };
+  $('#mt-check').onclick = async () => { await checkFiles(); refresh(); toast('Fichiers vérifiés.'); };
+  $('#mt-rmmiss').onclick = () => {
+    const n = cfg.games.filter((g) => g.missing).length;
+    if (!confirm(`Retirer ${n} jeu(x) dont le fichier est introuvable de la bibliothèque ? (Les fichiers ne sont pas touchés.)`)) return;
+    cfg.games = cfg.games.filter((g) => !g.missing); save(); render(); refresh();
+  };
+  $('#mt-rmdup').onclick = () => {
+    const drop = new Set();
+    dupGroups().forEach((a) => {
+      const keep = [...a].sort((x, y) => (x.missing ? 1 : 0) - (y.missing ? 1 : 0) || (y.playSeconds || 0) - (x.playSeconds || 0) || (y.lastPlayed || 0) - (x.lastPlayed || 0) || (y.favorite ? 1 : 0) - (x.favorite ? 1 : 0))[0];
+      a.forEach((g) => { if (g !== keep) drop.add(g); });
+    });
+    if (!confirm(`Retirer ${drop.size} doublon(s) de la bibliothèque ? Pour chaque jeu, la version la plus jouée est gardée. (Les fichiers ne sont pas touchés.)`)) return;
+    cfg.games = cfg.games.filter((g) => !drop.has(g)); save(); render(); refresh();
+  };
+  $('#mt-ok').onclick = () => d.close();
+  refresh(); d.showModal();
+}
+
+/* ---------- sauvegardes, mise à jour, hasard, statistiques ---------- */
+async function openBackups() {
+  const d = $('#dlg-bak');
+  const list = await api.backupsList();
+  $('#bk-list').innerHTML = list.length
+    ? list.map((b) => `<div class="mrow"><span>${esc(new Date(b.mtime).toLocaleString('fr-FR'))} · ${b.games === null ? 'illisible' : b.games + ' jeu(x)'}</span><button data-r="${esc(b.name)}" ${b.games === null ? 'disabled' : ''}>Restaurer</button></div>`).join('')
+    : '<p class="muted">Aucune sauvegarde pour l\'instant.</p>';
+  $('#bk-list').onclick = async (e) => {
+    const b = e.target.closest('[data-r]');
+    if (!b || !confirm('Restaurer cette sauvegarde ? La configuration actuelle est sauvegardée avant.')) return;
+    const r = await api.backupsRestore(b.dataset.r);
+    if (!r.ok) toast('Restauration impossible : ' + r.error);
+  };
+  $('#bk-exp').onclick = async () => { const r = await api.backupsExport(); if (r.ok) toast('Configuration exportée.'); else if (!r.canceled) toast('Export impossible : ' + r.error); };
+  $('#bk-imp').onclick = async () => {
+    if (!confirm('Importer une configuration remplace la bibliothèque actuelle (une sauvegarde est faite avant). Continuer ?')) return;
+    const r = await api.backupsImport();
+    if (!r.ok && !r.canceled) toast('Import impossible : ' + r.error);
+  };
+  $('#bk-ok').onclick = () => d.close();
+  d.showModal();
+}
+async function openUpdate() {
+  const d = $('#dlg-upd');
+  const info = await api.appInfo();
+  $('#up-ver').textContent = info.built ? 'Version installée : ' + new Date(info.built).toLocaleString('fr-FR') : 'Version installée : date inconnue';
+  $('#up-note').textContent = info.packaged ? '' : "Disponible seulement dans l'application installée (pas en mode développement).";
+  $('#up-pick').disabled = !info.packaged;
+  $('#up-back').disabled = !info.hasBackup;
+  $('#up-pick').onclick = async () => {
+    const r = await api.updatePick();
+    if (!r.ok) { if (!r.canceled) toast('Fichier refusé : ' + r.error); return; }
+    if (!confirm(`Installer ce fichier (${Math.round(r.size / 1024)} Ko) ? Emuglob va se fermer puis se relancer tout seul. L'ancienne version est gardée.`)) return;
+    const a = await api.updateApply(r.path);
+    toast(a.ok ? 'Mise à jour en cours…' : 'Mise à jour impossible : ' + a.error);
+  };
+  $('#up-back').onclick = async () => {
+    if (!confirm('Revenir à la version précédente ? Emuglob va se fermer puis se relancer.')) return;
+    const a = await api.updateRollback();
+    toast(a.ok ? 'Retour à la version précédente…' : 'Impossible : ' + a.error);
+  };
+  $('#up-ok').onclick = () => d.close();
+  d.showModal();
+}
+function randomGame() {
+  if (fgames.length < 2) return;
+  let i;
+  do { i = Math.floor(Math.random() * fgames.length); } while (i === fi);
+  flowSet(i);
+}
+function localStatsHTML() {
+  const gs = cfg.games, total = gs.reduce((s, g) => s + (g.playSeconds || 0), 0), launches = gs.reduce((s, g) => s + (g.playCount || 0), 0);
+  const top = gs.filter((g) => g.playSeconds >= 60).sort((a, b) => b.playSeconds - a.playSeconds).slice(0, 5);
+  const by = new Map();
+  gs.forEach((g) => { if (g.playSeconds) by.set(labelOf(g), (by.get(labelOf(g)) || 0) + g.playSeconds); });
+  const cons = [...by].sort((a, b) => b[1] - a[1]).slice(0, 6), max = cons.length ? cons[0][1] : 1;
+  const cards = [['Jeux dans la bibliothèque', gs.length], ['Parties lancées', launches], ['Temps de jeu', total >= 60 ? fmtDur(total) : '–'], ['Consoles', new Set(gs.map(labelOf)).size]];
+  return '<h3>Sur Emuglob</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString('fr-FR') : v}</b><small>${t}</small></div>`).join('') + '</div>' +
+    (top.length ? '<h3>Jeux les plus joués</h3>' + top.map((g) => `<div class="ach"><div class="tx"><b>${esc(g.title)}</b><small>${esc(labelOf(g))} · ${fmtDur(g.playSeconds)}${g.playCount ? ' · ' + g.playCount + ' partie(s)' : ''}</small></div></div>`).join('') : '') +
+    (cons.length ? '<h3>Temps par console</h3>' + cons.map(([k, v]) => `<div class="ach"><div class="tx"><b>${esc(k)}</b><small>${fmtDur(v)}</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div></div>`).join('') : '');
+}
+
+/* ---------- onglet Paramètres ---------- */
+const SET_ITEMS = [
+  { ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
+  { ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
+  { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
+  { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
+  { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
+  { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
+  { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
+  { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
+  { ic:'download', t:'Mettre à jour Emuglob', s:'Depuis un fichier app.asar', act:() => openUpdate() },
+  { ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
+];
+function openSettingsPanel() {
+  closeOv();
+  mode = 'settings'; setTop('set'); $('#ov-set').hidden = false;
+  $('#set-body').innerHTML = SET_ITEMS.map((b, i) =>
+    `<div class="sset" tabindex="0" data-i="${i}"><span class="si">${ic(b.ic)}</span><div><b>${b.t}</b><small>${b.s}</small></div></div>`).join('');
+  $('.sset').focus();
+}
+const navSel = () => (mode === 'settings' ? '.sset' : '.lcard, .lhead');
+
+/* ---------- amis RetroAchievements ---------- */
+let friends = null, feed = [], frState = '';
+async function loadFriends(force) {
+  frState = 'Chargement des amis…'; renderFr();
+  const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 120);
+  if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
+  const res = (r.data && (r.data.Results || r.data.results)) || [];
+  friends = res.map((f) => ({ user: f.User || f.user })).filter((f) => f.user);
+  feed = [];
+  const list = friends.slice(0, 40);
+  let i = 0;
+  const worker = async () => {
+    while (i < list.length) {
+      const f = list[i++];
+      const a = await api.ra('GetUserRecentAchievements', { u: f.user, m: 20160 }, force ? 0 : 120);
+      if (a.ok && Array.isArray(a.data)) a.data.forEach((x) => feed.push({ ...x, friend: f.user }));
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  feed.sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
+  feed = feed.slice(0, 100);
+  frState = '';
+}
+const friendRow = (a) => `<div class="fr"><div class="fa" style="background-image:url('${RAM}/UserPic/${encodeURIComponent(a.friend)}.png')"></div>
+  <img class="b" src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
+  <div class="tx"><b>${esc(a.friend)}</b> a débloqué <b>${esc(a.Title)}</b><small>${esc(a.GameTitle || '')} · ${esc(a.ConsoleName || '')} · ${esc((a.Date || '').slice(0, 16))}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
+function renderFr() {
+  let body;
+  if (frState) body = `<p class="muted">${esc(frState)}</p>`;
+  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leurs succès apparaîtront ici.</p>';
+  else if (!feed.length) body = '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>';
+  else body = `<p class="muted">${friends.length} ami(s) suivi(s) · derniers succès débloqués (14 jours)${friends.length > 40 ? ' · 40 premiers amis' : ''}</p>` + feed.map(friendRow).join('');
+  $('#fr-body').innerHTML = body;
+}
+async function openFriends() {
+  closeOv();
+  if (!raOn()) { toast('Renseigne ton pseudo et ta clé API RetroAchievements.'); return openSettings(); }
+  mode = 'friends'; setTop('fr'); $('#ov-fr').hidden = false;
+  await loadFriends(false);
+  renderFr();
+}
+
+/* ---------- identification des disques (Wii, GameCube, PS1, PS2, PSP, DS) ---------- */
+const DISC_EXT = new Set(['.iso', '.wbfs', '.rvz', '.wia', '.gcz', '.gcm', '.cso', '.cue', '.bin', '.img', '.nds']);
+const DISC_EMU = { wii:'dolphin', gc:'dolphin', ps2:'pcsx2', psp:'ppsspp' };
+function applyDisc(g, r) {
+  const before = `${g.emulator}|${g.platform}|${g.system}`;
+  g.disc = r.platform || 'unknown'; g.serial = r.id || '';
+  if (DISC_EMU[r.platform]) { g.emulator = DISC_EMU[r.platform]; g.platform = r.platform; g.system = 0; g.core = ''; }
+  else if (r.platform === 'ps1') { g.emulator = 'ralibretro'; g.platform = 'ps1'; g.system = 12; g.core = g.core || SYSTEMS[12][1]; }
+  if (before !== `${g.emulator}|${g.platform}|${g.system}`) {   // reclassé : on refait jaquette et succès
+    delete g.thumbV; delete g.thumb; delete g.raBoxTried;
+    if (!g.raManual) { delete g.raId; delete g.raV; delete g.raBox; delete g.raIcon; delete g.raTitle; }
+  }
+}
+async function identifyDiscs() {
+  const todo = cfg.games.filter((g) => g.disc === undefined && (DISC_EXT.has(extOf(g.path)) || g.emulator === 'dolphin'));
+  for (const g of todo) applyDisc(g, (await api.identify(g.path)) || { platform: 'unknown', id: '' });
+  if (todo.length) save();
+}
+
+/* ---------- ajout / scan ---------- */
+function makeGame(path) {
+  const ext = extOf(path), system = EXT[ext] || 0;
+  return { id: uid(), title: stem(path), path, emulator: emuForExt(ext, path), system, core: system ? SYSTEMS[system][1] : '',
+    cover: '', favorite: false, lastPlayed: 0, playCount: 0 };
+}
+async function addFiles() {
+  for (const p of await api.pickFiles()) {
+    if (cfg.games.some((g) => g.path === p)) continue;
+    const g = makeGame(p);
+    if (!g.system && g.emulator === 'ralibretro' && !(await openEdit(g, true))) continue;
+    cfg.games.push(g);
+  }
+  await identifyDiscs(); save(); render(); autoMatch(); findThumbs();
+}
+async function scan() {
+  const known = new Set(cfg.games.map((g) => g.path));
+  const res = await api.scanFolder([...Object.keys(EXT), ...Object.keys(EXT_EMU)]);
+  if (res.dir) { cfg.folders = cfg.folders || []; if (!cfg.folders.includes(res.dir)) cfg.folders.push(res.dir); }
+  const found = res.files.filter((p) => !known.has(p));
+  found.forEach((p) => cfg.games.push(makeGame(p)));
+  await identifyDiscs(); save(); render(); autoMatch(); findThumbs();
+  const sk = Object.entries(res.skipped || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([e, n]) => `${e} ×${n}`).join(', ');
+  toast(`${found.length} jeu(x) ajouté(s).` + (sk ? ` Gros fichiers ignorés (extension inconnue) : ${sk}.` : ''));
+}
+
+/* ---------- dialogues ---------- */
+function openEdit(g, isNew) {
+  return new Promise((resolve) => {
+    const d = $('#dlg'); let ok = false;
+    $('#f-title').value = g.title; $('#f-core').value = g.core; $('#f-raid').value = g.raQuery || (g.raId > 0 ? g.raId : '');
+    $('#f-system').innerHTML = '<option value="0">— choisir —</option>' + Object.entries(SYSTEMS).map(([id, v]) => `<option value="${id}" ${Number(id) === g.system ? 'selected' : ''}>${esc(v[0])}</option>`).join('');
+    $('#f-emu').innerHTML = cfg.emulators.map((e) => `<option value="${esc(e.id)}" ${e.id === g.emulator ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+    const sync = () => { const e = cfg.emulators.find((x) => x.id === $('#f-emu').value); $('#f-lib').style.display = e && e.kind === 'libretro' ? '' : 'none'; };
+    $('#f-emu').onchange = sync; sync();
+    const fillCores = () => { $('#core-list').innerHTML = (CORE_CANDS[Number($('#f-system').value)] || []).map((c) => `<option value="${c}">`).join(''); };
+    fillCores();
+    $('#f-system').onchange = (e) => { const s = SYSTEMS[e.target.value]; if (s) $('#f-core').value = s[1]; fillCores(); };
+    $('#f-del').style.display = isNew ? 'none' : '';
+    $('#f-cover').onclick = async () => { const p = await api.pickCover(g.id); if (p) { g.cover = p; toast('Jaquette définie.'); } };
+    $('#f-nocover').onclick = () => { g.cover = ''; toast('Jaquette retirée.'); };
+    $('#f-ok').onclick = () => {
+      g.title = $('#f-title').value.trim() || g.title; g.emulator = $('#f-emu').value;
+      g.system = Number($('#f-system').value); g.core = $('#f-core').value.trim();
+      g.coreManual = !!g.core && !!SYSTEMS[g.system] && g.core !== SYSTEMS[g.system][1];   // réglé à la main : on le respecte tant qu'il est installé
+      const v = $('#f-raid').value.trim();
+      const num = /^\d+$/.test(v) ? v : (/\/game\/(\d+)/.exec(v) || [])[1];
+      if (!v) { delete g.raId; delete g.raManual; delete g.raV; delete g.raQuery; }
+      else if (num) { if (Number(num) !== g.raId) delete g.raBox; g.raId = Number(num); g.raManual = true; delete g.raQuery; }
+      else { g.raQuery = v; delete g.raId; delete g.raManual; delete g.raV; delete g.raBox; }   // un nom : on cherche ce jeu dans la liste RetroAchievements
+      ok = true; d.close();
+    };
+    $('#f-cancel').onclick = () => d.close();
+    $('#f-del').onclick = () => { cfg.games = cfg.games.filter((x) => x.id !== g.id); ok = true; d.close(); };
+    d.onclose = () => resolve(ok);
+    d.showModal();
+  });
+}
+
+function openEmulators() {
+  const d = $('#dlg-emu'); let cur = cfg.emulators[0];
+  const fill = () => {
+    $('#e-list').innerHTML = cfg.emulators.map((e) => `<option value="${esc(e.id)}" ${e === cur ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+    $('#e-name').value = cur.name; $('#e-exe').value = cur.exe || ''; $('#e-args').value = cur.args || '';
+    $('#e-args-wrap').style.display = cur.kind === 'libretro' ? 'none' : '';
+    $('#e-sv-wrap').style.display = cur.kind === 'libretro' || cur.builtin ? 'none' : '';
+    $('#e-sv').checked = !!cur.shareSaves; $('#e-svdir').value = cur.saveDir || ''; $('#e-svext').value = cur.saveExt || '';
+    $('#e-del').style.display = cur.builtin ? 'none' : '';
+  };
+  const commit = () => { cur.name = $('#e-name').value.trim() || cur.name; cur.exe = $('#e-exe').value.trim(); cur.args = $('#e-args').value;
+    if (cur.kind !== 'libretro' && !cur.builtin) { cur.shareSaves = $('#e-sv').checked; cur.saveDir = $('#e-svdir').value.trim(); cur.saveExt = $('#e-svext').value.trim(); }
+    save(); };
+  $('#e-list').onchange = () => { commit(); cur = cfg.emulators.find((e) => e.id === $('#e-list').value); fill(); };
+  $('#e-browse').onclick = async () => { const p = await api.pickExe(); if (p) $('#e-exe').value = p; };
+  $('#e-add').onclick = () => { commit(); cur = { id: uid(), name: 'Nouvel émulateur', kind: 'standalone', exe: '', args: '"{game}"' }; cfg.emulators.push(cur); fill(); };
+  $('#e-del').onclick = () => {
+    cfg.games.forEach((g) => { if (g.emulator === cur.id) g.emulator = 'ralibretro'; });
+    cfg.emulators = cfg.emulators.filter((e) => e !== cur); cur = cfg.emulators[0]; fill();
+  };
+  $('#e-ok').onclick = () => d.close();
+  d.onclose = () => { commit(); render(); };
+  fill(); d.showModal();
+}
+
+function openSettings() {
+  const d = $('#dlg-set');
+  $('#s-user').value = cfg.ra.user || ''; $('#s-key').value = cfg.ra.key || '';
+  $('#s-hide').checked = cfg.hideWhilePlaying !== false;
+  $('#s-fs').checked = !!cfg.startFullscreen;
+  $('#s-saves').checked = cfg.shareSaves !== false;
+  $('#s-dc').value = (cfg.discord && cfg.discord.id) || '';
+  $('#s-dctest').onclick = async () => {
+    commit();
+    if (!cfg.discord.id) { $('#s-dcst').textContent = 'Renseigne d\'abord l\'ID d\'application.'; return; }
+    $('#s-dcst').textContent = 'Connexion à Discord…';
+    await api.discord(cfg.discord.id, { type: 0, details: 'Test Emuglob', state: 'Rich Presence OK', timestamps: { start: Date.now() } });
+    await new Promise((r) => setTimeout(r, 2500));
+    const st = await api.discordStatus();
+    $('#s-dcst').textContent = st === 'connecté' ? 'Connecté : regarde ton profil Discord (« Test Emuglob »).' : 'Échec : ' + st + '. Discord est ouvert ? ID correct ?';
+    if (!playing) setTimeout(() => presence(null), 8000);
+  };
+  autoInit = null;
+  api.appInfo().then((i) => { autoInit = !!i.autostart; $('#s-auto').checked = autoInit; });
+  $('#s-embed').checked = cfg.embedGames !== false;
+  $('#s-mode').value = cfg.embedMode || 'overlay';
+  $('#s-log').onclick = () => api.openEmbedLog();
+  const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { id: $('#s-dc').value.replace(/\D/g, '') };
+    if (autoInit !== null && $('#s-auto').checked !== autoInit) { autoInit = $('#s-auto').checked; api.autostart(autoInit); } save(); };
+  $('#s-test').onclick = async () => {
+    commit();
+    const r = await api.ra('GetUserProfile', {}, 0);
+    toast(r.ok && r.data && r.data.User ? 'Connecté : ' + r.data.User : 'Échec : ' + (r.error || 'réponse invalide'));
+  };
+  $('#s-wall').onclick = async () => { const p = await api.pickWallpaper(); if (p) { cfg.wallpaper = p; save(); applyWall(); } };
+  $('#s-wall-reset').onclick = () => { cfg.wallpaper = ''; save(); applyWall(); };
+  $('#s-covers').onclick = async () => {
+    cfg.games.forEach((g) => { if (!g.cover) { delete g.thumbV; delete g.raBoxTried; } });
+    Object.keys(tIdx).forEach((k) => delete tIdx[k]);
+    toast('Recherche des jaquettes…');
+    const r = await findThumbs();
+    toast(`${r.found} jaquette(s) trouvée(s) sur ${r.tried} jeu(x) testé(s).`);
+  };
+  $('#s-rematch').onclick = async () => {
+    cfg.games.forEach((g) => { if (!g.raManual) { delete g.raId; delete g.raV; } });
+    Object.keys(lists).forEach((k) => delete lists[k]);
+    prog = {};
+    toast('Détection des jeux en cours…');
+    await autoMatch();
+    const ok = cfg.games.filter((g) => g.raId > 0).length, hl = cfg.games.filter((g) => raSys(g)).length;
+    toast(`${ok} jeu(x) reconnu(s) sur ${hl}.`);
+  };
+  $('#s-full').onclick = () => api.fullscreen();
+  $('#s-ok').onclick = () => d.close();
+  d.onclose = () => { commit(); prog = {}; refreshRA(); autoMatch(); ensureRA(cur()); };
+  d.showModal();
+}
+
+function openMenu(g = cur()) {
+  if (!g) return;
+  const d = $('#dlg-menu');
+  $('#m-list').innerHTML = `<button data-a="fav">${g.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><button data-a="edit">Modifier…</button><button data-a="reveal">Afficher le fichier</button><button data-a="window">Lancer en fenêtre séparée</button><button data-a="saves">Copies de sauvegarde</button><button data-a="del">Retirer de la bibliothèque</button><button data-a="x">Annuler</button>`;
+  d.onclick = async (e) => {
+    const a = e.target.dataset.a; if (!a) return;
+    d.close();
+    if (a === 'fav') toggleFav(g);
+    else if (a === 'edit') { await openEdit(g, false); save(); render(); autoMatch(); findThumbs(); }
+    else if (a === 'reveal') api.reveal(g.path);
+    else if (a === 'window') launch(g, { embed: false });
+    else if (a === 'saves') api.savesOpen(g.id);
+    else if (a === 'del') { cfg.games = cfg.games.filter((x) => x !== g); save(); render(); }
+  };
+  d.showModal();
+}
+
+/* ---------- écran de jeu : l'émulateur est intégré dans la zone #gview ---------- */
+const FS_FLAGS = new Set(['-f', '-fullscreen', '--fullscreen']);
+function gameRect() {
+  const r = $('#gview').getBoundingClientRect(), k = window.devicePixelRatio || 1;
+  return { x: Math.round(r.left * k), y: Math.round(r.top * k), w: Math.round(r.width * k), h: Math.round(r.height * k) };
+}
+function enterGame(g) {
+  closeOv();
+  mode = 'game';
+  $('#g-title').textContent = g.title;
+  $('#g-state').textContent = 'Lancement…';
+  $('#g-wait').textContent = `Lancement de ${g.title}…`;
+  $('#game').hidden = false;
+}
+function leaveGame() {
+  $('#game').hidden = true;
+  if (mode === 'game') mode = 'home';
+}
+api.onGameEmbedded(({ ok, reason }) => {
+  if (ok) { $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); return; }
+  leaveGame();
+  toast(`Intégration impossible : ${reason}. L'émulateur tourne dans sa propre fenêtre (journal : Paramètres).`);
+});
+$('#g-stop').onclick = () => api.stopGame();
+$('#g-full').onclick = () => api.fullscreen();
+new ResizeObserver(() => { if (mode === 'game') api.gameMove(gameRect()); }).observe($('#gview'));
+
+/* ---------- retour au launcher quand l'émulateur se ferme ---------- */
+api.onGameExit(({ id, seconds, short }) => {
+  leaveGame();
+  playing = null; playStart = 0; presence(null);
+  const g = find(id);
+  if (g && !short) { g.playSeconds = (g.playSeconds || 0) + seconds; save(); }
+  render();
+  toast(short ? "L'émulateur s'est fermé tout de suite. Vérifie son chemin et ses arguments (Paramètres, Émulateurs)." : `Retour à Emuglob · ${fmtDur(seconds)} de jeu`);
+  if (g && g.raId > 0) loadProg(g, true).then(() => { renderInfo(); renderBottom(); });
+  refreshRA();
+});
+
+/* ---------- recherche (barre du haut) ---------- */
+let qList = [], qSel = 0;
+function renderSearch() {
+  const q = $('#q').value.trim().toLowerCase(), box = $('#q-res');
+  if (!q) { box.hidden = true; return; }
+  qList = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
+  qSel = 0;
+  box.innerHTML = qList.length ? qList.map((g, i) => {
+    const u = artUrl(g);
+    const bg = u ? `background-image:url('${esc(u)}')` : `background:hsl(${hue(g.title)},50%,32%)`;
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-id="${g.id}"><span class="qt" style="${bg}"></span><span class="qx"><b>${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
+  }).join('') : '<div class="qr none">Aucun jeu trouvé</div>';
+  box.hidden = false;
+}
+function pickSearch(g) {
+  $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur();
+  if (g) focusGame(g);
+}
+$('#q').oninput = renderSearch;
+$('#q').onfocus = renderSearch;
+$('#q').onblur = () => setTimeout(() => { $('#q-res').hidden = true; }, 120);
+$('#q').onkeydown = (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!qList.length) return;
+    qSel = (qSel + (e.key === 'ArrowDown' ? 1 : -1) + qList.length) % qList.length;
+    [...$('#q-res').children].forEach((c, i) => c.classList.toggle('on', i === qSel));
+    const on = $('#q-res .on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') { e.preventDefault(); pickSearch(qList[qSel]); }
+  else if (e.key === 'Escape') { $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur(); }
+};
+$('#q-res').onmousedown = (e) => e.preventDefault();   // garde le focus dans le champ pendant le clic
+$('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.id) pickSearch(find(r.dataset.id)); };
+
+/* ---------- événements ---------- */
+$('#bottom').onclick = (e) => { if (e.target.closest('.btile')) openTrophies(); };
+$('#btn-play').onclick = () => launch(cur());
+$('#btn-more').onclick = () => openMenu();
+$('#btn-rand').onclick = () => randomGame();
+$('#avatar').onclick = openProfile;
+$('#pro-close').onclick = closeOv;
+$('#pro-acc').onclick = openSettings;
+$('#pro-body').onclick = (e) => { if (e.target.closest('#pro-link')) openSettings(); };
+$('#tab-set').onclick = openSettingsPanel;
+$('#set-close').onclick = closeOv;
+$('#set-body').onclick = (e) => {
+  const t = e.target.closest('.sset');
+  if (!t) return;
+  const it = SET_ITEMS[Number(t.dataset.i)];
+  if (!it.keep) closeOv();
+  it.act();
+};
+$('#tab-tro').onclick = openTrophies;
+$('#tab-jeux').onclick = closeOv;
+$('#f-tabs').onclick = (e) => { const b = e.target.closest('.ftab'); if (b) { cfg.flowCons = fcons[Number(b.dataset.i)].key; save(); render(); scheduleRA(); } };
+$('#f-items').onclick = (e) => {
+  const el = e.target.closest('.fi');
+  if (!el) return;
+  const i = [...$('#f-items').children].indexOf(el);
+  if (i === fi) launch(cur()); else flowSet(i);
+};
+let wheelT = 0;
+$('#f-stage').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const t = performance.now();
+  if (t - wheelT < 70) return;
+  wheelT = t; flowMove(Math.sign(e.deltaY || e.deltaX));
+}, { passive: false });
+window.addEventListener('resize', () => { if (mode === 'home') placeFlow(); });
+$('#tab-fr').onclick = openFriends;
+$('#fr-close').onclick = closeOv;
+$('#fr-refresh').onclick = async () => { await loadFriends(true); renderFr(); };
+$('#lib-less').onclick = () => setAllOpen(false);
+$('#lib-more').onclick = () => setAllOpen(true);
+$('#lib-close').onclick = closeOv;
+$('#lib-q').oninput = renderLib;
+$('#lib-q').onkeydown = (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); const c = $('.lcard'); if (c) c.focus(); } };
+$('#lib-body').onclick = (e) => {
+  const h = e.target.closest('.lhead');
+  if (h) {
+    const k = h.dataset.k, wasOpen = h.dataset.open === '1';
+    cfg.open = cfg.open || {}; cfg.open[k] = !wasOpen; save(); renderLib();
+    const n = [...document.querySelectorAll('.lhead')].find((x) => x.dataset.k === k);
+    if (n) n.focus();
+    return;
+  }
+  const c = e.target.closest('.lcard');
+  if (!c) return;
+  closeOv(); focusGame(find(c.dataset.id));
+};
+$('#ov-tro').onclick = (e) => {
+  if (e.target.id === 'tro-close') return closeOv();
+  if (e.target.dataset.t) { tab = e.target.dataset.t; renderTro(); }
+};
+window.addEventListener('focus', () => {
+  const now = Date.now();
+  if (now - lastFileCheck > 30000) { lastFileCheck = now; checkFiles(); }
+  if (!raOn()) return;
+  refreshRA();
+  const g = cur();
+  if (g && g.raId > 0) loadProg(g, true).then(() => { renderInfo(); renderBottom(); if (mode === 'trophies') renderTro(); });
+});
+
+function moveFocus(selector, dx, dy) {
+  const cards = [...document.querySelectorAll(selector)], c0 = document.activeElement;
+  if (!cards.includes(c0)) { if (cards[0]) cards[0].focus(); return; }
+  const r = c0.getBoundingClientRect(); let best = null, bd = Infinity;
+  for (const c of cards) {
+    if (c === c0) continue;
+    const b = c.getBoundingClientRect(), ox = b.left - r.left, oy = b.top - r.top;
+    if (dx && Math.sign(ox) !== dx) continue;
+    if (dy && Math.sign(oy) !== dy) continue;
+    const d = dx ? Math.abs(ox) + Math.abs(oy) * 3 : Math.abs(oy) + Math.abs(ox) * 3;
+    if (d < bd) { bd = d; best = c; }
+  }
+  if (best) { best.focus(); best.scrollIntoView({ block: 'nearest' }); }
+}
+const setFullscreen = () => api.fullscreen();
+const KEYS = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F11') { e.preventDefault(); return setFullscreen(); }
+  if (mode === 'game') return;
+  if (document.querySelector('dialog[open]')) return;
+  if (e.key === 'Escape' && mode !== 'home') return closeOv();
+  if (e.target.tagName === 'INPUT') return;
+  if (mode === 'home') {
+    const k = e.key, kl = k.toLowerCase();
+    if (k === 'ArrowLeft') flowMove(-1);
+    else if (k === 'ArrowRight') flowMove(1);
+    else if (k === 'ArrowUp' || k === 'PageUp') flowCons(-1);
+    else if (k === 'ArrowDown' || k === 'PageDown') flowCons(1);
+    else if (k === 'Enter') launch(cur());
+    else if (kl === 'f') toggleFav();
+    else if (kl === 'm') openMenu();
+    else if (kl === 'r') randomGame();
+    else if (k === '/') $('#q').focus();
+    else return;
+    e.preventDefault();
+  } else if ((mode === 'library' || mode === 'settings') && KEYS[e.key]) { e.preventDefault(); moveFocus(navSel(), ...KEYS[e.key]); }
+  else if ((mode === 'library' || mode === 'settings') && e.key === 'Enter' && document.activeElement.matches(navSel())) document.activeElement.click();
+});
+
+/* ---------- manette ---------- */
+const prev = {}; let lastMove = 0;
+function pad() {
+  const gp = [...(navigator.getGamepads() || [])].find(Boolean);
+  if (gp) {
+    const pr = (i) => gp.buttons[i] && gp.buttons[i].pressed;
+    const edge = (i) => { const n = !!pr(i), w = prev[i]; prev[i] = n; return n && !w; };
+    const t = performance.now(), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+    const dx = pr(15) || ax > 0.6 ? 1 : pr(14) || ax < -0.6 ? -1 : 0;
+    const dy = pr(13) || ay > 0.6 ? 1 : pr(12) || ay < -0.6 ? -1 : 0;
+    const a = edge(0), b = edge(1), x = edge(2), y = edge(3), st = edge(9), lb = edge(4), rb = edge(5), back = edge(8);
+    const dlg = document.querySelector('dialog[open]');
+    const step = (dx || dy) && t - lastMove > 170;
+    if (dlg) { if (b) dlg.close(); }
+    else if (mode === 'home') {
+      if (dx && t - lastMove > 140) { lastMove = t; flowMove(dx); }
+      else if (dy && t - lastMove > 260) { lastMove = t; flowCons(dy); }
+      if (lb) flowCons(-1);
+      if (rb) flowCons(1);
+      if (a) launch(cur());
+      if (x) openMenu();
+      if (y) toggleFav();
+      if (back) openTrophies();
+    } else if (mode === 'library' || mode === 'settings') {
+      if (step) { lastMove = t; moveFocus(navSel(), dx, dy); }
+      if (a && document.activeElement.matches(navSel())) document.activeElement.click();
+      if (b) closeOv();
+    } else if (mode === 'trophies' || mode === 'friends' || mode === 'profile') {
+      if (dy) $(mode === 'friends' ? '#fr-body' : mode === 'profile' ? '#pro-body' : '#tro-body').scrollBy(0, dy * 40);
+      if (b) closeOv();
+    }
+    if (st && mode !== 'game') setFullscreen();
+  }
+  requestAnimationFrame(pad);
+}
+
+/* ---------- démarrage ---------- */
+(async function init() {
+  hydrateIcons();
+  cfg = await api.loadConfig();
+  cfg.games = cfg.games || [];
+  cfg.ra = cfg.ra || { user: '', key: '' };
+  cfg.emulators = cfg.emulators || [];
+  for (const d of DEFAULT_EMUS) {
+    const ex = cfg.emulators.find((e) => e.id === d.id);
+    if (!ex) cfg.emulators.push({ ...d }); else if (!ex.lab && d.lab) ex.lab = d.lab;
+  }
+  const ra = cfg.emulators.find((e) => e.id === 'ralibretro');
+  if (!ra.exe && cfg.ralibretro) ra.exe = cfg.ralibretro;
+  cfg.open = cfg.open || {};
+  cfg.folders = cfg.folders || [];
+  cfg.games.forEach((g) => {
+    if (!g.emulator) g.emulator = 'ralibretro';
+    if (g.thumb && /^https?:/.test(g.thumb)) delete g.thumb;   // ancien format (lien distant)
+    delete g.thumbTried; delete g.missing;
+    if (BAD_CORES.has(g.core) && SYSTEMS[g.system]) g.core = SYSTEMS[g.system][1];   // anciens cores par défaut invalides
+    if (!g.system && g.emulator === 'ralibretro' && EXT_EMU[extOf(g.path)]) g.emulator = emuForExt(extOf(g.path), g.path);   // ex. jeux Wii ajoutés avant le support de Dolphin
+  });
+  applyWall();
+  render();
+  await identifyDiscs();
+  render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs();
+  checkFiles();
+  setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
+  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
+  tick(); setInterval(tick, 15000);
+  pad();
+})();
+</script>
+</body>
+</html>

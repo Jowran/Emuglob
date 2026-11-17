@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+*.exe
+*.asar
+# ROMs, sauvegardes et config utilisateur
+roms/
+saves/
+config.json
