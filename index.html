@@ -154,6 +154,11 @@
   .cbadge .ico { width:17px; height:17px; }
   #home.tv .cbadge { display:flex; }
   #home.tv .ftab.on .cbadge { box-shadow:inset 0 0 0 2px rgba(255,255,255,.85); }
+  .cbadge.img { background:center/cover no-repeat; background-color:rgba(255,255,255,.08); }
+  .ftab { position:relative; }
+  .fnew { position:absolute; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 2px #1a1236; top:3px; right:3px; }
+  #home.tv .fnew { top:4px; left:34px; right:auto; }
+  #home.tc .fnew { top:0; left:36px; }
   #home:not(.tv) .fcat { display:none; }
   #home:not(.tv) .ftab .ct { display:none; }
   /* compact : icônes seules, comme la colonne des serveurs Discord */
@@ -165,6 +170,28 @@
   #home.tc .ftab .nm, #home.tc .ftab .ct { display:none; }
   #home.tc .cbadge { width:44px; height:44px; border-radius:22px; font-size:11px; }
   #home.tc .ftab:hover .cbadge, #home.tc .ftab.on .cbadge { border-radius:14px; }
+  #home.tc.th .ftabs-wrap { width:68px; z-index:20; transition:width .18s ease, background .18s; }
+  #home.tc.th .ftabs-wrap:hover { width:250px; background:rgba(16,11,36,.92); }
+  #home.tc.th .ftabs-wrap:hover .ftabs { align-items:stretch; padding:10px 8px; }
+  #home.tc.th .ftabs-wrap:hover .ftab { width:100%; display:flex; gap:12px; padding:3px 8px 3px 3px; }
+  #home.tc.th .ftabs-wrap:hover .ftab:hover { background:rgba(255,255,255,.07) !important; }
+  #home.tc.th .ftabs-wrap:hover .ftab.on { background:rgba(255,255,255,.14) !important; }
+  #home.tc.th .ftabs-wrap:hover .nm, #home.tc.th .ftabs-wrap:hover .ct { display:block; white-space:nowrap; }
+  #home.tc.th .ftabs-wrap:hover .nm { flex:1; color:#fff; font-size:14px; }
+  #home.tc.th .ftabs-wrap:hover .fcat { width:auto; align-self:stretch; margin:4px 8px; }
+  /* fenêtre « Barre des consoles » */
+  #dlg-tabs { width:min(560px, 92vw); }
+  .tmodes { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .tmodes label { margin:0; display:flex; gap:8px; align-items:center; padding:8px 10px; border-radius:10px; background:#262046; color:#fff; font-size:13px; cursor:pointer; }
+  .tmodes input, #tb-hover { width:auto !important; margin:0; flex:none; }
+  #tb-list { max-height:46vh; overflow:auto; margin-top:4px; }
+  .trow { display:flex; align-items:center; gap:10px; padding:5px 4px; border-bottom:1px solid #2a2550; font-size:13px; }
+  .trow.drag { opacity:.4; }
+  .trow.off .tl { opacity:.45; text-decoration:line-through; }
+  .trow .grip { cursor:grab; color:var(--muted); user-select:none; }
+  .trow .tl { flex:1; min-width:0; }
+  .trow .cbadge { display:flex; width:28px; height:28px; border-radius:8px; }
+  .trow button { padding:4px 8px !important; font-size:12px; }
   #home .fstage { flex:1; min-height:0; }
   #home .finfo { flex:none; padding:4px 56px 0; }
   #prog { justify-content:center; }
@@ -332,6 +359,16 @@
   <label>Doublons</label><div id="mt-dup" class="muted"></div>
   <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="mt-rmdup">Retirer les doublons</button></div>
   <div class="row"><button id="mt-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-tabs">
+  <h2>Barre des consoles</h2>
+  <label>Affichage</label>
+  <div class="tmodes" id="tb-modes"></div>
+  <label style="display:flex;gap:8px;align-items:center;color:#fff;font-size:13px"><input type="checkbox" id="tb-hover"> En mode « Icônes seules », afficher les noms au survol</label>
+  <label>Consoles (glisser ou ↑ ↓ pour l'ordre · « Icône » pour mettre ton propre logo)</label>
+  <div id="tb-list"></div>
+  <div class="row"><button id="tb-reset">Ordre alphabétique, tout afficher</button><button id="tb-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
 <dialog id="dlg-bak">
@@ -748,6 +785,14 @@ function flowColor(g) {
   const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
   return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
 }
+// mode d'affichage effectif : « auto » passe en vertical au-delà de 10 consoles
+const tabsModeNow = () => {
+  const m = cfg.tabsMode || 'horizontal';
+  return m === 'auto' ? (fcons.filter((t) => !t.key.startsWith('__')).length > 10 ? 'vertical' : 'horizontal') : m;
+};
+// pastille « nouveau » : jeu ajouté depuis moins de 7 jours et jamais lancé
+const isNew = (g) => g.added && !g.lastPlayed && Date.now() - g.added < 7 * 864e5;
+const hasNew = (t) => !t.key.startsWith('__') && t.games.some(isNew);
 // icône d'onglet : pastille colorée (couleur de la console) avec son abréviation
 const TAB_ABBR = { 'Game Boy':'GB', 'Game Boy Color':'GBC', 'Game Boy Advance':'GBA', 'Nintendo 64':'N64', 'Nintendo DS':'DS', 'Nintendo 3DS':'3DS',
   'Super Nintendo':'SNES', 'NES':'NES', 'Mega Drive / Genesis':'MD', 'Master System':'SMS', 'Game Gear':'GG', 'PlayStation':'PS1', 'PlayStation 2':'PS2',
@@ -756,12 +801,14 @@ const TAB_ABBR = { 'Game Boy':'GB', 'Game Boy Color':'GBC', 'Game Boy Advance':'
 function tabBadge(t) {
   if (t.key === '__recent') return `<span class="cbadge" style="--cc:#5b46d6">${ic('clock')}</span>`;
   if (t.key === '__fav') return `<span class="cbadge" style="--cc:#d97706">${ic('star')}</span>`;
+  const img = (cfg.tabIcons || {})[t.key];
+  if (img) return `<span class="cbadge img" style="background-image:url('${fileUrl(img)}')"></span>`;
   const ab = TAB_ABBR[t.label] || t.label.split(/[\s/-]+/).filter(Boolean).map((w) => (/\d/.test(w) ? w : w[0])).join('').slice(0, 4).toUpperCase();
   const col = t.games[0] ? flowColor(t.games[0]) : '#475569';
   return `<span class="cbadge" style="--cc:${col}">${esc(ab)}</span>`;
 }
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
-function tabsList() {
+function tabsList(all) {
   const gs = cfg.games;
   const played = gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
   const rest = gs.filter((g) => !g.lastPlayed).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || alpha(a, b));
@@ -770,7 +817,10 @@ function tabsList() {
   if (fav.length) tabs.push({ key: '__fav', label: 'Favoris', games: fav });
   const by = new Map();
   gs.forEach((g) => { const k = labelOf(g); if (!by.has(k)) by.set(k, []); by.get(k).push(g); });
-  [...by].sort((a, b) => a[0].localeCompare(b[0])).forEach(([k, list]) => tabs.push({ key: k, label: k, games: list.sort(alpha) }));
+  const ord = cfg.tabOrder || [], hid = new Set(cfg.tabHidden || []);
+  const rank = (k) => { const i = ord.indexOf(k); return i < 0 ? 1e6 : i; };
+  [...by].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+    .forEach(([k, list]) => { if (all || !hid.has(k)) tabs.push({ key: k, label: k, games: list.sort(alpha) }); });
   return tabs;
 }
 const cur = () => fgames[fi] || null;
@@ -781,11 +831,13 @@ function render() {
   const t = fcons[fci];
   fgames = t.games;
   fi = Math.max(0, fgames.findIndex((g) => g.id === fpos[t.key]));
-  $('#home').classList.toggle('tv', cfg.tabsMode === 'vertical' || cfg.tabsMode === 'compact');
-  $('#home').classList.toggle('tc', cfg.tabsMode === 'compact');
+  const tm = tabsModeNow();
+  $('#home').classList.toggle('tv', tm === 'vertical' || tm === 'compact');
+  $('#home').classList.toggle('tc', tm === 'compact');
+  $('#home').classList.toggle('th', tm === 'compact' && cfg.tabsHover !== false);
   $('#f-tabs').innerHTML = fcons.map((x, k) => (k === 0 ? '<div class="fcat">Bibliothèque</div>' : '')
     + (!x.key.startsWith('__') && (k === 0 || fcons[k - 1].key.startsWith('__')) ? '<div class="fcat">Consoles</div>' : '')
-    + `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}" title="${esc(x.label)} (${x.games.length})">${tabBadge(x)}<span class="nm">${esc(x.label)}</span><span class="ct">${x.games.length}</span></button>`).join('');
+    + `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}" title="${esc(x.label)} (${x.games.length})${hasNew(x) ? ' · nouveau jeu' : ''}">${tabBadge(x)}${hasNew(x) ? '<i class="fnew"></i>' : ''}<span class="nm">${esc(x.label)}</span><span class="ct">${x.games.length}</span></button>`).join('');
   $('#f-items').innerHTML = fgames.map((g) => `<div class="fi" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}</div>`).join('');
   placeFlow(); renderInfo(); renderBottom(); renderUser();
   const on = $('#f-tabs .on');
@@ -1219,16 +1271,67 @@ function localStatsHTML() {
 }
 
 /* ---------- onglet Paramètres ---------- */
-const TABS_MODES = { horizontal:'Barre horizontale', vertical:'Liste verticale avec icônes', compact:'Icônes seules (compact)' };
+const TABS_MODES = { horizontal:'Barre horizontale', vertical:'Liste verticale', compact:'Icônes seules', auto:'Automatique' };
+const TABS_MODES_HELP = { horizontal:'Une ligne en haut', vertical:'Liste à gauche avec icônes', compact:'Colonne d\'icônes à gauche', auto:'Horizontale, verticale au-delà de 10 consoles' };
+function openTabsDlg() {
+  const d = $('#dlg-tabs');
+  const refresh = () => {
+    const m = cfg.tabsMode || 'horizontal';
+    $('#tb-modes').innerHTML = Object.keys(TABS_MODES).map((k) => `<label title="${TABS_MODES_HELP[k]}"><input type="radio" name="tbm" value="${k}" ${k === m ? 'checked' : ''}>${TABS_MODES[k]}</label>`).join('');
+    $('#tb-hover').checked = cfg.tabsHover !== false;
+    $('#tb-hover').disabled = m !== 'compact';
+    const hid = new Set(cfg.tabHidden || []);
+    const cons = tabsList(true).filter((t) => !t.key.startsWith('__'));
+    $('#tb-list').innerHTML = cons.length ? cons.map((t) => `<div class="trow ${hid.has(t.key) ? 'off' : ''}" draggable="true" data-k="${esc(t.key)}">
+      <span class="grip" title="Glisser pour déplacer">⋮⋮</span>${tabBadge(t)}<span class="tl">${esc(t.label)} <span class="muted">(${t.games.length})</span></span>
+      <button data-a="up" title="Monter">↑</button><button data-a="down" title="Descendre">↓</button>
+      <button data-a="icon">Icône</button>${(cfg.tabIcons || {})[t.key] ? '<button data-a="noicon" title="Revenir à l\'icône par défaut">×</button>' : ''}
+      <button data-a="hide">${hid.has(t.key) ? 'Afficher' : 'Masquer'}</button></div>`).join('') : '<p class="muted">Aucune console pour l\'instant.</p>';
+  };
+  const order = () => tabsList(true).filter((t) => !t.key.startsWith('__')).map((t) => t.key);
+  const apply = () => { save(); render(); refresh(); };
+  $('#tb-modes').onchange = (e) => { cfg.tabsMode = e.target.value; apply(); };
+  $('#tb-hover').onchange = (e) => { cfg.tabsHover = e.target.checked; apply(); };
+  $('#tb-list').onclick = async (e) => {
+    const b = e.target.closest('button[data-a]'); if (!b) return;
+    const k = b.closest('.trow').dataset.k, a = b.dataset.a;
+    if (a === 'up' || a === 'down') {
+      const o = order(), i = o.indexOf(k), j = i + (a === 'up' ? -1 : 1);
+      if (j < 0 || j >= o.length) return;
+      [o[i], o[j]] = [o[j], o[i]]; cfg.tabOrder = o;
+    } else if (a === 'hide') {
+      const h = new Set(cfg.tabHidden || []); h.has(k) ? h.delete(k) : h.add(k); cfg.tabHidden = [...h];
+    } else if (a === 'icon') {
+      const p = await api.pickCover('icone-console'); if (!p) return;
+      cfg.tabIcons = { ...(cfg.tabIcons || {}), [k]: p };
+    } else if (a === 'noicon') {
+      cfg.tabIcons = { ...(cfg.tabIcons || {}) }; delete cfg.tabIcons[k];
+    }
+    apply();
+  };
+  let dragK = null;
+  $('#tb-list').ondragstart = (e) => { const r = e.target.closest('.trow'); if (!r) return; dragK = r.dataset.k; r.classList.add('drag'); };
+  $('#tb-list').ondragover = (e) => { if (dragK) e.preventDefault(); };
+  $('#tb-list').ondrop = (e) => {
+    e.preventDefault();
+    const r = e.target.closest('.trow'); if (!r || !dragK || r.dataset.k === dragK) { dragK = null; refresh(); return; }
+    const o = order().filter((x) => x !== dragK);
+    const box = r.getBoundingClientRect(), after = e.clientY > box.top + box.height / 2;
+    o.splice(o.indexOf(r.dataset.k) + (after ? 1 : 0), 0, dragK);
+    cfg.tabOrder = o; dragK = null; apply();
+  };
+  $('#tb-list').ondragend = () => { dragK = null; $('#tb-list').querySelectorAll('.drag').forEach((x) => x.classList.remove('drag')); };
+  $('#tb-reset').onclick = () => { delete cfg.tabOrder; delete cfg.tabHidden; apply(); };
+  $('#tb-ok').onclick = () => d.close();
+  refresh(); d.showModal();
+}
 const SET_ITEMS = [
   { ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
   { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
   { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
   { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
-  { ic:'list', t:'Affichage des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · cliquer pour changer'; }, keep:true, act:(el) => {
-    const ks = Object.keys(TABS_MODES); cfg.tabsMode = ks[(ks.indexOf(cfg.tabsMode || 'horizontal') + 1) % ks.length];
-    save(); render(); if (el) el.querySelector('small').textContent = SET_ITEMS.find((x) => x.t === 'Affichage des consoles').s; } },
+  { ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · ordre, icônes'; }, act:() => openTabsDlg() },
   { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
   { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
@@ -1309,7 +1412,7 @@ async function identifyDiscs() {
 function makeGame(path) {
   const ext = extOf(path), system = EXT[ext] || 0;
   return { id: uid(), title: stem(path), path, emulator: emuForExt(ext, path), system, core: system ? SYSTEMS[system][1] : '',
-    cover: '', favorite: false, lastPlayed: 0, playCount: 0 };
+    cover: '', favorite: false, lastPlayed: 0, playCount: 0, added: Date.now() };
 }
 async function addFiles() {
   for (const p of await api.pickFiles()) {
