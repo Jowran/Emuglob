@@ -361,7 +361,7 @@ ipcMain.handle('win:fullscreen', (_e, force) => {
 ipcMain.handle('app:quit', () => app.quit());
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress']);
+const RA_ALLOWED = new Set(['GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
 const mem = new Map();
 
 ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
