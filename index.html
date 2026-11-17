@@ -135,6 +135,36 @@
   #tint { position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--fcc,#5b46d6) 58%, transparent) 0%, transparent 62%); }
   #home .ftabs-wrap { flex:none; margin:10px 56px 0; }
   #home .ftabs { padding:2px 0; }
+  /* modes verticaux de la barre des consoles (Paramètres › Affichage des consoles) */
+  #home.tv { display:grid; grid-template-columns:270px minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto auto; column-gap:8px; }
+  #home.tv.tc { grid-template-columns:76px minmax(0,1fr); }
+  #home.tv > .fstage, #home.tv > .finfo, #home.tv > #bottom { grid-column:2; }
+  #home.tv .ftabs-wrap { grid-column:1; grid-row:1 / -1; margin:14px 0 16px 40px; flex-direction:column; align-items:stretch; min-height:0;
+    background:rgba(16,11,36,.55); border:1px solid rgba(255,255,255,.08); border-radius:14px; backdrop-filter:blur(8px); }
+  #home.tv .farr { display:none !important; }
+  #home.tv .ftabs { flex:1; flex-direction:column; justify-content:flex-start; gap:2px; overflow-x:hidden; overflow-y:auto; padding:8px 6px; -webkit-mask-image:none; scrollbar-width:none; }
+  #home.tv .fcat { flex:none; padding:12px 8px 4px; font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:rgba(255,255,255,.5); }
+  #home.tv .fcat:first-child { padding-top:4px; }
+  #home.tv .ftab { flex:none; display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:0; border-radius:10px; padding:5px 8px 5px 5px; font-size:14px; color:rgba(255,255,255,.66); }
+  #home.tv .ftab .nm { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  #home.tv .ftab .ct { font-size:11px; color:rgba(255,255,255,.4); }
+  #home.tv .ftab:hover { background:rgba(255,255,255,.07); color:#fff; }
+  #home.tv .ftab.on { background:rgba(255,255,255,.14); color:#fff; font-weight:600; }
+  .cbadge { display:none; flex:none; width:32px; height:32px; border-radius:9px; align-items:center; justify-content:center; background:var(--cc,#475569); color:#fff; font-size:10px; font-weight:800; letter-spacing:.2px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.18); transition:border-radius .15s; }
+  .cbadge .ico { width:17px; height:17px; }
+  #home.tv .cbadge { display:flex; }
+  #home.tv .ftab.on .cbadge { box-shadow:inset 0 0 0 2px rgba(255,255,255,.85); }
+  #home:not(.tv) .fcat { display:none; }
+  #home:not(.tv) .ftab .ct { display:none; }
+  /* compact : icônes seules, comme la colonne des serveurs Discord */
+  #home.tc .ftabs-wrap { margin-left:24px; }
+  #home.tc .ftabs { align-items:center; gap:6px; padding:10px 0; }
+  #home.tc .fcat { padding:0; width:28px; height:2px; margin:4px 0; background:rgba(255,255,255,.15); font-size:0; }
+  #home.tc .fcat:first-child { display:none; }
+  #home.tc .ftab { width:auto; padding:0; border-radius:12px; background:none !important; }
+  #home.tc .ftab .nm, #home.tc .ftab .ct { display:none; }
+  #home.tc .cbadge { width:44px; height:44px; border-radius:22px; font-size:11px; }
+  #home.tc .ftab:hover .cbadge, #home.tc .ftab.on .cbadge { border-radius:14px; }
   #home .fstage { flex:1; min-height:0; }
   #home .finfo { flex:none; padding:4px 56px 0; }
   #prog { justify-content:center; }
@@ -718,6 +748,18 @@ function flowColor(g) {
   const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
   return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
 }
+// icône d'onglet : pastille colorée (couleur de la console) avec son abréviation
+const TAB_ABBR = { 'Game Boy':'GB', 'Game Boy Color':'GBC', 'Game Boy Advance':'GBA', 'Nintendo 64':'N64', 'Nintendo DS':'DS', 'Nintendo 3DS':'3DS',
+  'Super Nintendo':'SNES', 'NES':'NES', 'Mega Drive / Genesis':'MD', 'Master System':'SMS', 'Game Gear':'GG', 'PlayStation':'PS1', 'PlayStation 2':'PS2',
+  'PSP':'PSP', 'PC Engine':'PCE', 'Atari 2600':'A26', 'Atari Lynx':'LNX', 'Neo Geo Pocket':'NGP', 'Arcade':'ARC', 'Wii':'Wii', 'GameCube':'GC',
+  'Nintendo Switch':'NSW', 'Saturn':'SAT', 'Dreamcast':'DC', 'Virtual Boy':'VB', 'WonderSwan':'WS' };
+function tabBadge(t) {
+  if (t.key === '__recent') return `<span class="cbadge" style="--cc:#5b46d6">${ic('clock')}</span>`;
+  if (t.key === '__fav') return `<span class="cbadge" style="--cc:#d97706">${ic('star')}</span>`;
+  const ab = TAB_ABBR[t.label] || t.label.split(/[\s/-]+/).filter(Boolean).map((w) => (/\d/.test(w) ? w : w[0])).join('').slice(0, 4).toUpperCase();
+  const col = t.games[0] ? flowColor(t.games[0]) : '#475569';
+  return `<span class="cbadge" style="--cc:${col}">${esc(ab)}</span>`;
+}
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
 function tabsList() {
   const gs = cfg.games;
@@ -739,11 +781,16 @@ function render() {
   const t = fcons[fci];
   fgames = t.games;
   fi = Math.max(0, fgames.findIndex((g) => g.id === fpos[t.key]));
-  $('#f-tabs').innerHTML = fcons.map((x, k) => `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}">${esc(x.label)}</button>`).join('');
+  $('#home').classList.toggle('tv', cfg.tabsMode === 'vertical' || cfg.tabsMode === 'compact');
+  $('#home').classList.toggle('tc', cfg.tabsMode === 'compact');
+  $('#f-tabs').innerHTML = fcons.map((x, k) => (k === 0 ? '<div class="fcat">Bibliothèque</div>' : '')
+    + (!x.key.startsWith('__') && (k === 0 || fcons[k - 1].key.startsWith('__')) ? '<div class="fcat">Consoles</div>' : '')
+    + `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}" title="${esc(x.label)} (${x.games.length})">${tabBadge(x)}<span class="nm">${esc(x.label)}</span><span class="ct">${x.games.length}</span></button>`).join('');
   $('#f-items').innerHTML = fgames.map((g) => `<div class="fi" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}</div>`).join('');
   placeFlow(); renderInfo(); renderBottom(); renderUser();
   const on = $('#f-tabs .on');
   if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  if (on && $('#home').classList.contains('tv')) on.scrollIntoView({ block: 'nearest' });
   updTabsFade();
 }
 
@@ -1172,12 +1219,16 @@ function localStatsHTML() {
 }
 
 /* ---------- onglet Paramètres ---------- */
+const TABS_MODES = { horizontal:'Barre horizontale', vertical:'Liste verticale avec icônes', compact:'Icônes seules (compact)' };
 const SET_ITEMS = [
   { ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
   { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
   { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
   { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
+  { ic:'list', t:'Affichage des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · cliquer pour changer'; }, keep:true, act:(el) => {
+    const ks = Object.keys(TABS_MODES); cfg.tabsMode = ks[(ks.indexOf(cfg.tabsMode || 'horizontal') + 1) % ks.length];
+    save(); render(); if (el) el.querySelector('small').textContent = SET_ITEMS.find((x) => x.t === 'Affichage des consoles').s; } },
   { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
   { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
@@ -1497,7 +1548,7 @@ $('#set-body').onclick = (e) => {
   if (!t) return;
   const it = SET_ITEMS[Number(t.dataset.i)];
   if (!it.keep) closeOv();
-  it.act();
+  it.act(t);
 };
 $('#tab-tro').onclick = openTrophies;
 $('#tab-jeux').onclick = closeOv;
