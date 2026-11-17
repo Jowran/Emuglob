@@ -101,7 +101,16 @@
   .fbrand { min-width:190px; }
   .fbrand b { display:block; font-size:22px; letter-spacing:3px; font-weight:800; text-transform:uppercase; }
   .fbrand small { color:rgba(255,255,255,.65); letter-spacing:2px; font-size:11px; text-transform:uppercase; }
-  .ftabs { flex:1; display:flex; gap:6px; justify-content:center; overflow-x:auto; scrollbar-width:none; }
+  .ftabs { flex:1; display:flex; gap:6px; justify-content:safe center; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+  .ftabs::-webkit-scrollbar { display:none; }
+  .ftabs-wrap { position:relative; display:flex; align-items:center; min-width:0; }
+  .ftabs-wrap .ftabs { --fl:0px; --fr:0px; -webkit-mask-image:linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%); }
+  .ftabs-wrap.cl .ftabs { --fl:48px; }
+  .ftabs-wrap.cr .ftabs { --fr:48px; }
+  .farr { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:26px; height:26px; border-radius:50%; border:1px solid rgba(255,255,255,.2); background:rgba(20,14,40,.75); color:#fff; font:inherit; font-size:15px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; }
+  .farr:hover { background:rgba(255,255,255,.25); }
+  .farr.l { left:0; } .farr.r { right:0; }
+  .ftabs-wrap.cl .farr.l, .ftabs-wrap.cr .farr.r { display:flex; }
   .ftab { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e8f5ea; padding:5px 14px; border-radius:16px; font:inherit; font-size:12px; white-space:nowrap; cursor:pointer; }
   .ftab:hover { background:rgba(255,255,255,.2); }
   .ftab.on { background:rgba(255,255,255,.92); color:#111; }
@@ -124,7 +133,8 @@
   .hk { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:10px; background:rgba(255,255,255,.2); font-weight:700; font-size:11px; line-height:1; font-family:inherit; font-style:normal; color:#fff; }
   #home { flex:1; min-height:0; display:flex; flex-direction:column; }
   #tint { position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--fcc,#5b46d6) 58%, transparent) 0%, transparent 62%); }
-  #home .ftabs { flex:none; justify-content:center; padding:10px 56px 0; }
+  #home .ftabs-wrap { flex:none; margin:10px 56px 0; }
+  #home .ftabs { padding:2px 0; }
   #home .fstage { flex:1; min-height:0; }
   #home .finfo { flex:none; padding:4px 56px 0; }
   #prog { justify-content:center; }
@@ -189,7 +199,7 @@
 </div>
 
 <div id="home">
-  <div class="ftabs" id="f-tabs"></div>
+  <div class="ftabs-wrap" id="f-tabs-wrap"><button class="farr l" id="f-tl" title="Précédent">‹</button><div class="ftabs" id="f-tabs"></div><button class="farr r" id="f-tr" title="Suivant">›</button></div>
   <div class="fstage" id="f-stage"><div class="floor"></div><div id="f-items"></div></div>
   <div class="finfo">
     <div id="f-title"></div>
@@ -734,6 +744,15 @@ function render() {
   placeFlow(); renderInfo(); renderBottom(); renderUser();
   const on = $('#f-tabs .on');
   if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  updTabsFade();
+}
+
+// barre des consoles : fondu + flèches selon ce qui reste à faire défiler
+function updTabsFade() {
+  const el = $('#f-tabs'), w = $('#f-tabs-wrap');
+  const max = el.scrollWidth - el.clientWidth;
+  w.classList.toggle('cl', el.scrollLeft > 2);
+  w.classList.toggle('cr', el.scrollLeft < max - 2);
 }
 
 function placeFlow() {
@@ -1489,6 +1508,16 @@ $('#f-items').onclick = (e) => {
   const i = [...$('#f-items').children].indexOf(el);
   if (i === fi) launch(cur()); else flowSet(i);
 };
+$('#f-tabs').addEventListener('wheel', (e) => {
+  const el = e.currentTarget;
+  if (el.scrollWidth <= el.clientWidth) return;
+  e.preventDefault(); e.stopPropagation();
+  el.scrollLeft += (Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX);
+}, { passive: false });
+$('#f-tabs').addEventListener('scroll', updTabsFade, { passive: true });
+window.addEventListener('resize', updTabsFade);
+$('#f-tl').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: -el.clientWidth * 0.7, behavior: 'smooth' }); };
+$('#f-tr').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: el.clientWidth * 0.7, behavior: 'smooth' }); };
 let wheelT = 0;
 $('#f-stage').addEventListener('wheel', (e) => {
   e.preventDefault();
