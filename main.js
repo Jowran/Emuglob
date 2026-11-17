@@ -478,7 +478,7 @@ const buildInfo = () => { try { return readJson(path.join(__dirname, 'build-info
 const updTarget = () => process.env.EMUGLOB_UPDATE_TARGET || path.join(process.resourcesPath, 'app.asar');
 const canUpdate = () => app.isPackaged || !!process.env.EMUGLOB_UPDATE_TARGET;
 ipcMain.handle('app:info', () => ({
-  built: buildInfo().built || '', packaged: canUpdate(),
+  built: buildInfo().built || '', version: app.getVersion(), packaged: canUpdate(),
   hasBackup: canUpdate() && fs.existsSync(updTarget() + '.bak'),
   autostart: app.getLoginItemSettings().openAtLogin,
 }));
@@ -520,6 +520,54 @@ ipcMain.handle('update:apply', (_e, src) => {
   if (!canUpdate()) return { ok: false, error: "disponible seulement dans l'application installée" };
   try { asarFiles(src); launchUpdater(src); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; }
 });
+/* ---------- recherche de mises à jour en ligne (Releases GitHub) ---------- */
+// Repo PUBLIC qui porte les Releases (ce repo) (aucun token : l'API ne voit pas les Releases d'un repo privé).
+// Chaque Release doit avoir un tag « vX.Y.Z » supérieur à la version de package.json et, pour une mise à jour automatique, un fichier « app.asar » attaché.
+const UPDATE_REPO = process.env.EMUGLOB_UPDATE_REPO || 'Jowran/emuglob';
+const verParts = (v) => String(v || '').replace(/^v/i, '').split(/[.-]/).slice(0, 3).map((n) => parseInt(n, 10) || 0);
+const newerThan = (a, b) => { const x = verParts(a), y = verParts(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+async function ghFetch(url, accept) {
+  const r = await fetch(url, { headers: { 'User-Agent': 'Emuglob-updater', Accept: accept || 'application/vnd.github+json' }, signal: AbortSignal.timeout(20000) });
+  if (r.status === 404) throw new Error('aucune version publiée (ou repo introuvable/privé)');
+  if (r.status === 403 || r.status === 429) throw new Error('GitHub limite les requêtes, réessaie plus tard');
+  if (!r.ok) throw new Error('GitHub a répondu ' + r.status);
+  return r;
+}
+let lastRelease = null;
+ipcMain.handle('update:check', async () => {
+  try {
+    const rel = await (await ghFetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`)).json();
+    const asar = (rel.assets || []).find((a) => a.name === 'app.asar');
+    lastRelease = rel;
+    return {
+      ok: true, current: app.getVersion(), latest: String(rel.tag_name || '').replace(/^v/i, ''),
+      available: newerThan(rel.tag_name, app.getVersion()), name: rel.name || rel.tag_name, notes: rel.body || '',
+      url: rel.html_url, auto: !!asar && canUpdate(), size: asar ? asar.size : 0,
+    };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('update:download', async () => {
+  if (!canUpdate()) return { ok: false, error: "disponible seulement dans l'application installée" };
+  const rel = lastRelease;
+  const asset = rel && (rel.assets || []).find((a) => a.name === 'app.asar');
+  if (!asset) return { ok: false, error: "cette version n'a pas de fichier app.asar : télécharge-la à la main" };
+  try {
+    const ofs = require('original-fs');   // écriture d'un fichier .asar sans la « magie asar » d'Electron
+    const dir = path.join(app.getPath('userData'), 'update');
+    ofs.mkdirSync(dir, { recursive: true });
+    const buf = Buffer.from(await (await ghFetch(asset.browser_download_url, 'application/octet-stream')).arrayBuffer());
+    if (asset.size && buf.length !== asset.size) throw new Error('téléchargement incomplet');
+    const want = /^sha256:([0-9a-f]{64})$/i.exec(asset.digest || '');
+    if (want && crypto.createHash('sha256').update(buf).digest('hex') !== want[1].toLowerCase()) throw new Error('fichier corrompu (empreinte SHA-256 différente)');
+    const file = path.join(dir, `app-${String(rel.tag_name).replace(/[^\w.-]/g, '')}.bin`);
+    ofs.writeFileSync(file, buf);
+    const files = asarFiles(file);
+    for (const need of ['main.js', 'index.html', 'preload.js', 'package.json']) if (!files[need]) throw new Error(`il manque ${need} : ce n'est pas un app.asar d'Emuglob`);
+    launchUpdater(file);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('update:page', () => { if (lastRelease && /^https:\/\/github\.com\//.test(lastRelease.html_url)) shell.openExternal(lastRelease.html_url); });
 ipcMain.handle('update:rollback', () => {
   const bak = updTarget() + '.bak';
   if (!canUpdate() || !fs.existsSync(bak)) return { ok: false, error: 'aucune version précédente' };
