@@ -7,3 +7,5 @@ out/
 roms/
 saves/
 config.json
+
+!tools/7za.exe

@@ -132,4 +132,91 @@ class SaveVault {
   }
 }
 
-module.exports = { SaveVault, locate, zipInnerName };
+// ---------- recherche des sauvegardes déjà présentes ailleurs sur le PC (import dans le coffre, l'original n'est jamais touché) ----------
+const SAVE_EXT = new Set(['.srm', '.sav', '.sram', '.mcd', '.mcr', '.dsv', '.eep', '.fla', '.sa1']);
+const MAX_SAVE = 4 * 1048576;
+// clé d'un nom : sans les extensions empilées (Jeu.gba.sram → jeu) ; version souple sans (Europe) [!] ni ponctuation
+const keyOf = (name) => low(stemOf(name)).trim();
+// Jeu.sram → [jeu] ; Jeu.gba.sram → [jeu.gba, jeu] (la 2e extension n'est retirée qu'en second choix : « F.Zero.srm » reste « f.zero »)
+const saveKeys = (name) => { const a = keyOf(name), e = path.extname(a); return e && /^\.[a-z0-9]{1,4}$/.test(e) ? [a, a.slice(0, -e.length)] : [a]; };
+const looseOf = (k) => k.replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/_\d$/, '').replace(/[^a-z0-9]+/g, '');
+
+// dossiers habituels des émulateurs (Windows), en plus des dossiers des ROMs et des émulateurs réglés
+function defaultSaveDirs(env) {
+  const H = env.USERPROFILE || env.HOME || '', A = env.APPDATA || '', D = path.join(H, 'Documents');
+  return [
+    path.join(A, 'RetroArch', 'saves'), 'C:\\RetroArch-Win64\\saves', 'C:\\RetroArch\\saves', path.join(H, 'RetroArch', 'saves'),
+    path.join(D, 'RALibretro', 'Saves'), path.join(D, 'DuckStation', 'memcards'), path.join(H, 'DuckStation', 'memcards'),
+    path.join(D, 'mGBA'), path.join(A, 'mGBA'), path.join(A, 'melonDS'), path.join(D, 'melonDS'), path.join(A, 'Snes9x', 'Saves'),
+    path.join(D, 'Mesen', 'Saves'), path.join(D, 'Mesen2', 'Saves'), path.join(A, 'bsnes'), path.join(D, 'SameBoy'),
+    path.join(A, 'Project64', 'Save'), 'C:\\Program Files (x86)\\Project64 3.0\\Save', path.join(D, 'Emulateurs'), path.join(D, 'Emulators'),
+  ];
+}
+
+// renvoie [{ gameId, title, file, size, mtime, where, match: 'exact'|'proche', vault: { mtime } | null, same, newer }]
+function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.env }) {
+  const exact = new Map(), loose = new Map();
+  const add = (m, k, g) => { if (!k) return; if (!m.has(k)) m.set(k, []); if (!m.get(k).includes(g)) m.get(k).push(g); };
+  for (const g of games || []) {
+    if (!g || !g.path) continue;
+    const names = [path.basename(g.path)];
+    if (low(path.extname(g.path)) === '.zip') { const z = zipInnerName(g.path); if (z) names.push(z); }
+    for (const n of names) { add(exact, keyOf(n), g); add(loose, looseOf(keyOf(n)), g); }
+    if (g.title) { add(exact, low(g.title).trim(), g); add(loose, looseOf(low(g.title)), g); }
+  }
+  // dossiers à fouiller : [dossier, profondeur, libellé]
+  const dirs = [];
+  const romDirs = new Set((games || []).filter((g) => g && g.path).map((g) => path.dirname(g.path)));
+  for (const d of romDirs) { dirs.push([d, 0, 'à côté des ROMs']); for (const s of ['saves', 'Saves', 'save', 'Save', 'sav']) dirs.push([path.join(d, s), 2, 'à côté des ROMs']); }
+  for (const e of emus || []) if (e && e.exe) dirs.push([path.dirname(e.exe), 4, e.name]);
+  for (const d of defaultSaveDirs(env)) dirs.push([d, 3, 'dossier de ' + (d.split(/[\\/]/).find((x) => /retroarch|ralibretro|duckstation|mgba|melonds|snes9x|mesen|bsnes|sameboy|project64|emul/i.test(x)) || 'l\'émulateur')]);
+  for (const d of extraDirs) dirs.push([d, 5, 'dossier choisi']);
+  const vaultAbs = vaultBase ? path.resolve(vaultBase) : null;
+  const seen = new Set(), out = [];
+  for (const [dir, depth, where] of dirs) {
+    if (!dir) continue;
+    walk(dir, depth, (p) => {
+      const rp = path.resolve(p);
+      if (seen.has(low(rp)) || (vaultAbs && low(rp).startsWith(low(vaultAbs) + path.sep))) return;
+      if (!SAVE_EXT.has(low(path.extname(p)))) return;
+      seen.add(low(rp));
+      const st = statOf(p); if (!st || st.size > MAX_SAVE) return;
+      const ks = saveKeys(path.basename(p));
+      let gs = ks.map((k) => exact.get(k)).find(Boolean), match = 'exact';
+      if (!gs) { gs = ks.map((k) => loose.get(looseOf(k))).find(Boolean); match = 'proche'; }
+      if (!gs || gs.length !== 1) return;   // aucun jeu, ou plusieurs jeux possibles : on ne devine pas
+      const g = gs[0];
+      out.push({ gameId: g.id, title: g.title || stemOf(g.path), file: p, size: st.size, mtime: st.mtimeMs, where, match });
+    });
+  }
+  if (vaultBase) {
+    const v = new SaveVault(vaultBase);
+    for (const c of out) {
+      const vs = statOf(v.file(c.gameId));
+      c.vault = vs ? { mtime: vs.mtimeMs } : null;
+      c.same = !!vs && same(v.file(c.gameId), c.file);
+      c.newer = !vs || (!c.same && c.mtime > vs.mtimeMs + 2000);
+    }
+  }
+  // pour un même jeu, la plus récente d'abord
+  return out.sort((a, b) => a.title.localeCompare(b.title) || b.mtime - a.mtime);
+}
+
+// copie les sauvegardes choisies dans le coffre ; l'ancienne du coffre part dans l'historique ; l'original reste en place
+function importExisting(vaultBase, items) {
+  const v = new SaveVault(vaultBase), done = [], errors = [];
+  for (const { gameId, file } of items || []) {
+    try {
+      if (!statOf(file) || statOf(file).size > MAX_SAVE) throw new Error('fichier introuvable');
+      const dst = v.file(String(gameId));
+      if (statOf(dst) && same(dst, file)) { done.push({ gameId, file, action: 'kept' }); continue; }
+      v.keep(String(gameId), dst, 'avant-import');
+      v.copy(file, dst);
+      fs.writeFileSync(path.join(v.dir(String(gameId)), 'source.txt'), `import\n${file}\n${new Date().toISOString()}\n`);
+      done.push({ gameId, file, action: 'imported' });
+    } catch (e) { errors.push({ gameId, file, error: e.message }); }
+  }
+  return { done, errors };
+}
+
+module.exports = { SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf };
