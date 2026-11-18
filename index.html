@@ -99,6 +99,24 @@
   .sh-ach img { width:40px; height:40px; border-radius:8px; flex:none; }
   .sh-ach div { font-size:13px; min-width:0; } .sh-ach small { display:block; color:var(--muted); font-size:11.5px; }
   .sh-file { font-size:12px; color:var(--muted); line-height:1.7; overflow-wrap:anywhere; }
+  .sh-hash { padding:8px 0; border-top:1px solid rgba(255,255,255,.08); font-size:12px; overflow-wrap:anywhere; }
+  .sh-hash:first-of-type { border-top:none; }
+  .sh-hash b { display:block; font-weight:600; margin-bottom:3px; }
+  .sh-hash code { font:11px ui-monospace,Consolas,monospace; color:var(--muted); cursor:copy; }
+  .sh-hash code:hover { color:var(--acc); }
+  .sh-hash .sh-tags { margin:6px 0 0; gap:5px; }
+  .sh-hash .sh-tags span { padding:2px 8px; font-size:11px; }
+  .sh-card .fb { margin-top:8px; font-size:12px; padding:5px 10px; }
+  .sh-tabs { display:flex; gap:6px; margin:16px 0 4px; }
+  .sh-tabs button { background:rgba(255,255,255,.08); border:1px solid transparent; color:inherit; font:inherit; font-size:14px; padding:6px 16px; border-radius:999px; cursor:pointer; }
+  .sh-tabs button.on { background:color-mix(in srgb, var(--acc) 45%, transparent); border-color:var(--acc); }
+  .sh-subs { display:flex; flex-direction:column; gap:6px; margin:14px 0 10px; max-width:860px; }
+  .sh-sub-r { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.06); cursor:pointer; }
+  .sh-sub-r:hover, .sh-sub-r:focus { background:rgba(255,255,255,.12); outline:none; }
+  .sh-sub-r img { width:44px; height:44px; border-radius:8px; flex:none; }
+  .sh-sub-r > div { flex:1; min-width:0; } .sh-sub-r b { display:block; } .sh-sub-r small { color:var(--muted); font-size:12px; }
+  .sh-own { font-size:12px; color:var(--muted); white-space:nowrap; } .sh-own.on { color:var(--acc); }
+  body.light .sh-tabs button, body.light .sh-sub-r { background:rgba(0,0,0,.05); } body.light .sh-tabs button.on { color:#fff; }
   .sh-load { opacity:.6; font-size:13px; }
   @media (max-width: 1300px) { .sh { grid-template-columns:minmax(200px,280px) minmax(0,1fr); } .sh-side { grid-column:1 / -1; } }
   body.light .sh-card, body.light .sh-hl > div { background:rgba(255,255,255,.7); border-color:#e3e6ee; }
@@ -218,6 +236,16 @@
   .corow .ci { color:var(--muted); min-width:170px; text-align:right; } .corow .ci.ok { color:#7fe0a0; }
   .corow button { padding:4px 10px; font-size:12px; }
   #dlg-tuto { width:min(760px, 94vw); }
+  #dlg-cons { width:min(820px, 94vw); }
+  .cs-h { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; } .cs-h h2 { margin:0 0 10px; } #cs-n { font-size:13px; }
+  #cs-q { width:100%; box-sizing:border-box; margin-bottom:10px; }
+  #cs-list { height:min(62vh, 640px); overflow:auto; display:flex; flex-direction:column; gap:4px; scrollbar-width:none; }
+  #cs-list::-webkit-scrollbar { display:none; }
+  .cs-r { display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:10px; cursor:pointer; flex:none; }
+  .cs-r:hover, .cs-r:focus { background:#5b46d6; outline:none; } .cs-r:hover small, .cs-r:focus small, .cs-r:hover .sh-own, .cs-r:focus .sh-own { color:#fff; }
+  .cs-r img { width:40px; height:40px; border-radius:6px; flex:none; }
+  .cs-r > div { flex:1; min-width:0; } .cs-r b { display:block; font-weight:600; } .cs-r small { color:var(--muted); font-size:12px; }
+  .qt.qc { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.1); } .qt.qc svg { width:18px; height:18px; }
   #tu-dots { display:flex; gap:6px; margin-bottom:14px; }
   #tu-dots i { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,.12); cursor:pointer; }
   #tu-dots i.on { background:#ffc83d; }
@@ -401,6 +429,8 @@
   .qr.none { cursor:default; color:var(--muted); }
   .qr.none:hover { background:none; }
   .qt { width:34px; height:44px; border-radius:4px; background-size:cover; background-position:center; flex:none; }
+  .qt.sq { height:34px; margin:5px 0; }
+  .qh { padding:8px 8px 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .qx { min-width:0; }
   .qx b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; font-size:14px; }
   .qx small { color:var(--muted); font-size:12px; }
@@ -690,6 +720,12 @@
   <div class="row"><button id="co-ok" style="margin-right:auto">Fermer</button><button id="co-base" style="background:#5b46d6">Installer les cores de base</button></div>
 </dialog>
 
+<dialog id="dlg-cons">
+  <div class="cs-h"><h2 id="cs-title"></h2><span id="cs-n" class="muted"></span></div>
+  <input id="cs-q" placeholder="Filtrer les jeux…" autocomplete="off" spellcheck="false">
+  <div id="cs-list"></div>
+  <div class="row"><button id="cs-close">Fermer</button></div>
+</dialog>
 <dialog id="dlg-tuto">
   <div id="tu-dots"></div>
   <div id="tu-body"></div>
@@ -1826,19 +1862,20 @@ const sheetX = {};   // données chargées par jeu : { gp: GetGameProgression, w
 const fmtH = (sec) => { const h = sec / 3600; return h < 1 ? Math.max(1, Math.round(sec / 60)) + ' min' : (h < 10 ? Math.round(h * 2) / 2 : Math.round(h)).toString().replace('.', ',') + ' h'; };
 const dayFr = (t) => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 let sheetFrom = '';
-const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); else if (back === 'profile') openProfile(); };
+const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); else if (back === 'profile') openProfile(); else if (back === 'cons' && consName) openConsGames(consName); };
 async function openSheet(g = cur(), from = '') {
   if (!g) return;
   closeOv();
   sheetFrom = from;
   if (from === 'friends') setTop('fr');
-  mode = 'sheet'; sheetGame = g; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
+  mode = 'sheet'; sheetGame = g; hashAll = false; sheetTab = 'info'; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
   if (g.virtual && raOn()) jobs.push((async () => {   // jeu d'un ami, absent de la bibliothèque : tout vient de RetroAchievements
     await loadProg(g);
     if (!x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
+    if (!x.hashes) { const r = await api.ra('GetGameHashes', { i: g.raId }, 604800); x.hashes = r.ok && r.data && Array.isArray(r.data.Results) ? r.data.Results : { error: true }; }
     if (g.friend && x.fpUser !== g.friend) { const r = await api.ra('GetGameInfoAndUserProgress', { g: g.raId, u: g.friend }, 60); if (r.ok && r.data) { x.fp = r.data; x.fpUser = g.friend; } }
   })());
   else if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
@@ -1849,7 +1886,35 @@ async function openSheet(g = cur(), from = '') {
     const r = await api.wiki(g.raTitle || (p && p.Title) || g.title, p ? p.ConsoleName : labelOf(g), LANG);
     x.wiki = r && r.ok ? r : { none: true, error: r && (r.offline ? 'hors ligne' : r.error) };
   })());
+  if (raOn() && g.raId > 0 && !x.subs) jobs.push(Promise.allSettled(jobs.slice()).then(() => loadSubsets(g, x)));
   for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) renderSheet(); }).catch(() => {});
+}
+// subsets RetroAchievements du jeu : jeux « Titre [Subset - Nom] » de la même console (GetGameList, gardée 7 jours)
+const SUBSET_RX = /\s*\[\s*subset\s*-\s*([^\]]*?)\s*\]\s*/i;
+let sheetTab = 'info';
+async function loadSubsets(g, x) {
+  const p = prog[g.raId] && prog[g.raId].data;
+  const cid = (p && p.ConsoleID) || (!g.virtual && raSys(g)) || 0;
+  const title = (p && p.Title) || g.raTitle || g.title;
+  if (!cid || !title) return;
+  const r = await api.ra('GetGameList', { i: cid, f: 1 }, 604800);
+  if (!r.ok || !Array.isArray(r.data)) return;
+  const base = title.replace(SUBSET_RX, ' ').trim().toLowerCase();
+  x.subs = r.data.map((y) => ({ id: +(y.ID || y.id), title: y.Title || y.title || '', icon: y.ImageIcon || y.imageIcon || '', ach: y.NumAchievements || 0, pts: y.Points || 0, cons: y.ConsoleName || (p && p.ConsoleName) || '' }))
+    .filter((y) => y.id !== +g.raId && y.title.replace(SUBSET_RX, ' ').trim().toLowerCase() === base)
+    .map((y) => { const m = SUBSET_RX.exec(y.title); return { ...y, name: m ? m[1] : '', base: !m }; })
+    .sort((a, b) => b.base - a.base || a.name.localeCompare(b.name));
+}
+function subsetsHTML(x) {
+  return `<div class="sh-subs">${x.subs.map((y, k) => {
+    const own = cfg.games.find((z) => z.raId === y.id);
+    return `<div class="sh-sub-r" data-sub="${k}" tabindex="0">
+      <img src="${RAM}${esc(y.icon)}" alt="" onerror="this.style.visibility='hidden'">
+      <div><b translate="no">${esc(y.base ? y.title : y.name || y.title)}</b>
+      <small>${y.base ? '<span>Jeu de base</span> · ' : ''}<span>${y.ach} succès</span> · ${y.pts} pts</small></div>
+      <span class="sh-own ${own ? 'on' : ''}">${own ? 'Dans ta bibliothèque' : 'Pas dans ta bibliothèque'}</span></div>`;
+  }).join('')}</div>
+  <div class="sh-src">Un subset est un set de succès en plus (défis, bonus…). Il se joue avec une ROM patchée ou, pour les subsets bonus, avec le jeu de base (émulateurs récents). Clic pour ouvrir sa fiche et voir ses hash.</div>`;
 }
 let sheetGame = null;
 function renderSheet() {
@@ -1894,12 +1959,14 @@ function renderSheet() {
     <div class="sh-sub">${esc(g.virtual ? (p && p.ConsoleName) || g.raConsole || '' : labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
     <h1 translate="no">${esc(g.title)}</h1>
     ${who ? `<div class="sh-sub">${esc(who)}</div>` : ''}
+    ${x.subs && x.subs.length ? `<div class="sh-tabs"><button class="${sheetTab === 'info' ? 'on' : ''}" data-tab="info">Infos</button><button class="${sheetTab === 'sub' ? 'on' : ''}" data-tab="sub">Subsets (${x.subs.length})</button></div>` : ''}
+    ${sheetTab === 'sub' && x.subs && x.subs.length ? subsetsHTML(x) : `
     ${genres.length || g.favorite ? `<div class="sh-tags">${genres.map((t, i) => `<span class="${i ? '' : 'c'}">${esc(t)}</span>`).join('')}${g.favorite ? '<span>★ Favori</span>' : ''}</div>` : '<div style="height:18px"></div>'}
     <p class="sh-sum">${sum}</p>
     ${w && w.text ? `<div class="sh-src">Résumé : Wikipédia${w.lang !== LANG ? (LANG === 'en' ? ' (en français, pas de page en anglais)' : ' (en anglais, pas de page en français)') : ''}, licence CC BY-SA</div>` : ''}
     ${hl.length ? `<div class="sh-hl">${hl.map(([t, v]) => `<div><b>${fmtH(v)}</b><span>${t}</span><div class="sh-bar"><i style="width:${Math.round((100 * v) / hmax)}%"></i></div></div>`).join('')}</div>
       <div class="sh-src">Durée de vie : temps médian des joueurs RetroAchievements</div>` : ''}
-    ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}
+    ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}`}
   </div>
   <div class="sh-side">
     ${!raOn() ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.</div></div>'
@@ -1911,12 +1978,37 @@ function renderSheet() {
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
     ${g.virtual ? '' : subStats(g).map((x) => `<div class="sh-card"><h4>Subset · ${esc(x.name)}</h4><div class="sh-prog"><b>${x.s.got.length} / ${x.s.total}</b><span class="sh-sub">${x.s.pts} pts</span></div>
       <div class="sh-bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('')}
-    ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
+    ${g.virtual ? hashCard(x) : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
+}
+// jeu absent de la bibliothèque : versions de ROM reconnues par RetroAchievements (clic sur un MD5 = copie)
+let hashAll = false;
+function hashCard(x) {
+  if (!raOn()) return '';
+  const h = x.hashes;
+  if (!h) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-load">Chargement…</div></div>';
+  if (h.error) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-file">Liste indisponible pour le moment.</div></div>';
+  if (!h.length) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-file">Aucun hash enregistré.</div></div>';
+  const shown = hashAll ? h : h.slice(0, 6);
+  return `<div class="sh-card"><h4>Hash supportés (${h.length})</h4>${shown.map((r) => `<div class="sh-hash">
+    <b translate="no">${esc(r.Name || '?')}</b>
+    <code data-md5="${esc(r.MD5 || '')}" title="Copier">${esc(r.MD5 || '')}</code>
+    ${(r.Labels || []).length || r.PatchUrl ? `<div class="sh-tags">${(r.Labels || []).map((l) => `<span translate="no">${esc(l)}</span>`).join('')}${r.PatchUrl ? '<span>Patch requis</span>' : ''}</div>` : ''}</div>`).join('')}
+    ${h.length > 6 ? `<button class="fb" data-hmore>${hashAll ? 'Afficher moins' : `Tout afficher (${h.length})`}</button>` : ''}
+    <div class="sh-src">Seules ces versions débloquent les succès. Clic sur un MD5 pour le copier.</div></div>`;
 }
 $('#sh-close').onclick = () => closeSheet();
 $('#sh-body').onclick = (e) => {
   const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
+  const md = e.target.closest('[data-md5]'); if (md) { navigator.clipboard.writeText(md.dataset.md5).then(() => toast('MD5 copié.'), () => {}); return; }
+  if (e.target.closest('[data-hmore]')) { hashAll = !hashAll; return renderSheet(); }
+  const tb = e.target.closest('[data-tab]'); if (tb) { sheetTab = tb.dataset.tab; return renderSheet(); }
+  const sb = e.target.closest('[data-sub]');
+  if (sb) {
+    const y = ((sheetX[sheetGame.id] || {}).subs || [])[+sb.dataset.sub]; if (!y) return;
+    const own = cfg.games.find((z) => z.raId === y.id);
+    return openSheet(own || { id: 'ra-' + y.id, title: y.title, raId: y.id, raConsole: y.cons, raIcon: y.icon || undefined, virtual: true, path: '' }, sheetFrom);
+  }
   const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
   const g = sheetGame;
   if (b.dataset.sh === 'play') { closeOv(); launch(g); }
@@ -2983,23 +3075,77 @@ api.onGameExit(({ id, seconds, short, saved }) => {
   refreshRA();
 });
 
-/* ---------- recherche (barre du haut) ---------- */
-let qList = [], qSel = 0;
+/* ---------- recherche (barre du haut) : bibliothèque puis tout le catalogue RetroAchievements ---------- */
+let qList = [], qSel = 0, raCat = null, raCatLoad = null;
+const qNorm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function loadCatalog() {
+  if (raCat || raCatLoad || !raOn()) return;
+  raCatLoad = api.raCatalog().then((r) => {
+    if (r && r.ok) raCat = r.games.map(([id, title, cons, icon, ach, pts]) => ({ id, title, cons, icon, ach, pts, n: ' ' + qNorm(title) + ' ', hack: /^~|\[subset/i.test(title) }));
+    else raCatLoad = null;   // réessaie au prochain focus
+    if (raCat || !r || !r.ok) { if (document.activeElement === $('#q')) renderSearch(); }
+  }).catch(() => { raCatLoad = null; });
+}
+function raMatches(q) {
+  if (!raCat) return [];
+  const words = qNorm(q).split(' ').filter(Boolean);
+  if (!words.length || (words.length === 1 && words[0].length < 2)) return [];
+  const full = ' ' + words.join(' ');
+  const out = [];
+  for (const r of raCat) {
+    if (!words.every((w) => r.n.includes(w))) continue;
+    const sc = (r.n.startsWith(full + ' ') || r.n.startsWith(full) ? 0 : r.n.includes(full) ? 1 : 2) + (r.hack ? 3 : 0);
+    out.push([sc, r]);
+  }
+  return out.sort((a, b) => a[0] - b[0] || a[1].title.length - b[1].title.length || a[1].title.localeCompare(b[1].title)).map((x) => x[1]);
+}
+// consoles : nom RA ou abréviation courante
+const CONS_ALIAS = { nes: 'NES/Famicom', famicom: 'NES/Famicom', snes: 'SNES/Super Famicom', sfc: 'SNES/Super Famicom', n64: 'Nintendo 64', gb: 'Game Boy', gbc: 'Game Boy Color', gba: 'Game Boy Advance',
+  ds: 'Nintendo DS', nds: 'Nintendo DS', dsi: 'Nintendo DSi', gc: 'GameCube', ngc: 'GameCube', ps1: 'PlayStation', psx: 'PlayStation', ps2: 'PlayStation 2', psp: 'PlayStation Portable', md: 'Genesis/Mega Drive',
+  megadrive: 'Genesis/Mega Drive', sms: 'Master System', gg: 'Game Gear', pce: 'PC Engine/TurboGrafx-16', dc: 'Dreamcast', sat: 'Saturn', vb: 'Virtual Boy', ngp: 'Neo Geo Pocket', ws: 'WonderSwan', a2600: 'Atari 2600', lynx: 'Atari Lynx' };
+let raConsList = null;
+function consMatches(q) {
+  if (!raCat) return [];
+  if (!raConsList) { const m = new Map(); for (const r of raCat) m.set(r.cons, (m.get(r.cons) || 0) + 1); raConsList = [...m].map(([name, n]) => ({ name, n, k: qNorm(name) })); }
+  const k = qNorm(q), flat = k.replace(/ /g, ''), al = CONS_ALIAS[flat];
+  if (k.length < 2) return [];
+  return raConsList.filter((c) => c.name === al || c.k.includes(k) || c.k.replace(/ /g, '').includes(flat)).sort((a, b) => (b.name === al) - (a.name === al) || a.name.localeCompare(b.name)).slice(0, 4);
+}
 function renderSearch() {
   const q = $('#q').value.trim().toLowerCase(), box = $('#q-res');
   if (!q) { box.hidden = true; return; }
-  qList = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
+  loadCatalog();
+  const mine = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
+  const seen = new Set(mine.map((g) => g.raId).filter((x) => x > 0));
+  const ra = raMatches(q).filter((r) => !seen.has(r.id)).slice(0, 25);
+  const cons = consMatches(q);
+  qList = [...mine.map((g) => ({ g })), ...cons.map((c) => ({ cons: c })), ...ra.map((r) => ({ ra: r }))];
   qSel = 0;
-  box.innerHTML = qList.length ? qList.map((g, i) => {
+  const rowG = (g, i) => {
     const u = artUrl(g);
     const bg = u ? `background-image:url('${esc(u)}')` : `background:hsl(${hue(g.title)},50%,32%)`;
-    return `<div class="qr ${i === 0 ? 'on' : ''}" data-id="${g.id}"><span class="qt" style="${bg}"></span><span class="qx"><b translate="no">${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
-  }).join('') : '<div class="qr none">Aucun jeu trouvé</div>';
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt" style="${bg}"></span><span class="qx"><b translate="no">${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
+  };
+  const rowR = (r, i) => {
+    const own = cfg.games.find((g) => g.raId === r.id);
+    const bg = r.icon ? `background-image:url('${esc(RAM + r.icon)}')` : `background:hsl(${hue(r.title)},50%,32%)`;
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt sq" style="${bg}"></span><span class="qx"><b translate="no">${esc(r.title)}</b><small><span translate="no">${esc(r.cons)}</span>${own ? ' · <span>Dans ta bibliothèque</span>' : ''}</small></span></div>`;
+  };
+  const head = !raOn() ? '' : raCat ? (ra.length ? '<div class="qh">RetroAchievements</div>' : '')
+    : raCatLoad ? '<div class="qh">RetroAchievements</div><div class="qr none">Chargement du catalogue RetroAchievements…</div>' : '';
+  const rowC = (c, i) => `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt sq qc">${ic('list')}</span><span class="qx"><b translate="no">${esc(c.name)}</b><small>${c.n} ${c.n > 1 ? 'jeux' : 'jeu'} RetroAchievements</small></span></div>`;
+  box.innerHTML = (mine.length ? mine.map(rowG).join('') : !ra.length && !cons.length && !raCatLoad ? '<div class="qr none">Aucun jeu trouvé</div>' : '')
+    + (cons.length ? '<div class="qh">Consoles</div>' + cons.map((c, k) => rowC(c, mine.length + k)).join('') : '')
+    + head + ra.map((r, k) => rowR(r, mine.length + cons.length + k)).join('');
   box.hidden = false;
 }
-function pickSearch(g) {
+function pickSearch(it) {
   $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur();
-  if (g) focusGame(g);
+  if (!it) return;
+  if (it.g) return focusGame(it.g);
+  if (it.cons) return openConsGames(it.cons.name);
+  const r = it.ra, own = cfg.games.find((g) => g.raId === r.id);
+  openSheet(own || { id: 'ra-' + r.id, title: r.title, raId: r.id, raConsole: r.cons, raIcon: r.icon || undefined, virtual: true, path: '' }, 'search');
 }
 $('#q').oninput = renderSearch;
 $('#q').onfocus = renderSearch;
@@ -3009,13 +3155,51 @@ $('#q').onkeydown = (e) => {
     e.preventDefault();
     if (!qList.length) return;
     qSel = (qSel + (e.key === 'ArrowDown' ? 1 : -1) + qList.length) % qList.length;
-    [...$('#q-res').children].forEach((c, i) => c.classList.toggle('on', i === qSel));
+    $('#q-res').querySelectorAll('.qr[data-i]').forEach((c) => c.classList.toggle('on', +c.dataset.i === qSel));
     const on = $('#q-res .on'); if (on) on.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'Enter') { e.preventDefault(); pickSearch(qList[qSel]); }
   else if (e.key === 'Escape') { $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur(); }
 };
 $('#q-res').onmousedown = (e) => e.preventDefault();   // garde le focus dans le champ pendant le clic
-$('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.id) pickSearch(find(r.dataset.id)); };
+$('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.i) pickSearch(qList[+r.dataset.i]); };
+
+/* ---------- tous les jeux RetroAchievements d'une console (depuis la recherche) ---------- */
+let consName = '', consRows = [];
+function openConsGames(name) {
+  if (!raCat) return;
+  consName = name;
+  consRows = raCat.filter((r) => r.cons === name).sort((a, b) => a.hack - b.hack || a.title.localeCompare(b.title));
+  $('#cs-title').textContent = name; $('#cs-q').value = '';
+  drawConsGames();
+  const d = $('#dlg-cons'); if (!d.open) d.showModal();
+  $('#cs-q').focus();
+}
+function drawConsGames() {
+  const words = qNorm($('#cs-q').value).split(' ').filter(Boolean);
+  const own = new Set(cfg.games.map((g) => g.raId).filter((x) => x > 0));
+  const list = consRows.filter((r) => words.every((w) => r.n.includes(w)));
+  const nOwn = consRows.filter((r) => own.has(r.id)).length;
+  $('#cs-n').textContent = `${consRows.length} jeux · ${nOwn} dans ta bibliothèque`;
+  $('#cs-list').innerHTML = list.length ? list.map((r) => `<div class="cs-r" tabindex="0" data-cid="${r.id}">
+    <img src="${RAM}${esc(r.icon)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div><b translate="no">${esc(r.title)}</b>${r.ach ? `<small><span>${r.ach} succès</span> · ${r.pts} pts</small>` : ''}</div>
+    ${own.has(r.id) ? '<span class="sh-own on">Dans ta bibliothèque</span>' : ''}</div>`).join('') : '<div class="sh-load" style="padding:12px">Aucun jeu trouvé</div>';
+}
+$('#cs-q').oninput = drawConsGames;
+$('#cs-close').onclick = () => $('#dlg-cons').close();
+$('#cs-list').onclick = (e) => {
+  const row = e.target.closest('[data-cid]'); if (!row) return;
+  const r = consRows.find((x) => x.id === +row.dataset.cid); if (!r) return;
+  $('#dlg-cons').close();
+  const own = cfg.games.find((g) => g.raId === r.id);
+  openSheet(own || { id: 'ra-' + r.id, title: r.title, raId: r.id, raConsole: r.cons, raIcon: r.icon || undefined, virtual: true, path: '' }, 'cons');
+};
+$('#cs-list').onkeydown = (e) => {
+  const row = e.target.closest('[data-cid]'); if (!row) return;
+  if (e.key === 'Enter') { e.preventDefault(); row.click(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling; if (n) n.focus(); else if (e.key === 'ArrowUp') $('#cs-q').focus(); }
+};
+$('#cs-q').onkeydown = (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); const f = $('#cs-list [data-cid]'); if (f) f.focus(); } else if (e.key === 'Enter') { const f = $('#cs-list [data-cid]'); if (f) f.click(); } };
 
 /* ---------- événements ---------- */
 $('#bottom').onclick = (e) => { if (e.target.closest('.btile')) openTrophies(); };
@@ -3503,6 +3687,11 @@ const TUTO = [
     <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li></ol>
     <ul><li><b>Hardcore</b> : pas de sauvegarde d'état, de retour arrière ni de ralenti, mais les points comptent pleinement. <b>Softcore</b> : tout est permis, les succès sont marqués à part.</li>
     <li>Seules les ROMs <b>reconnues</b> par RetroAchievements (bonne version, non modifiée) ont des succès.</li></ul>` },
+  { ic:'search', t:'Rechercher et fiche de jeu', go:() => $('#q').focus(), h:`<ul><li>La <b>barre de recherche</b> (en haut) trouve tes jeux, puis <b>tous les jeux RetroAchievements</b>, même ceux que tu n'as pas. Tape un nom de <b>console</b> (ex. « snes ») pour voir tous ses jeux RetroAchievements. Flèches et Entrée pour choisir.</li>
+    <li>La <b>fiche du jeu</b> (touche <b>I</b> ou le bouton à droite de Jouer) : résumé, durée de vie, captures et succès.</li>
+    <li>Pour un jeu que tu n'as pas, la fiche liste les <b>hash supportés</b> : les versions de ROM exactes qui débloquent les succès (clic sur un MD5 pour le copier).</li>
+    <li>L'onglet <b>Subsets</b> de la fiche montre les sets de succès en plus du jeu (défis, bonus…). Une ROM patchée « [Subset - Nom] » est rangée sous son jeu de base : Jouer te demande lequel lancer.</li></ul>
+    <div class="tip">Le catalogue RetroAchievements se télécharge à la première recherche, puis reste disponible hors ligne.</div>` },
   { ic:'user', t:'Profil, amis et Discord', go:() => openSettings('discord'), h:`<ul><li><b>Profil</b> (le rond en haut à droite) : temps de jeu, jeux les plus joués, puis tes stats RetroAchievements.</li>
     <li><b>Amis</b> : ce que jouent les gens que tu suis sur RetroAchievements.</li>
     <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
@@ -3547,6 +3736,11 @@ const TUTO_EN = [
     <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li></ol>
     <ul><li><b>Hardcore</b>: no save states, rewind or slow motion, but points count fully. <b>Softcore</b>: anything goes, achievements are marked separately.</li>
     <li>Only ROMs <b>recognized</b> by RetroAchievements (right version, unmodified) have achievements.</li></ul>` },
+  { t:'Search and game sheet', h:`<ul><li>The <b>search bar</b> (at the top) finds your games, then <b>every RetroAchievements game</b>, even the ones you don't have. Type a <b>console</b> name (e.g. "snes") to see all its RetroAchievements games. Arrows and Enter to pick.</li>
+    <li>The <b>game sheet</b> (<b>I</b> key or the button right of Play): summary, length, screenshots and achievements.</li>
+    <li>For a game you don't have, the sheet lists the <b>supported hashes</b>: the exact ROM versions that unlock achievements (click an MD5 to copy it).</li>
+    <li>The sheet's <b>Subsets</b> tab shows the game's extra achievement sets (challenges, bonus…). A patched "[Subset - Name]" ROM is filed under its base game: Play asks which one to launch.</li></ul>
+    <div class="tip">The RetroAchievements catalog downloads on your first search, then stays available offline.</div>` },
   { t:'Profile, friends and Discord', h:`<ul><li><b>Profile</b> (the circle at the top right): play time, most played games, then your RetroAchievements stats.</li>
     <li><b>Friends</b>: what the people you follow on RetroAchievements are playing.</li>
     <li><b>Discord</b>: shows the current game on your Discord profile. A simple switch in Settings, Accounts.</li></ul>` },

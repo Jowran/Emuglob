@@ -807,7 +807,7 @@ ipcMain.handle('app:quit', () => app.quit());
 ipcMain.handle('app:relaunch', () => { app.relaunch(); app.quit(); });
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
+const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs', 'GetGameHashes']);
 const mem = new Map();
 
 // ---------- résumé Wikipédia pour la fiche de jeu (français, sinon anglais), gardé sur disque pour le mode hors ligne ----------
@@ -978,7 +978,8 @@ ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
   });
 });
 ipcMain.handle('wiki:open', (_e, url) => { if (typeof url === 'string' && /^https:\/\/[a-z]{2}\.wikipedia\.org\/wiki\//.test(url)) shell.openExternal(url); });
-ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
+ipcMain.handle('ra:call', (_e, a) => raCall(a));
+async function raCall({ endpoint, params = {}, ttl = 60 }) {
   if (!RA_ALLOWED.has(endpoint)) return { ok: false, error: 'Endpoint non autorisé' };
   const ra = readCfg().ra || {};
   if (!ra.user || !ra.key) return { ok: false, error: 'RetroAchievements non configuré' };
@@ -1027,6 +1028,50 @@ ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   } catch (err) {
     return stale() || { ok: false, error: err.name === 'TimeoutError' ? 'Délai dépassé' : err.message };
   }
+}
+
+// catalogue complet RetroAchievements ([id, titre, console, icône, succès, points]) (tous les jeux avec succès, toutes consoles) pour la barre de recherche.
+// Construit une fois depuis GetGameList (sans les hash, plus léger) puis gardé 7 jours dans ra-cache/catalog.json.
+let catalogJob = null;
+ipcMain.handle('ra:catalog', (_e, force) => {
+  const file = path.join(raCacheDir(), 'catalog-v2.json');
+  let old = null;
+  try { old = JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { /* pas encore construit */ }
+  if (old && !force && (!net.isOnline() || Date.now() - old.t < 7 * 864e5)) return { ok: true, games: old.games };
+  if (!net.isOnline()) return old ? { ok: true, games: old.games } : { ok: false, error: 'hors ligne' };
+  if (catalogJob) return catalogJob;
+  catalogJob = (async () => {
+    const cons = await raCall({ endpoint: 'GetConsoleIDs', params: { a: 1, g: 1 }, ttl: 604800 });
+    if (!cons.ok || !Array.isArray(cons.data)) return old ? { ok: true, games: old.games } : { ok: false, error: cons.error || 'consoles' };
+    const list = cons.data.filter((c) => c.ID && c.Active !== false && c.IsGameSystem !== false);
+    const games = [];
+    let i = 0, fails = 0;
+    const worker = async () => {
+      while (i < list.length) {
+        const c = list[i++];
+        // liste avec hash déjà en cache (reconnaissance de la bibliothèque) ? on la réutilise
+        let rows = null;
+        try { rows = JSON.parse(fs.readFileSync(path.join(raCacheDir(), `list-${c.ID}-h.json`), 'utf-8')); } catch { /* absente */ }
+        if (!Array.isArray(rows)) {
+          const r = await raCall({ endpoint: 'GetGameList', params: { i: c.ID, f: 1 }, ttl: 604800 });
+          rows = r.ok && Array.isArray(r.data) ? r.data : null;
+        }
+        if (!rows) { fails++; continue; }
+        for (const x of rows) {
+          const title = x.Title || x.title;
+          if (title) games.push([x.ID || x.id, title, c.Name, x.ImageIcon || x.imageIcon || '', x.NumAchievements || 0, x.Points || 0]);
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (!games.length) return old ? { ok: true, games: old.games } : { ok: false, error: 'catalogue vide' };
+    if (!fails) try {
+      fs.mkdirSync(raCacheDir(), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify({ t: Date.now(), games }));
+    } catch { /* cache facultatif */ }
+    return { ok: true, games };
+  })().finally(() => { catalogJob = null; });
+  return catalogJob;
 });
 
 /* ---------- reconnaissance des jeux et jaquettes ---------- */
