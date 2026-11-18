@@ -176,6 +176,9 @@
     'Récompenses': 'Awards', 'Succès (7 jours)': 'Achievements (7 days)', 'Terminé': 'Beaten', 'Maîtrisé': 'Mastered', 'Complété': 'Completed', 'Derniers jeux terminés': 'Latest games beaten',
     'Membre depuis le': 'Member since', 'Temps de jeu total': 'Total play time', 'Cette semaine': 'This week', 'Ce mois-ci': 'This month', 'Parties lancées': 'Sessions started',
     'Jeux lancés': 'Games started', 'Durée moyenne': 'Average length', 'Mon temps de jeu': 'My play time', 'Dernière partie': 'Last session', 'Jeux les plus joués': 'Most played games',
+    'Organiser le profil': 'Arrange profile', 'Ordre des sections (↑ ↓ pour déplacer)': 'Section order (↑ ↓ to move)', 'Compte RetroAchievements': 'RetroAchievements account',
+    'Ordre par défaut': 'Default order', 'Mes badges': 'My badges', 'Tous mes badges': 'All my badges', "Aucun badge pour l'instant.": 'No badges yet.', 'Masquer': 'Hide', 'Afficher': 'Show', 'Monter': 'Move up', 'Descendre': 'Move down',
+    'Voir le profil': 'View profile', 'Retour': 'Back', '(succès débloqués)': '(achievements unlocked)',
     'Badges': 'Badges', 'Maîtrisés': 'Mastered', 'Complétés': 'Completed', 'Terminés': 'Beaten', 'Événements': 'Events', 'Site': 'Site', 'Événement': 'Event',
     'Terminé (softcore)': 'Beaten (softcore)', 'Afficher moins': 'Show less', 'Récompense': 'Award', 'Palier de succès': 'Achievement milestone', 'Palier de points': 'Points milestone',
     'Soutien Patreon': 'Patreon supporter', 'Légende certifiée': 'Certified legend', 'Développeur de succès': 'Achievement developer',
@@ -239,7 +242,7 @@
   const P = [
     ['il y a {} min', '{} min ago'], ['il y a {} h', '{} h ago'], ['il y a {} j', '{} d ago'], ['Vu {}', 'Seen {}'],
     ['{} h {} min', '{} h {} min'], ['{} {}/{} succès · {} pts', '{} {}/{} achievements · {} pts'], ['{}/{} succès', '{}/{} achievements'], ['{} succès', '{} achievements'],
-    ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
+    ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
     ['Fichier introuvable : {}. Disque débranché ?', 'File not found: {}. Drive unplugged?'], ['keys.txt importé ({} clés).', 'keys.txt imported ({} keys).'],
     ['keys.txt importé ({} clés) dans {}.', 'keys.txt imported ({} keys) to {}.'],
     ['Jeu Wii U incomplet : dossier {} absent à côté de code ({}). Recopie le jeu en entier.', 'Incomplete Wii U game: {} folder missing next to code ({}). Copy the whole game again.'],

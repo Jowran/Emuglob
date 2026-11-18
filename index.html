@@ -127,7 +127,7 @@
   .fgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; margin-bottom:26px; }
   .fcard { padding:14px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column; gap:10px; min-width:0; }
   .fcard.live { border-color:color-mix(in srgb, #3ddc84 55%, transparent); background:linear-gradient(160deg, rgba(61,220,132,.12), rgba(255,255,255,.05) 60%); }
-  .fhead { display:flex; gap:12px; align-items:center; } .fhead b { display:block; font-size:15px; }
+  .fhead { display:flex; gap:12px; align-items:center; cursor:pointer; border-radius:10px; } .fhead:hover b { text-decoration:underline; } .fhead b { display:block; font-size:15px; }
   .fcard .fa { width:42px; height:42px; border-radius:50%; background:#3a2a6a center/cover; flex:none; position:relative; }
   .fcard .fa i { position:absolute; right:-1px; bottom:-1px; width:12px; height:12px; border-radius:50%; background:#6b6690; border:2px solid #1a1440; }
   .fcard.live .fa i { background:#3ddc84; box-shadow:0 0 8px #3ddc84; }
@@ -405,17 +405,25 @@
   .pro-head .av { width:88px; height:88px; flex:none; }
   .pro-head h3 { margin:0; font-size:26px; }
   .pro-head small { color:var(--muted); display:block; }
+  .pro-strip { margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; max-width:62%; padding:10px 14px; border-radius:16px; background:rgba(0,0,0,.25); }
+  .pro-strip .sb { width:52px; height:52px; border-radius:10px; border:3px solid #64748b; overflow:hidden; display:grid; place-items:center; background:#2a2350; box-sizing:border-box; transition:transform .15s; }
+  .pro-strip .sb[data-bi] { cursor:pointer; } .pro-strip .sb:hover { transform:translateY(-3px) scale(1.06); }
+  .pro-strip .sb img { width:100%; height:100%; display:block; }
+  .pro-strip .sb.b-mastery { border-color:#ffc83d; box-shadow:0 0 10px rgba(255,200,61,.4); } .pro-strip .sb.b-completion { border-color:#cbd5e1; }
+  .pro-strip .sb.b-beaten { border-color:#8f7bff; } .pro-strip .sb.b-event { border-color:#22c55e; }
+  #pro-bdg.on { border-color:#ffc83d; }
+  #pp-list .trow.off .tl { opacity:.45; }
   .stats { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; margin-bottom:24px; }
   .st { background:rgba(255,255,255,.07); border-radius:14px; padding:14px 16px; }
   .st b { display:block; font-size:26px; color:#ffc83d; }
   .st small { color:var(--muted); }
-  .pgrid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-bottom:24px; }
-  .pcard { position:relative; display:flex; flex-direction:column; min-height:170px; padding:14px 16px 12px; border-radius:16px; background:rgba(255,255,255,.07); cursor:pointer; overflow:hidden; transition:background .15s, transform .15s; }
+  .pgrid { display:grid; grid-template-columns:repeat(3, minmax(0,290px)); gap:14px; margin-bottom:24px; }
+  .pcard { position:relative; display:flex; flex-direction:column; min-height:136px; padding:12px 14px 10px; border-radius:16px; background:rgba(255,255,255,.07); cursor:pointer; overflow:hidden; transition:background .15s, transform .15s; }
   .pcard:hover { background:rgba(255,255,255,.12); transform:translateY(-2px); }
   .pc-top { display:flex; gap:12px; align-items:flex-start; justify-content:space-between; }
-  .pc-top b { font-size:15px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .pc-art { width:52px; height:52px; flex:none; border-radius:10px; background-size:cover; background-position:center; box-shadow:0 4px 12px rgba(0,0,0,.35); }
-  .pc-time { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:30px; font-weight:700; color:#ffc83d; padding:6px 0; }
+  .pc-top b { font-size:14px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .pc-art { width:44px; height:44px; flex:none; border-radius:10px; background-size:cover; background-position:center; box-shadow:0 4px 12px rgba(0,0,0,.35); }
+  .pc-time { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:24px; font-weight:700; color:#ffc83d; padding:4px 0; }
   .pc-time small { font-size:12px; font-weight:400; color:var(--muted); min-height:14px; }
   .pc-1 { font-size:18px; margin-right:6px; vertical-align:middle; }
   .pc-cons { align-self:flex-end; font-size:12px; color:var(--muted); }
@@ -607,7 +615,7 @@
 </div>
 
 <div class="overlay" id="ov-pro" hidden>
-  <div class="ovh"><h2>Mon profil</h2><button id="pro-acc"><i data-ic="user"></i> Compte</button><button id="pro-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovh"><h2 id="pro-title">Mon profil</h2><button id="pro-bdg" title="Tous mes badges"><i data-ic="trophy"></i> Badges</button><button id="pro-acc" title="Organiser le profil"><i data-ic="user"></i> Compte</button><button id="pro-close"><i data-ic="close"></i> Fermer</button></div>
   <div class="ovb" id="pro-body"></div>
 </div>
 
@@ -777,6 +785,12 @@
   <div class="row"><button id="mt-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
+<dialog id="dlg-pro">
+  <h2>Organiser le profil</h2>
+  <label>Ordre des sections (↑ ↓ pour déplacer)</label>
+  <div id="pp-list"></div>
+  <div class="row"><button id="pp-acc">Compte RetroAchievements</button><button id="pp-reset">Ordre par défaut</button><button id="pp-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
 <dialog id="dlg-tabs">
   <h2>Barre des consoles</h2>
   <label>Affichage</label>
@@ -1806,12 +1820,19 @@ function renderTro() {
 }
 
 /* ---------- profil RetroAchievements (clic sur l'avatar) ---------- */
-let proData = null;
+let proData = null, proView = 'main', proUser = null;   // proUser = pseudo d'un ami (null = moi)
 async function openProfile() {
-  closeOv(); setTop(''); mode = 'profile'; $('#ov-pro').hidden = false;
-  if (!raOn()) { $('#pro-body').innerHTML = localStatsHTML() + '<p class="muted">Lie ton compte RetroAchievements pour voir tes points et tes succès ici.</p><button class="fb" id="pro-link">Lier mon compte</button>'; return; }
-  $('#pro-body').innerHTML = localStatsHTML() + '<p class="muted">Chargement du profil…</p>';
-  const [p, aw, c0] = await Promise.all([api.ra('GetUserProfile', {}, 0), api.ra('GetUserAwards', {}, 300), api.ra('GetUserCompletionProgress', { c: 500, o: 0 }, 600)]);
+  closeOv(); setTop(proUser ? 'fr' : ''); mode = 'profile'; $('#ov-pro').hidden = false;
+  if (!raOn()) proUser = null;
+  const u = proUser, up = u ? { u } : {};
+  $('#pro-title').textContent = u ? T('Profil de {}').replace('{}', u) : T('Mon profil');
+  $('#pro-acc').style.display = u ? 'none' : '';
+  $('#pro-close').lastChild.textContent = u ? ' ' + T('Retour') : ' ' + T('Fermer');
+  $('#pro-bdg').style.display = raOn() ? '' : 'none'; $('#pro-bdg').classList.toggle('on', proView === 'badges');
+  if (!raOn()) { proView = 'main'; $('#pro-body').innerHTML = localStatsHTML('') + '<p class="muted">Lie ton compte RetroAchievements pour voir tes points et tes succès ici.</p><button class="fb" id="pro-link">Lier mon compte</button>'; return; }
+  proData = null;
+  $('#pro-body').innerHTML = proView === 'badges' || u ? '<p class="muted">Chargement du profil…</p>' : localStatsHTML('<h3>RetroAchievements</h3><p class="muted">Chargement du profil…</p>');
+  const [p, aw, c0] = await Promise.all([api.ra('GetUserProfile', up, u ? 300 : 0), api.ra('GetUserAwards', up, 300), api.ra('GetUserCompletionProgress', { ...up, c: 500, o: 0 }, 600)]);
   const games = [];
   let total = 0;
   const take = (r) => {
@@ -1822,13 +1843,15 @@ async function openProfile() {
     return arr.length;
   };
   let n = take(c0);
-  for (let o = 500; n === 500 && games.length < total && o < 2500; o += 500) n = take(await api.ra('GetUserCompletionProgress', { c: 500, o }, 600));
+  for (let o = 500; n === 500 && games.length < total && o < 2500; o += 500) n = take(await api.ra('GetUserCompletionProgress', { ...up, c: 500, o }, 600));
   proData = { p: p.ok ? p.data : null, a: aw.ok ? aw.data : null, games, total: total || games.length, err: p.error || aw.error };
-  if (mode === 'profile') renderPro();
+  if (mode === 'profile' && proUser === u) renderPro();
 }
 function renderPro() {
   const { p, a, games, total, err } = proData;
-  if (!p && !a) { $('#pro-body').innerHTML = localStatsHTML() + `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`; return; }
+  $('#pro-bdg').classList.toggle('on', proView === 'badges');
+  const u = proUser;
+  if (!p && !a) { proView = 'main'; $('#pro-body').innerHTML = u ? `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}).</p>` : localStatsHTML(`<h3>RetroAchievements</h3><p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`); return; }
   const num = (v) => (v === undefined || v === null ? '–' : Number(v).toLocaleString(LOC));
   const kind = (x) => x.HighestAwardKind || x.highestAwardKind || '';
   const finished = games.filter((x) => kind(x)).length;
@@ -1837,15 +1860,27 @@ function renderPro() {
   const cards = [
     ['Points (hardcore)', p && p.TotalPoints], ['Points (softcore)', p && p.TotalSoftcorePoints], ['RetroPoints', p && p.TotalTruePoints],
     ['Jeux terminés', total > games.length && a ? mastered + (a.BeatenHardcoreAwardsCount || 0) + (a.BeatenSoftcoreAwardsCount || 0) : finished],
-    ['Jeux maîtrisés', mastered], ['Jeux joués', total], ['Succès débloqués', unlocked], ['Récompenses', a && a.TotalAwardsCount], ['Succès (7 jours)', recent.length],
+    ['Jeux maîtrisés', mastered], ['Jeux joués', total], ['Succès débloqués', unlocked], ['Récompenses', a && a.TotalAwardsCount], ...(u ? [] : [['Succès (7 jours)', recent.length]]),
   ];
   proBadges = badgeList(a);
   const pic = p && p.UserPic ? `style="background-image:url('${RAM}${p.UserPic}')"` : '';
-  $('#pro-body').innerHTML = `<div class="pro-head"><div class="av" ${pic}></div><div><h3>${esc((p && p.User) || cfg.ra.user)}</h3>
-    ${p && p.Motto ? `<small>${esc(p.Motto)}</small>` : ''}${p && p.MemberSince ? `<small>Membre depuis le ${esc(String(p.MemberSince).slice(0, 10))}</small>` : ''}${p && p.RichPresenceMsg ? `<small>${esc(p.RichPresenceMsg)}</small>` : ''}</div></div>
-    ${localStatsHTML()}<div class="stats">${cards.map(([t, v]) => `<div class="st"><b>${num(v)}</b><small>${t}</small></div>`).join('')}</div>` +
-    (proBadges.length ? `<h3>Badges <span class="muted">(${proBadges.length})</span></h3><div id="pro-badges"></div>` : '');
-  renderBadges();
+  const strip = proBadges.filter((x) => x.k !== 'site').slice(0, 14);
+  const head = `<div class="pro-head"><div class="av" ${pic}></div><div><h3 translate="no">${esc((p && p.User) || u || cfg.ra.user)}</h3>
+    ${p && p.Motto ? `<small>${esc(p.Motto)}</small>` : ''}${p && p.MemberSince ? `<small>Membre depuis le ${esc(String(p.MemberSince).slice(0, 10))}</small>` : ''}${p && p.RichPresenceMsg ? `<small>${esc(p.RichPresenceMsg)}</small>` : ''}</div>
+    ${strip.length && proView === 'main' ? `<div class="pro-strip">${strip.map((b) => `<span class="sb b-${b.k}" ${b.id ? `data-bi="${proBadges.indexOf(b)}" data-all` : ''} title="${esc(b.title)} · ${esc(T(b.lab))}">${b.img ? `<img src="${esc(b.img)}" alt="" onerror="this.style.visibility='hidden'">` : ic('star')}</span>`).join('')}</div>` : ''}</div>`;
+  if (proView === 'badges') { $('#pro-body').innerHTML = head + `<h3>${u ? 'Badges' : 'Mes badges'} <span class="muted">(${proBadges.length})</span></h3>` + (proBadges.length ? '<div id="pro-badges"></div>' : '<p class="muted">Aucun badge pour l\'instant.</p>'); badgeAll = true; renderBadges(); return; }
+  const raSec = `<h3>RetroAchievements</h3><div class="stats">${cards.map(([t, v]) => `<div class="st"><b>${num(v)}</b><small>${t}</small></div>`).join('')}</div>`;
+  if (!u) { $('#pro-body').innerHTML = head + localStatsHTML(raSec); return; }
+  // ami : pas de temps de jeu chez RA, ses jeux les plus joués = ceux où il a le plus de succès
+  const top = games.filter((x) => (x.NumAwarded || 0) > 0).sort((x, y) => (y.NumAwarded || 0) - (x.NumAwarded || 0)).slice(0, 6);
+  const topSec = top.length ? '<h3>Jeux les plus joués <span class="muted">(succès débloqués)</span></h3><div class="pgrid">' + top.map((x, i) => {
+    const pc = x.MaxPossible ? Math.round((100 * x.NumAwarded) / x.MaxPossible) : 0;
+    return `<div class="pcard" data-fgid="${+x.GameID}" data-fgt="${esc(x.Title || '')}" data-fgc="${esc(x.ConsoleName || '')}"><div class="pc-top"><b translate="no">${esc(x.Title || '')}</b><span class="pc-art" style="background-image:url('${RAM}${esc(x.ImageIcon || '')}')"></span></div>
+      <div class="pc-time">${i === 0 ? '<span class="pc-1">★</span>' : ''}${x.NumAwarded} / ${x.MaxPossible || '?'}<small>${pc} %${x.HighestAwardKind ? ' · ' + esc(T({ mastered: 'Maîtrisé', completed: 'Complété', 'beaten-hardcore': 'Terminé', 'beaten-softcore': 'Terminé (softcore)' }[x.HighestAwardKind] || '')) : ''}</small></div>
+      <div class="pc-cons">${esc(x.ConsoleName || '')}</div><div class="pc-bar"><i style="width:${pc}%"></i></div></div>`;
+  }).join('') + '</div>' : '';
+  const hid = new Set(cfg.proHidden || []), secs = { top: topSec, ra: raSec };
+  $('#pro-body').innerHTML = head + proOrder().filter((k) => !hid.has(k)).map((k) => secs[k] || '').join('');
 }
 // badges du profil RA : maîtrise / complétion, jeux terminés, événements, récompenses du site
 let proBadges = [], badgeTab = 'all', badgeAll = false;
@@ -1879,7 +1914,7 @@ function openProGame(id) {
 }
 function openBadgeGame(b) {
   const mine = cfg.games.find((g) => g.raId === b.id);
-  openSheet(mine || { id: 'ra-' + b.id, title: b.title, raId: b.id, raConsole: b.cons, virtual: true, path: '' }, 'profile');
+  openSheet(mine || { id: 'ra-' + b.id, title: b.title, raId: b.id, raConsole: b.cons, virtual: true, friend: proUser || undefined, path: '' }, 'profile');
 }
 
 /* ---------- entretien de la bibliothèque : fichiers introuvables, dossiers surveillés, doublons ---------- */
@@ -2019,7 +2054,7 @@ function randomGame() {
   do { i = Math.floor(Math.random() * fgames.length); } while (i === fi);
   flowSet(i);
 }
-function localStatsHTML() {
+function localSecs() {
   const gs = cfg.games, total = gs.reduce((s, g) => s + (g.playSeconds || 0), 0), launches = gs.reduce((s, g) => s + (g.playCount || 0), 0);
   const played = gs.filter((g) => g.playCount || g.playSeconds).length;
   const top = gs.filter((g) => g.playSeconds >= 60).sort((a, b) => b.playSeconds - a.playSeconds).slice(0, 6);
@@ -2035,17 +2070,49 @@ function localStatsHTML() {
     ['Parties lancées', launches], ['Jeux lancés', `${played} / ${gs.length}`], ['Durée moyenne', launches && total >= 60 ? fmtDur(total / launches) : '–']];
   const lastTxt = last ? `${esc(lastG ? lastG.title : 'Jeu retiré')} · ${fmtDur(last.s)} · ${new Date(last.end).toLocaleString(LOC, { dateStyle: 'medium', timeStyle: 'short' })}`
     : recent ? `${esc(recent.title)} · ${new Date(recent.lastPlayed).toLocaleString(LOC, { dateStyle: 'medium', timeStyle: 'short' })}` : '';
-  return '<h3>Mon temps de jeu</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString(LOC) : v}</b><small>${t}</small></div>`).join('') + '</div>' +
-    (lastTxt ? `<h3>Dernière partie</h3><div class="ach"><div class="tx"><b>${lastTxt.split(' · ')[0]}</b><small>${lastTxt.split(' · ').slice(1).join(' · ')}</small></div></div>` : '') +
+  return { time: '<h3>Mon temps de jeu</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString(LOC) : v}</b><small>${t}</small></div>`).join('') + '</div>' +
+      (!ses.length ? '<p class="muted" style="font-size:12px;margin-top:-14px">Les stats « cette semaine » et « ce mois-ci » se remplissent à partir de ta prochaine partie.</p>' : ''),
+    last: (lastTxt ? `<h3>Dernière partie</h3><div class="ach"><div class="tx"><b>${lastTxt.split(' · ')[0]}</b><small>${lastTxt.split(' · ').slice(1).join(' · ')}</small></div></div>` : '') +
     (top.length ? '<h3>Jeux les plus joués</h3><div class="pgrid">' + top.map((g, i) => {
       const u = artUrl(g), bg = u ? `background-image:url('${esc(u).replace(/'/g, '%27')}')` : `background:hsl(${hue(g.title)},50%,32%)`;
       return `<div class="pcard" data-pg="${g.id}"><div class="pc-top"><b translate="no">${esc(g.title)}</b><span class="pc-art" style="${bg}"></span></div>
         <div class="pc-time">${i === 0 ? '<span class="pc-1">★</span>' : ''}${fmtDur(g.playSeconds)}<small>${g.playCount ? g.playCount + ' partie(s)' : ''}</small></div>
         <div class="pc-cons">${esc(labelOf(g))}</div><div class="pc-bar"><i style="width:${Math.round((100 * g.playSeconds) / top[0].playSeconds)}%"></i></div></div>`;
-    }).join('') + '</div>' : '') +
-    (cons.length ? '<h3>Temps par console</h3><div class="cgrid">' + cons.map(([k, v]) => `<div class="ccard"><b>${esc(k)}</b><span>${fmtDur(v)}</span><small>${Math.round((100 * v) / total)} %</small><div class="pc-bar"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div>`).join('') + '</div>' : '') +
-    (!ses.length ? '<p class="muted" style="font-size:12px">Les stats « cette semaine » et « ce mois-ci » se remplissent à partir de ta prochaine partie.</p>' : '') +
-    '<h3>RetroAchievements</h3>';
+    }).join('') + '</div>' : ''),
+    cons: (cons.length ? '<h3>Temps par console</h3><div class="cgrid">' + cons.map(([k, v]) => `<div class="ccard"><b>${esc(k)}</b><span>${fmtDur(v)}</span><small>${Math.round((100 * v) / total)} %</small><div class="pc-bar"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div>`).join('') + '</div>' : '') };
+}
+
+// sections du profil dans l'ordre choisi (bouton Compte)
+const PRO_SECS = [['time', 'Mon temps de jeu'], ['last', 'Dernière partie'], ['top', 'Jeux les plus joués'], ['cons', 'Temps par console'], ['ra', 'RetroAchievements']];
+function proOrder() {
+  const keys = PRO_SECS.map(([k]) => k), o = (cfg.proOrder || []).filter((k) => keys.includes(k));
+  return [...o, ...keys.filter((k) => !o.includes(k))];
+}
+function localStatsHTML(ra = '<h3>RetroAchievements</h3>') {
+  const secs = { ...localSecs(), ra }, hid = new Set(cfg.proHidden || []);
+  return proOrder().filter((k) => !hid.has(k)).map((k) => secs[k] || '').join('');
+}
+function openProOrder() {
+  const d = $('#dlg-pro');
+  const refresh = () => {
+    const o = proOrder(), hid = new Set(cfg.proHidden || []), name = Object.fromEntries(PRO_SECS);
+    $('#pp-list').innerHTML = o.map((k, i) => `<div class="trow ${hid.has(k) ? 'off' : ''}" data-k="${k}"><span class="tl">${name[k]}</span>
+      <button data-a="up" ${i ? '' : 'disabled'} title="Monter">↑</button><button data-a="down" ${i < o.length - 1 ? '' : 'disabled'} title="Descendre">↓</button>
+      <button data-a="hide">${hid.has(k) ? 'Afficher' : 'Masquer'}</button></div>`).join('');
+  };
+  const apply = () => { save(); refresh(); if (mode === 'profile') (proData && raOn() ? renderPro() : openProfile()); };
+  $('#pp-list').onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const k = b.closest('.trow').dataset.k, o = proOrder(), i = o.indexOf(k);
+    if (b.dataset.a === 'up' && i > 0) [o[i - 1], o[i]] = [o[i], o[i - 1]];
+    else if (b.dataset.a === 'down' && i < o.length - 1) [o[i + 1], o[i]] = [o[i], o[i + 1]];
+    else if (b.dataset.a === 'hide') { const h = new Set(cfg.proHidden || []); h.has(k) ? h.delete(k) : h.add(k); cfg.proHidden = [...h]; }
+    cfg.proOrder = o; apply();
+  };
+  $('#pp-reset').onclick = () => { delete cfg.proOrder; delete cfg.proHidden; apply(); };
+  $('#pp-acc').onclick = () => { d.close(); openSettings(); };
+  $('#pp-ok').onclick = () => d.close();
+  refresh(); d.showModal();
 }
 
 /* ---------- onglet Paramètres ---------- */
@@ -2213,7 +2280,7 @@ const friendCard = (f) => {
   const g = f.game;
   const lastA = (f.ach || [])[0];
   return `<div class="fcard ${f.live ? 'live' : ''}">
-    <div class="fhead"><div class="fa" style="background-image:url('${RAM}${esc(f.pic || '/UserPic/' + encodeURIComponent(f.user) + '.png')}')"><i></i></div><div><b translate="no">${esc(f.user)}</b>${st}</div></div>
+    <div class="fhead" data-fu="${esc(f.user)}" title="Voir le profil"><div class="fa" style="background-image:url('${RAM}${esc(f.pic || '/UserPic/' + encodeURIComponent(f.user) + '.png')}')"><i></i></div><div><b translate="no">${esc(f.user)}</b>${st}</div></div>
     ${g ? `<div class="fgame" data-fg="${esc(f.user)}" title="Voir la fiche du jeu"><img src="${RAM}${esc(g.icon || '')}" alt="" onerror="this.style.visibility='hidden'"><div><b translate="no">${esc(g.title || '')}</b><small>${esc(g.console || '')}${f.live ? '' : ' · dernier jeu'}</small></div></div>` : ''}
     ${f.rp && (f.live || (f.rpAt && Date.now() - f.rpAt < 864e5)) ? `<div class="frp">${esc(f.rp)}</div>` : ''}
     ${lastA ? `<div class="flast"><img src="${RAM}/Badge/${esc(lastA.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'"><small><b>${esc(lastA.Title)}</b> ${subTag(lastA)} · ${esc(agoMs(lastA.at))}</small></div>` : ''}
@@ -2763,15 +2830,18 @@ $('#btn-more').onclick = () => openMenu();
 $('#btn-sort').onclick = () => openSort();
 $('#btn-rand').onclick = () => randomGame();
 $('#btn-sheet').onclick = () => openSheet();
-$('#avatar').onclick = openProfile;
-$('#pro-close').onclick = closeOv;
-$('#pro-acc').onclick = openSettings;
+$('#avatar').onclick = () => { proView = 'main'; proUser = null; openProfile(); };
+$('#pro-close').onclick = () => { if (proUser) { proUser = null; closeOv(); openFriends(); } else closeOv(); };
+$('#pro-acc').onclick = openProOrder;
+$('#pro-bdg').onclick = () => { proView = proView === 'badges' ? 'main' : 'badges'; $('#pro-body').scrollTop = 0; proData && mode === 'profile' ? renderPro() : openProfile(); };
 $('#pro-body').onclick = (e) => {
   if (e.target.closest('#pro-link')) return openSettings();
   const pg = e.target.closest('[data-pg]'); if (pg) return openProGame(pg.dataset.pg);
+  const fg = e.target.closest('[data-fgid]'); if (fg) return openBadgeGame({ id: +fg.dataset.fgid, title: fg.dataset.fgt, cons: fg.dataset.fgc });
   const bk = e.target.closest('[data-bk]'); if (bk) { badgeTab = bk.dataset.bk; badgeAll = false; return renderBadges(); }
   if (e.target.closest('[data-bmore]')) { badgeAll = !badgeAll; return renderBadges(); }
   const bi = e.target.closest('[data-bi]'), el = $('#pro-badges');
+  if (bi && bi.hasAttribute('data-all')) return openBadgeGame(proBadges[+bi.dataset.bi]);
   if (bi && el && el._list) openBadgeGame(el._list[+bi.dataset.bi]);
 };
 $('#tab-set').onclick = openSettingsPanel;
@@ -2836,7 +2906,10 @@ $('#f-stage').addEventListener('wheel', (e) => {
 window.addEventListener('resize', () => { if (mode === 'home') placeFlow(); });
 $('#tab-fr').onclick = openFriends;
 $('#fr-close').onclick = closeOv;
-$('#fr-body').onclick = (e) => { const c = e.target.closest('[data-fg]'); if (c) openFriendGame(c.dataset.fg); };
+$('#fr-body').onclick = (e) => {
+  const fu = e.target.closest('[data-fu]'); if (fu) { proUser = fu.dataset.fu; proView = 'main'; return openProfile(); }
+  const c = e.target.closest('[data-fg]'); if (c) openFriendGame(c.dataset.fg);
+};
 $('#fr-refresh').onclick = async () => { await loadFriends(true); renderFr(); };
 $('#lib-less').onclick = () => setAllOpen(false);
 $('#lib-more').onclick = () => setAllOpen(true);
