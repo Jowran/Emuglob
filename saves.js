@@ -45,6 +45,47 @@ function walk(dir, depth, cb) {
   }
 }
 const statOf = (p) => { try { const s = fs.statSync(p); return s.isFile() && s.size > 0 ? s : null; } catch { return null; } };
+// sauvegarde vide (que des 0xFF ou des 0x00) : l'émulateur l'a créée sans que le jeu ait rien enregistré, elle ne doit jamais l'emporter
+function isBlank(p) {
+  try {
+    const b = fs.readFileSync(p);
+    if (!b.length) return true;
+    const v = b[0];
+    if (v !== 0xff && v !== 0x00) return false;
+    for (let i = 1; i < b.length; i++) if (b[i] !== v) return false;
+    return true;
+  } catch { return true; }
+}
+
+// ---------- RetroArch : <dossier>\saves\[Core\]<jeu>.srm (format libretro brut, identique à RALibretro) ----------
+const raCache = { t: 0, roots: [] };
+function retroarchSaveRoots(env = process.env) {
+  if (Date.now() - raCache.t < 60000) return raCache.roots;
+  const H = env.USERPROFILE || env.HOME || '', A = env.APPDATA || '';
+  const pf86 = env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', pf = env.ProgramFiles || 'C:\\Program Files';
+  const bases = ['C:\\RetroArch-Win64', 'C:\\RetroArch', 'D:\\RetroArch-Win64', 'D:\\RetroArch', path.join(A, 'RetroArch'), path.join(H, 'RetroArch'),
+    path.join(pf, 'RetroArch'), path.join(pf86, 'Steam', 'steamapps', 'common', 'RetroArch'), path.join(pf, 'Steam', 'steamapps', 'common', 'RetroArch')];
+  const roots = [];
+  for (const b of bases) {
+    let cfg = '';
+    try { cfg = fs.readFileSync(path.join(b, 'retroarch.cfg'), 'utf-8'); } catch { if (!fs.existsSync(path.join(b, 'saves'))) continue; }
+    let dir = (/^\s*savefile_directory\s*=\s*"([^"]*)"/m.exec(cfg) || [])[1] || '';
+    if (!dir || dir === 'default') dir = path.join(b, 'saves');
+    else if (/^:[\\/]/.test(dir)) dir = path.join(b, dir.slice(2));   // « :\saves » = relatif au dossier de RetroArch
+    roots.push({ dir, inContent: /^\s*savefiles_in_content_dir\s*=\s*"true"/m.test(cfg) });
+  }
+  raCache.t = Date.now(); raCache.roots = roots;
+  return roots;
+}
+// sauvegardes RetroArch de ce jeu (dans saves\, ses sous-dossiers par core / par dossier de contenu, ou à côté de la ROM)
+function retroarchSaves(rom, env = process.env) {
+  const want = low(stemOf(rom) + '.srm'), out = [];
+  for (const r of retroarchSaveRoots(env)) {
+    walk(r.dir, 2, (p) => { if (low(path.basename(p)) === want) out.push(p); });
+    if (r.inContent) { const p = path.join(path.dirname(rom), stemOf(rom) + '.srm'); if (statOf(p)) out.push(p); }
+  }
+  return [...new Set(out)];
+}
 
 // où cet émulateur range la sauvegarde de ce jeu : { found: [chemins existants], target: chemin par défaut } ou null (pas de partage)
 function locate(emu, rom) {
@@ -71,7 +112,7 @@ function locate(emu, rom) {
   return { found, target: path.join(dir, stemOf(rom) + ext) };
 }
 
-const newest = (paths) => paths.map((p) => ({ p, s: statOf(p) })).filter((x) => x.s).sort((a, b) => b.s.mtimeMs - a.s.mtimeMs)[0] || null;
+const newest = (paths) => paths.filter((p) => !isBlank(p)).map((p) => ({ p, s: statOf(p) })).filter((x) => x.s).sort((a, b) => b.s.mtimeMs - a.s.mtimeMs)[0] || null;
 const same = (a, b) => { try { return fs.readFileSync(a).equals(fs.readFileSync(b)); } catch { return false; } };
 const safe = (s) => String(s).replace(/[^\w.-]+/g, '_').slice(0, 60);
 
@@ -107,12 +148,15 @@ class SaveVault {
       const l = locate(e, rom);
       if (l) l.found.forEach((p) => pool.push({ p, from: e.name }));
     }
+    if (emu.kind === 'libretro') for (const p of retroarchSaves(rom)) if (!own.found.includes(p)) pool.push({ p, from: 'RetroArch' });
     if (statOf(this.file(gameId))) pool.push({ p: this.file(gameId), from: 'Emuglob' });
-    const best = pool.map((x) => ({ ...x, s: statOf(x.p) })).filter((x) => x.s).sort((a, b) => b.s.mtimeMs - a.s.mtimeMs)[0];
+    const best = pool.filter((x) => !isBlank(x.p)).map((x) => ({ ...x, s: statOf(x.p) })).filter((x) => x.s).sort((a, b) => b.s.mtimeMs - a.s.mtimeMs)[0];
     if (!best) return { action: 'none' };
     if (mine && (mine.s.mtimeMs >= best.s.mtimeMs - 2000 || same(mine.p, best.p))) return { action: 'kept' };
-    const dst = mine ? mine.p : own.target;
-    if (mine) this.keep(gameId, mine.p, `${emu.name}-remplacee`);
+    // sauvegarde vide de l'émulateur lancé : remplacée elle aussi (gardée dans l'historique)
+    const blank = !mine && own.found.find((p) => statOf(p));
+    const dst = mine ? mine.p : blank || own.target;
+    if (mine || blank) this.keep(gameId, dst, `${emu.name}-remplacee`);
     this.copy(best.p, dst);
     return { action: 'copied', from: best.from, to: dst };
   }
@@ -124,11 +168,22 @@ class SaveVault {
     const mine = newest(own.found);
     if (!mine) return { action: 'none' };
     const v = this.file(gameId);
-    if (statOf(v) && same(v, mine.p)) return { action: 'kept' };
-    this.keep(gameId, v, 'coffre');
-    this.copy(mine.p, v);
-    fs.writeFileSync(path.join(this.dir(gameId), 'source.txt'), `${emu.name}\n${mine.p}\n${new Date().toISOString()}\n`);
-    return { action: 'saved', from: mine.p };
+    const res = { action: 'kept' };
+    if (!(statOf(v) && same(v, mine.p))) {
+      this.keep(gameId, v, 'coffre');
+      this.copy(mine.p, v);
+      fs.writeFileSync(path.join(this.dir(gameId), 'source.txt'), `${emu.name}\n${mine.p}\n${new Date().toISOString()}\n`);
+      Object.assign(res, { action: 'saved', from: mine.p });
+    }
+    // RetroArch : sa sauvegarde du jeu (si elle existe déjà) est mise à jour, l'ancienne part d'abord dans l'historique
+    if (emu.kind === 'libretro') {
+      for (const p of retroarchSaves(rom)) {
+        const s = statOf(p);
+        if (!s || s.size !== mine.s.size || s.mtimeMs >= mine.s.mtimeMs - 2000 || same(p, mine.p)) continue;
+        try { this.keep(gameId, p, 'RetroArch-remplacee'); this.copy(mine.p, p); (res.retroarch = res.retroarch || []).push(p); } catch { /* fichier verrouillé : tant pis */ }
+      }
+    }
+    return res;
   }
 }
 
@@ -326,4 +381,95 @@ SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
   fs.renameSync(tmp, dst);
 };
 
-module.exports = { SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };
+// ---------- Cemu : les autres installations du PC (portable, autre dossier, ancien Cemu) partagent leurs sauvegardes ----------
+// recherche de Cemu.exe : emplacements habituels + racine des disques (2 niveaux, 3 dans les dossiers « émulateurs / jeux »)
+const cemuScan = { t: 0, exes: [] };
+const SKIP_DIR = /^(\$|windows$|system volume information$|programdata$|recovery$|perflogs$|intel$|amd$|nvidia$|msocache$|config\.msi$|node_modules$|\.)/i;
+const DEEP_DIR = /emu|cemu|wii|jeu|game|program|t[ée]l[ée]ch|download|bureau|desktop|document|portable|tools|outils/i;
+function findCemuExes(env = process.env, extra = []) {
+  if (Date.now() - cemuScan.t < 10 * 60000) return cemuScan.exes;
+  const H = env.USERPROFILE || env.HOME || '';
+  const found = new Set();
+  const check = (dir) => { for (const n of ['Cemu.exe', 'cemu.exe']) { const p = path.join(dir, n); if (statOf(p)) { found.add(path.resolve(p)); return; } } };
+  const subdirs = (d) => { try { return fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory() && !SKIP_DIR.test(e.name)).map((e) => path.join(d, e.name)); } catch { return []; } };
+  const t0 = Date.now();
+  for (const d of [...extra, path.join(H, 'Documents'), path.join(H, 'Desktop'), path.join(H, 'Downloads'), env.ProgramFiles, env['ProgramFiles(x86)'], env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs')].filter(Boolean)) {
+    check(d); for (const a of subdirs(d)) { check(a); for (const b of subdirs(a)) check(b); }
+  }
+  if (process.platform === 'win32') {
+    for (const L of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+      const root = L + ':\\';
+      if (!fs.existsSync(root)) continue;
+      for (const a of subdirs(root)) {
+        if (Date.now() - t0 > 4000) break;   // disque lent : on s'arrête là
+        check(a);
+        for (const b of subdirs(a)) { check(b); if (DEEP_DIR.test(path.basename(a)) || DEEP_DIR.test(path.basename(b))) for (const c of subdirs(b)) check(c); }
+      }
+    }
+  }
+  cemuScan.t = Date.now(); cemuScan.exes = [...found];
+  return cemuScan.exes;
+}
+// dossiers mlc01 des AUTRES Cemu (ceux du Cemu lancé par Emuglob exclus)
+function cemuOtherRoots(exe, env = process.env) {
+  const own = new Set(cemuMlcRoots(exe, env).map((r) => low(path.resolve(r))));
+  const me = exe ? low(path.resolve(exe)) : '';
+  const out = [];
+  for (const x of findCemuExes(env, exe ? [path.dirname(path.dirname(exe))] : [])) {
+    if (low(x) === me) continue;
+    for (const r of cemuMlcRoots(x, env)) { const k = low(path.resolve(r)); if (!own.has(k)) { own.add(k); out.push({ root: r, exe: x }); } }
+  }
+  return out;
+}
+const cemuTid = (exe, rom, { tid, title } = {}) => {
+  let id = low(tid || wiiuTitleId(rom) || '');
+  if (!id && title) {
+    const want = nameKey(title), names = Object.assign({}, ...[exe, ...findCemuExes()].map((x) => cemuTitleNames(x)));
+    const hit = Object.keys(names).filter((k) => /^00050000/.test(k) && nameKey(names[k]) === want);
+    if (hit.length === 1) id = hit[0];
+  }
+  return /^[0-9a-f]{16}$/.test(id) ? id : '';
+};
+const saveIn = (root, id) => path.join(root, 'usr', 'save', id.slice(0, 8), id.slice(8));
+const hasFiles = (d) => newestMtime(d) > 0;
+function replaceDir(src, dst) {
+  const tmp = dst + '.emuglob-tmp';
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.cpSync(src, tmp, { recursive: true, preserveTimestamps: true });
+  if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  fs.renameSync(tmp, dst);
+}
+// avant le lancement : reprend la sauvegarde d'un autre Cemu si elle est plus récente (l'actuelle part d'abord dans le coffre)
+SaveVault.prototype.cemuPrepare = function cemuPrepare({ gameId, exe, rom, tid, title }) {
+  const id = cemuTid(exe, rom, { tid, title });
+  if (!id) return { action: 'none' };
+  // Cemu jamais lancé : pas encore de mlc01, on prend celui qu'il utilisera (portable\ si présent, sinon %APPDATA%\Cemu)
+  const ownRoots = cemuMlcRoots(exe);
+  if (!ownRoots.length) {
+    const env = process.env, ex = path.dirname(exe || '');
+    ownRoots.push(fs.existsSync(path.join(ex, 'portable')) ? path.join(ex, 'portable', 'mlc01')
+      : fs.existsSync(path.join(ex, 'settings.xml')) || !env.APPDATA ? path.join(ex, 'mlc01') : path.join(env.APPDATA, 'Cemu', 'mlc01'));
+  }
+  const mine = ownRoots.map((r) => saveIn(r, id)).find((d) => hasFiles(d)) || saveIn(ownRoots[0], id);
+  const mineT = hasFiles(mine) ? newestMtime(mine) : 0;
+  const best = cemuOtherRoots(exe).map((o) => ({ ...o, dir: saveIn(o.root, id) })).filter((o) => hasFiles(o.dir))
+    .map((o) => ({ ...o, t: newestMtime(o.dir) })).sort((a, b) => b.t - a.t)[0];
+  if (!best || best.t <= mineT + 2000 || dirSig(best.dir) === dirSig(mine)) return { action: mineT ? 'kept' : 'none', tid: id };
+  if (mineT) this.snapDir(String(gameId), mine, 'avant-reprise');
+  replaceDir(best.dir, mine);
+  return { action: 'copied', from: 'Cemu (' + path.dirname(best.exe) + ')', to: mine, tid: id };
+};
+// après la partie : met à jour la sauvegarde des autres Cemu qui ont déjà ce jeu (l'ancienne part d'abord dans le coffre)
+SaveVault.prototype.cemuPush = function cemuPush({ gameId, exe, dir, tid }) {
+  if (!dir || !/^[0-9a-f]{16}$/.test(tid || '') || !hasFiles(dir)) return [];
+  const t = newestMtime(dir), done = [];
+  for (const o of cemuOtherRoots(exe)) {
+    const d = saveIn(o.root, tid);
+    if (!hasFiles(d) || newestMtime(d) >= t - 2000 || dirSig(d) === dirSig(dir)) continue;
+    try { this.snapDir(String(gameId), d, 'autre-Cemu-remplacee'); replaceDir(dir, d); done.push(d); } catch { /* fichier verrouillé : tant pis */ }
+  }
+  return done;
+};
+
+module.exports = { findCemuExes, cemuOtherRoots, isBlank, retroarchSaves, SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };

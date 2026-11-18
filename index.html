@@ -1592,7 +1592,7 @@ async function launch(g, opts = {}) {
   }
   const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
   if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
-  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '' } : null;
+  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '', title: g.title || '' } : null;
   const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', stream: !!cfg.streamMirror, sync, cover: { title: g.title, emu: emu.name, id: emu.id, img: artUrl(g), c: flowColor(g), f: cartForm(g, emu), k: (/^(dolphin|pcsx2|cemu|ppsspp)$/.test(emu.id) || g.platform === 'ps1' || g.system === 12) ? 'disc' : 'cart' } });
   if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
   playing = g; playStart = Date.now(); presence(g);
