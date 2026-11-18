@@ -82,6 +82,10 @@ npm run pack       # build Windows dans dist/
 
 La configuration de l'utilisateur est dans `%APPDATA%\emuglob-launcher\` (`config.json`, jaquettes, sauvegardes, copies de secours, cache).
 
+## Licence
+
+Emuglob est un logiciel libre sous licence [GPL-3.0](LICENSE) : tu peux l'utiliser, le modifier et le redistribuer, à condition de garder la même licence et de partager le code source de tes modifications.
+
 ## Crédits
 
 Emuglob ne contient aucun émulateur. Ceux qu'il installe sont téléchargés depuis leur source officielle et lancés comme des programmes séparés :
