@@ -9,7 +9,13 @@
   * { box-sizing:border-box; }
   html, body { height:100%; margin:0; overflow:hidden; }
   body { display:flex; flex-direction:column; color:#fff; font:15px/1.4 "Segoe UI",system-ui,sans-serif;
-    background:var(--wall,none) center/cover, linear-gradient(180deg,#140e3a 0%,#2d1658 40%,#8a3a7a 72%,#e0785a 100%); }
+    background:var(--wall,none) center/cover, linear-gradient(180deg,var(--th1) 0%,var(--th2) 40%,var(--th3) 72%,var(--th4) 100%);
+    transition:--th1 .9s ease, --th2 .9s ease, --th3 .9s ease, --th4 .9s ease; }
+  /* thème : couleurs du fond selon la console (Paramètres › Thèmes et sons), animées en douceur */
+  @property --th1 { syntax:'<color>'; inherits:true; initial-value:#140e3a; }
+  @property --th2 { syntax:'<color>'; inherits:true; initial-value:#2d1658; }
+  @property --th3 { syntax:'<color>'; inherits:true; initial-value:#8a3a7a; }
+  @property --th4 { syntax:'<color>'; inherits:true; initial-value:#e0785a; }
   body::before { content:""; position:fixed; inset:0; pointer-events:none;
     background:linear-gradient(90deg,rgba(8,6,24,.7),rgba(8,6,24,.1) 65%), linear-gradient(0deg,rgba(8,6,24,.7),transparent 45%); }
   #top, #row, #info, #bottom { position:relative; }
@@ -193,6 +199,12 @@
   .trow .tl { flex:1; min-width:0; }
   .trow .cbadge { display:flex; width:28px; height:28px; border-radius:8px; }
   .trow button { padding:4px 8px !important; font-size:12px; }
+  .trow input[type=color] { width:28px !important; height:24px; padding:0 !important; border-radius:6px; cursor:pointer; flex:none; }
+  #dlg-amb { width:min(520px, 92vw); }
+  #dlg-amb .ck { display:flex; align-items:center; gap:8px; color:#fff; font-size:14px; margin-top:12px; }
+  #dlg-amb .ck input { width:auto; margin:0; }
+  #dlg-amb input[type=range] { padding:0; accent-color:#8f7bff; }
+  #dlg-amb .vol { display:flex; align-items:center; gap:10px; } #dlg-amb .vol span { width:42px; text-align:right; color:var(--muted); font-size:13px; }
   #home .fstage { flex:1; min-height:0; }
   #home .finfo { flex:none; padding:4px 56px 0; }
   #prog { justify-content:center; }
@@ -372,6 +384,15 @@
   <div class="row"><button id="tb-reset">Ordre alphabétique, tout afficher</button><button id="tb-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
+<dialog id="dlg-amb">
+  <h2>Thèmes et sons</h2>
+  <label class="ck"><input type="checkbox" id="am-theme"> Couleur du fond selon la console sélectionnée</label>
+  <small class="muted">Couleur personnalisée par console : Paramètres › Barre des consoles. Masqué si un fond d'écran est choisi.</small>
+  <label class="ck"><input type="checkbox" id="am-ui"> Sons de navigation (survol et sélection des jeux)</label>
+  <label>Volume des sons</label><div class="vol"><input type="range" id="am-uivol" min="0" max="100"><span id="am-uivol-v"></span></div>
+  <div class="row"><button id="am-test" style="margin-right:auto">Tester le son</button><button id="am-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
 <dialog id="dlg-bak">
   <h2>Sauvegardes</h2>
   <p class="muted">Emuglob sauvegarde ta bibliothèque et tes réglages automatiquement (toutes les 6 heures au plus, 10 gardées).</p>
@@ -498,6 +519,7 @@ const ICONS = {
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   dice: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
   download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
   flow: '<rect x="8.5" y="4" width="7" height="16" rx="1.2"/><path d="M4.5 7v10M19.5 7v10"/>',
@@ -808,6 +830,15 @@ const TAB_ABBR = { 'Game Boy':'GB', 'Game Boy Color':'GBC', 'Game Boy Advance':'
   'Super Nintendo':'SNES', 'NES':'NES', 'Mega Drive / Genesis':'MD', 'Master System':'SMS', 'Game Gear':'GG', 'PlayStation':'PS1', 'PlayStation 2':'PS2',
   'PSP':'PSP', 'PC Engine':'PCE', 'Atari 2600':'A26', 'Atari Lynx':'LNX', 'Neo Geo Pocket':'NGP', 'Arcade':'ARC', 'Wii':'Wii', 'GameCube':'GC',
   'Nintendo Switch':'NSW', 'Saturn':'SAT', 'Dreamcast':'DC', 'Virtual Boy':'VB', 'WonderSwan':'WS' };
+// couleur d'une console : choisie par l'utilisateur, sinon celle de son système
+function consColor(t) {
+  if (!t) return '#5b46d6';
+  const c = (cfg.tabColors || {})[t.key];
+  if (c) return c;
+  if (t.key === '__recent') return '#5b46d6';
+  if (t.key === '__fav') return '#d97706';
+  return t.games[0] ? flowColor(t.games[0]) : '#475569';
+}
 function tabBadge(t) {
   if (t.key === '__recent') return `<span class="cbadge" style="--cc:#5b46d6">${ic('clock')}</span>`;
   if (t.key === '__fav') return `<span class="cbadge" style="--cc:#d97706">${ic('star')}</span>`;
@@ -816,8 +847,7 @@ function tabBadge(t) {
   const rs = t.games[0] ? raSys(t.games[0]) : 0;
   if (consoleIcons[rs]) return `<span class="cbadge img ra" style="--cc:${t.games[0] ? flowColor(t.games[0]) : '#475569'};background-image:url('${esc(consoleIcons[rs])}')"></span>`;
   const ab = TAB_ABBR[t.label] || t.label.split(/[\s/-]+/).filter(Boolean).map((w) => (/\d/.test(w) ? w : w[0])).join('').slice(0, 4).toUpperCase();
-  const col = t.games[0] ? flowColor(t.games[0]) : '#475569';
-  return `<span class="cbadge" style="--cc:${col}">${esc(ab)}</span>`;
+  return `<span class="cbadge" style="--cc:${consColor(t)}">${esc(ab)}</span>`;
 }
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
 function tabsList(all) {
@@ -856,6 +886,10 @@ function render() {
   if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
   if (on && $('#home').classList.contains('tv')) on.scrollIntoView({ block: 'nearest' });
   updTabsFade();
+  const ck = t ? t.key : '';
+  if (lastConsKey !== null && ck !== lastConsKey) sfx('cons');
+  lastConsKey = ck;
+  applyTheme();
 }
 
 // barre des consoles : fondu + flèches selon ce qui reste à faire défiler
@@ -891,6 +925,7 @@ function flowSet(i) {
   fi = Math.max(0, Math.min(fgames.length - 1, i));
   fpos[fcons[fci].key] = fgames[fi].id;
   placeFlow(); renderInfo(); renderBottom(); scheduleRA();
+  sfx('move', fi);
 }
 const flowMove = (d) => flowSet(fi + d);
 function flowCons(step) {
@@ -953,6 +988,92 @@ function toggleFav(g = cur()) {
   g.favorite = !g.favorite; save(); render();
 }
 
+/* ---------- thèmes : couleur du fond selon la console ---------- */
+const TH_DEF = ['#140e3a', '#2d1658', '#8a3a7a', '#e0785a'];
+const cctx = document.createElement('canvas').getContext('2d');
+const toRgb = (c) => { cctx.fillStyle = '#000'; cctx.fillStyle = c; const h = cctx.fillStyle; return h.startsWith('#') ? [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) : [91, 70, 214]; };
+const mixHex = (a, b, k) => '#' + toRgb(a).map((x, i) => Math.round(x * (1 - k) + toRgb(b)[i] * k).toString(16).padStart(2, '0')).join('');
+const consColorHex = (t) => mixHex(consColor(t), '#000', 0);
+let lastConsKey = null;
+function applyTheme() {
+  let th = TH_DEF;
+  if (cfg.consoleTheme !== false && fcons[fci]) {
+    const c = consColor(fcons[fci]);
+    th = [mixHex(c, '#05040f', 0.82), mixHex(c, '#0a0818', 0.6), mixHex(c, '#000', 0.3), mixHex(c, '#fff', 0.18)];
+  }
+  th.forEach((v, i) => document.body.style.setProperty(`--th${i + 1}`, v));
+}
+
+/* ---------- sons de navigation (générés, aucun fichier audio) ---------- */
+const snd = () => {
+  const d = { ui: true, uiVol: 0.5 };
+  cfg.sound = { ui: (cfg.sound || {}).ui ?? d.ui, uiVol: (cfg.sound || {}).uiVol ?? d.uiVol };
+  return cfg.sound;
+};
+let actx = null, uiOut = null;
+function audio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return actx; }
+  actx = new AudioContext();
+  uiOut = actx.createGain(); uiOut.connect(actx.destination);
+  setVolumes();
+  return actx;
+}
+function setVolumes() {
+  if (!actx) return;
+  const s = snd();
+  uiOut.gain.value = s.ui ? s.uiVol * 0.6 : 0;
+}
+const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
+function tone(out, t, f, { type = 'sine', a = 0.005, d = 0.25, v = 0.3, f2 = 0 } = {}) {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + a + d * 0.5);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  o.connect(g); g.connect(out); o.start(t); o.stop(t + a + d + 0.05);
+}
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];
+let sfxT = 0;
+function sfx(kind, i = 0) {
+  const s = snd();
+  if (!s.ui || !s.uiVol || mode === 'game') return;
+  const now = performance.now();
+  if (now - sfxT < 45) return;
+  sfxT = now;
+  const c = audio(), t = c.currentTime + 0.01;
+  if (kind === 'hover') tone(uiOut, t, mtof(84 + PENTA[i % 5]), { d: 0.12, v: 0.12 });
+  else if (kind === 'move') { tone(uiOut, t, mtof(79 + PENTA[i % 5]), { type: 'triangle', d: 0.14, v: 0.22 }); tone(uiOut, t, mtof(91 + PENTA[i % 5]), { d: 0.1, v: 0.06 }); }
+  else if (kind === 'cons') { tone(uiOut, t, mtof(72), { type: 'triangle', d: 0.18, v: 0.2 }); tone(uiOut, t + 0.07, mtof(79), { type: 'triangle', d: 0.25, v: 0.2 }); }
+  else if (kind === 'launch') [72, 76, 79, 84].forEach((m, k) => tone(uiOut, t + k * 0.07, mtof(m), { type: 'triangle', d: 0.4, v: 0.22 }));
+  else if (kind === 'test') [79, 83, 86].forEach((m, k) => tone(uiOut, t + k * 0.1, mtof(m), { d: 0.3, v: 0.2 }));
+}
+
+// Chromium peut bloquer le son avant la première action : on relance au premier clic ou touche
+['pointerdown', 'keydown'].forEach((ev) => window.addEventListener(ev, () => { if (actx && actx.state === 'suspended') actx.resume(); }, { capture: true }));
+
+function openAmbDlg() {
+  const d = $('#dlg-amb'), s = snd();
+  const refresh = () => {
+    $('#am-theme').checked = cfg.consoleTheme !== false;
+    $('#am-ui').checked = s.ui;
+    $('#am-uivol').value = Math.round(s.uiVol * 100); $('#am-uivol-v').textContent = Math.round(s.uiVol * 100) + ' %';
+  };
+  $('#am-theme').onchange = (e) => { cfg.consoleTheme = e.target.checked; save(); applyTheme(); };
+  $('#am-ui').onchange = (e) => { s.ui = e.target.checked; save(); setVolumes(); refresh(); };
+  $('#am-uivol').oninput = (e) => { s.uiVol = e.target.value / 100; audio(); setVolumes(); refresh(); };
+  $('#am-uivol').onchange = () => { save(); sfx('test'); };
+  $('#am-test').onclick = () => { audio(); sfxT = 0; sfx('test'); };
+  $('#am-ok').onclick = () => d.close();
+  refresh(); d.showModal();
+}
+// son au survol des jeux, des consoles et des boutons
+let hoverEl = null;
+document.addEventListener('mouseover', (e) => {
+  const el = e.target.closest('.fi, .ftab, .sset, .btile, .lcard');
+  if (el === hoverEl) return;
+  hoverEl = el;
+  if (el && !el.classList.contains('cc') && !el.classList.contains('on')) sfx('hover', [...el.parentNode.children].indexOf(el));
+});
+
 /* ---------- lancement ---------- */
 async function launch(g, opts = {}) {
   if (!g) return;
@@ -985,6 +1106,7 @@ async function launch(g, opts = {}) {
   else if (r.saves && r.saves.action === 'error') setTimeout(() => toast('Sauvegardes non synchronisées : ' + r.saves.error), 1500);
   if (embed && !r.embedding) leaveGame();
   g.lastPlayed = Date.now(); g.playCount = (g.playCount || 0) + 1; save();
+  sfx('launch');
   toast('Lancement de ' + g.title + '…');
   render();
 }
@@ -1298,12 +1420,20 @@ function openTabsDlg() {
       <span class="grip" title="Glisser pour déplacer">⋮⋮</span>${tabBadge(t)}<span class="tl">${esc(t.label)} <span class="muted">(${t.games.length})</span></span>
       <button data-a="up" title="Monter">↑</button><button data-a="down" title="Descendre">↓</button>
       <button data-a="icon">Icône</button>${(cfg.tabIcons || {})[t.key] ? '<button data-a="noicon" title="Revenir à l\'icône par défaut">×</button>' : ''}
+      <input type="color" data-a="color" value="${consColorHex(t)}" title="Couleur du thème de cette console">${(cfg.tabColors || {})[t.key] ? '<button data-a="nocolor" title="Couleur par défaut">×</button>' : ''}
+
       <button data-a="hide">${hid.has(t.key) ? 'Afficher' : 'Masquer'}</button></div>`).join('') : '<p class="muted">Aucune console pour l\'instant.</p>';
   };
   const order = () => tabsList(true).filter((t) => !t.key.startsWith('__')).map((t) => t.key);
   const apply = () => { save(); render(); refresh(); };
   $('#tb-modes').onchange = (e) => { cfg.tabsMode = e.target.value; apply(); };
   $('#tb-hover').onchange = (e) => { cfg.tabsHover = e.target.checked; apply(); };
+  $('#tb-list').oninput = (e) => {   // aperçu en direct de la couleur choisie
+    if (!e.target.matches('input[data-a="color"]')) return;
+    cfg.tabColors = { ...(cfg.tabColors || {}), [e.target.closest('.trow').dataset.k]: e.target.value };
+    applyTheme();
+  };
+  $('#tb-list').onchange = (e) => { if (e.target.matches('input[data-a="color"]')) apply(); };
   $('#tb-list').onclick = async (e) => {
     const b = e.target.closest('button[data-a]'); if (!b) return;
     const k = b.closest('.trow').dataset.k, a = b.dataset.a;
@@ -1318,6 +1448,8 @@ function openTabsDlg() {
       cfg.tabIcons = { ...(cfg.tabIcons || {}), [k]: p };
     } else if (a === 'noicon') {
       cfg.tabIcons = { ...(cfg.tabIcons || {}) }; delete cfg.tabIcons[k];
+    } else if (a === 'nocolor') {
+      cfg.tabColors = { ...(cfg.tabColors || {}) }; delete cfg.tabColors[k];
     }
     apply();
   };
@@ -1343,6 +1475,7 @@ const SET_ITEMS = [
   { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
   { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
   { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
+  { ic:'music', t:'Thèmes et sons', s:'Couleurs par console, sons de navigation', act:() => openAmbDlg() },
   { ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · ordre, icônes'; }, act:() => openTabsDlg() },
   { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
