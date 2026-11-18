@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
   quit: () => ipcRenderer.invoke('app:quit'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   ra: (endpoint, params, ttl) => ipcRenderer.invoke('ra:call', { endpoint, params, ttl }),
+  raCatalog: (force) => ipcRenderer.invoke('ra:catalog', force),
   wiki: (title, consoleName, lang) => ipcRenderer.invoke('wiki:summary', { title, console: consoleName, lang }),
   wikiOpen: (url) => ipcRenderer.invoke('wiki:open', url),
   gameMove: (r) => ipcRenderer.invoke('game:move', r),

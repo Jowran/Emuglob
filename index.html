@@ -98,6 +98,14 @@
   .sh-ach img { width:40px; height:40px; border-radius:8px; flex:none; }
   .sh-ach div { font-size:13px; min-width:0; } .sh-ach small { display:block; color:var(--muted); font-size:11.5px; }
   .sh-file { font-size:12px; color:var(--muted); line-height:1.7; overflow-wrap:anywhere; }
+  .sh-hash { padding:8px 0; border-top:1px solid rgba(255,255,255,.08); font-size:12px; overflow-wrap:anywhere; }
+  .sh-hash:first-of-type { border-top:none; }
+  .sh-hash b { display:block; font-weight:600; margin-bottom:3px; }
+  .sh-hash code { font:11px ui-monospace,Consolas,monospace; color:var(--muted); cursor:copy; }
+  .sh-hash code:hover { color:var(--acc); }
+  .sh-hash .sh-tags { margin:6px 0 0; gap:5px; }
+  .sh-hash .sh-tags span { padding:2px 8px; font-size:11px; }
+  .sh-card .fb { margin-top:8px; font-size:12px; padding:5px 10px; }
   .sh-load { opacity:.6; font-size:13px; }
   @media (max-width: 1300px) { .sh { grid-template-columns:minmax(200px,280px) minmax(0,1fr); } .sh-side { grid-column:1 / -1; } }
   body.light .sh-card, body.light .sh-hl > div { background:rgba(255,255,255,.7); border-color:#e3e6ee; }
@@ -400,6 +408,8 @@
   .qr.none { cursor:default; color:var(--muted); }
   .qr.none:hover { background:none; }
   .qt { width:34px; height:44px; border-radius:4px; background-size:cover; background-position:center; flex:none; }
+  .qt.sq { height:34px; margin:5px 0; }
+  .qh { padding:8px 8px 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .qx { min-width:0; }
   .qx b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; font-size:14px; }
   .qx small { color:var(--muted); font-size:12px; }
@@ -1691,13 +1701,14 @@ async function openSheet(g = cur(), from = '') {
   closeOv();
   sheetFrom = from;
   if (from === 'friends') setTop('fr');
-  mode = 'sheet'; sheetGame = g; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
+  mode = 'sheet'; sheetGame = g; hashAll = false; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
   if (g.virtual && raOn()) jobs.push((async () => {   // jeu d'un ami, absent de la bibliothèque : tout vient de RetroAchievements
     await loadProg(g);
     if (!x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
+    if (!x.hashes) { const r = await api.ra('GetGameHashes', { i: g.raId }, 604800); x.hashes = r.ok && r.data && Array.isArray(r.data.Results) ? r.data.Results : { error: true }; }
     if (g.friend && x.fpUser !== g.friend) { const r = await api.ra('GetGameInfoAndUserProgress', { g: g.raId, u: g.friend }, 60); if (r.ok && r.data) { x.fp = r.data; x.fpUser = g.friend; } }
   })());
   else if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
@@ -1768,12 +1779,30 @@ function renderSheet() {
       : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
         <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString(LOC)} joueurs sur RetroAchievements</div>` : ''}</div>
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
-    ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
+    ${g.virtual ? hashCard(x) : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
+}
+// jeu absent de la bibliothèque : versions de ROM reconnues par RetroAchievements (clic sur un MD5 = copie)
+let hashAll = false;
+function hashCard(x) {
+  if (!raOn()) return '';
+  const h = x.hashes;
+  if (!h) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-load">Chargement…</div></div>';
+  if (h.error) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-file">Liste indisponible pour le moment.</div></div>';
+  if (!h.length) return '<div class="sh-card"><h4>Hash supportés</h4><div class="sh-file">Aucun hash enregistré.</div></div>';
+  const shown = hashAll ? h : h.slice(0, 6);
+  return `<div class="sh-card"><h4>Hash supportés (${h.length})</h4>${shown.map((r) => `<div class="sh-hash">
+    <b translate="no">${esc(r.Name || '?')}</b>
+    <code data-md5="${esc(r.MD5 || '')}" title="Copier">${esc(r.MD5 || '')}</code>
+    ${(r.Labels || []).length || r.PatchUrl ? `<div class="sh-tags">${(r.Labels || []).map((l) => `<span translate="no">${esc(l)}</span>`).join('')}${r.PatchUrl ? '<span>Patch requis</span>' : ''}</div>` : ''}</div>`).join('')}
+    ${h.length > 6 ? `<button class="fb" data-hmore>${hashAll ? 'Afficher moins' : `Tout afficher (${h.length})`}</button>` : ''}
+    <div class="sh-src">Seules ces versions débloquent les succès. Clic sur un MD5 pour le copier.</div></div>`;
 }
 $('#sh-close').onclick = () => closeSheet();
 $('#sh-body').onclick = (e) => {
   const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
+  const md = e.target.closest('[data-md5]'); if (md) { navigator.clipboard.writeText(md.dataset.md5).then(() => toast('MD5 copié.'), () => {}); return; }
+  if (e.target.closest('[data-hmore]')) { hashAll = !hashAll; return renderSheet(); }
   const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
   const g = sheetGame;
   if (b.dataset.sh === 'play') { closeOv(); launch(g); }
@@ -2812,23 +2841,61 @@ api.onGameExit(({ id, seconds, short, saved }) => {
   refreshRA();
 });
 
-/* ---------- recherche (barre du haut) ---------- */
-let qList = [], qSel = 0;
+/* ---------- recherche (barre du haut) : bibliothèque puis tout le catalogue RetroAchievements ---------- */
+let qList = [], qSel = 0, raCat = null, raCatLoad = null;
+const qNorm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/['’]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function loadCatalog() {
+  if (raCat || raCatLoad || !raOn()) return;
+  raCatLoad = api.raCatalog().then((r) => {
+    if (r && r.ok) raCat = r.games.map(([id, title, cons, icon]) => ({ id, title, cons, icon, n: ' ' + qNorm(title) + ' ', hack: /^~|\[subset/i.test(title) }));
+    else raCatLoad = null;   // réessaie au prochain focus
+    if (raCat || !r || !r.ok) { if (document.activeElement === $('#q')) renderSearch(); }
+  }).catch(() => { raCatLoad = null; });
+}
+function raMatches(q) {
+  if (!raCat) return [];
+  const words = qNorm(q).split(' ').filter(Boolean);
+  if (!words.length || (words.length === 1 && words[0].length < 2)) return [];
+  const full = ' ' + words.join(' ');
+  const out = [];
+  for (const r of raCat) {
+    if (!words.every((w) => r.n.includes(w))) continue;
+    const sc = (r.n.startsWith(full + ' ') || r.n.startsWith(full) ? 0 : r.n.includes(full) ? 1 : 2) + (r.hack ? 3 : 0);
+    out.push([sc, r]);
+  }
+  return out.sort((a, b) => a[0] - b[0] || a[1].title.length - b[1].title.length || a[1].title.localeCompare(b[1].title)).map((x) => x[1]);
+}
 function renderSearch() {
   const q = $('#q').value.trim().toLowerCase(), box = $('#q-res');
   if (!q) { box.hidden = true; return; }
-  qList = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
+  loadCatalog();
+  const mine = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
+  const seen = new Set(mine.map((g) => g.raId).filter((x) => x > 0));
+  const ra = raMatches(q).filter((r) => !seen.has(r.id)).slice(0, 25);
+  qList = [...mine.map((g) => ({ g })), ...ra.map((r) => ({ ra: r }))];
   qSel = 0;
-  box.innerHTML = qList.length ? qList.map((g, i) => {
+  const rowG = (g, i) => {
     const u = artUrl(g);
     const bg = u ? `background-image:url('${esc(u)}')` : `background:hsl(${hue(g.title)},50%,32%)`;
-    return `<div class="qr ${i === 0 ? 'on' : ''}" data-id="${g.id}"><span class="qt" style="${bg}"></span><span class="qx"><b translate="no">${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
-  }).join('') : '<div class="qr none">Aucun jeu trouvé</div>';
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt" style="${bg}"></span><span class="qx"><b translate="no">${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
+  };
+  const rowR = (r, i) => {
+    const own = cfg.games.find((g) => g.raId === r.id);
+    const bg = r.icon ? `background-image:url('${esc(RAM + r.icon)}')` : `background:hsl(${hue(r.title)},50%,32%)`;
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt sq" style="${bg}"></span><span class="qx"><b translate="no">${esc(r.title)}</b><small><span translate="no">${esc(r.cons)}</span>${own ? ' · <span>Dans ta bibliothèque</span>' : ''}</small></span></div>`;
+  };
+  const head = !raOn() ? '' : raCat ? (ra.length ? '<div class="qh">RetroAchievements</div>' : '')
+    : raCatLoad ? '<div class="qh">RetroAchievements</div><div class="qr none">Chargement du catalogue RetroAchievements…</div>' : '';
+  box.innerHTML = (mine.length ? mine.map(rowG).join('') : !ra.length && !raCatLoad ? '<div class="qr none">Aucun jeu trouvé</div>' : '')
+    + head + ra.map((r, k) => rowR(r, mine.length + k)).join('');
   box.hidden = false;
 }
-function pickSearch(g) {
+function pickSearch(it) {
   $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur();
-  if (g) focusGame(g);
+  if (!it) return;
+  if (it.g) return focusGame(it.g);
+  const r = it.ra, own = cfg.games.find((g) => g.raId === r.id);
+  openSheet(own || { id: 'ra-' + r.id, title: r.title, raId: r.id, raConsole: r.cons, raIcon: r.icon || undefined, virtual: true, path: '' }, 'search');
 }
 $('#q').oninput = renderSearch;
 $('#q').onfocus = renderSearch;
@@ -2838,13 +2905,13 @@ $('#q').onkeydown = (e) => {
     e.preventDefault();
     if (!qList.length) return;
     qSel = (qSel + (e.key === 'ArrowDown' ? 1 : -1) + qList.length) % qList.length;
-    [...$('#q-res').children].forEach((c, i) => c.classList.toggle('on', i === qSel));
+    $('#q-res').querySelectorAll('.qr[data-i]').forEach((c) => c.classList.toggle('on', +c.dataset.i === qSel));
     const on = $('#q-res .on'); if (on) on.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'Enter') { e.preventDefault(); pickSearch(qList[qSel]); }
   else if (e.key === 'Escape') { $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur(); }
 };
 $('#q-res').onmousedown = (e) => e.preventDefault();   // garde le focus dans le champ pendant le clic
-$('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.id) pickSearch(find(r.dataset.id)); };
+$('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.i) pickSearch(qList[+r.dataset.i]); };
 
 /* ---------- événements ---------- */
 $('#bottom').onclick = (e) => { if (e.target.closest('.btile')) openTrophies(); };
