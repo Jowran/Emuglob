@@ -7,6 +7,13 @@
 <style>
   :root { --t:clamp(110px,9vw,150px); --T:clamp(200px,17.3vw,290px); --muted:#b9b4d4; --glass:rgba(24,18,48,.6); --glow:rgba(95,180,255,.75); }
   * { box-sizing:border-box; }
+  /* barres de défilement : invisibles, une fine barre apparaît seulement au survol de la zone */
+  ::-webkit-scrollbar { width:6px; height:6px; background:transparent; }
+  ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { display:none; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:transparent; border-radius:3px; }
+  :hover::-webkit-scrollbar-thumb { background:rgba(255,255,255,.18); }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.32); }
   html, body { height:100%; margin:0; overflow:hidden; }
   body { display:flex; flex-direction:column; color:#fff; font:15px/1.4 "Segoe UI",system-ui,sans-serif;
     background:var(--wall,none) center/cover, linear-gradient(180deg,var(--th1) 0%,var(--th2) 40%,var(--th3) 72%,var(--th4) 100%);
