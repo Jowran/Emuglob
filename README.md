@@ -58,8 +58,6 @@ Windows 10 / 11 · 64 bits · en français
 | PCSX2 | PlayStation 2 |
 | Dolphin | Wii, GameCube |
 | Cemu | Wii U |
-| Azahar | Nintendo 3DS |
-| PPSSPP | PSP |
 
 D'autres émulateurs peuvent être ajoutés à la main (chemin et arguments dans Paramètres, Émulateurs).
 
