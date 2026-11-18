@@ -1573,10 +1573,11 @@ function presence(g) {
   const a = { type: 0, status_display_type: 2, details: txt(g.title), timestamps: { start: playStart || Date.now() },
     state: txt(labelOf(g) + (st && st.total ? ` · ${st.got.length}/${st.total} ${T('succès')}` : '')) };
   const img = g.thumbUrl || (g.raBox ? RAM + g.raBox : g.raIcon ? RAM + g.raIcon : '');
-  const assets = {};
-  if (img) { assets.large_image = img; assets.large_text = txt(g.title); }
+  // jaquette du jeu (lien https) sinon le logo Emuglob (asset « emuglob » de l'application Discord) ; logo en petit si pas de compte RA
+  const assets = { large_image: img || 'emuglob', large_text: txt(g.title) };
   if (profile && profile.UserPic && cfg.ra && cfg.ra.user) { assets.small_image = RAM + profile.UserPic; assets.small_text = txt(cfg.ra.user + (profile.TotalPoints ? ` · ${profile.TotalPoints} pts` : '')); }
-  if (Object.keys(assets).length) a.assets = assets;
+  else if (img) { assets.small_image = 'emuglob'; assets.small_text = 'Emuglob'; }
+  a.assets = assets;
   if (g.raId > 0) a.buttons = [{ label: T('Voir sur RetroAchievements'), url: `https://retroachievements.org/game/${g.raId}` }];
   return api.discord(on, a, id);
 }
