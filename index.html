@@ -63,6 +63,45 @@
   .ovh { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
   .ovh h2 { margin:0; flex:1; font-size:24px; }
   .ovb { overflow:auto; flex:1; padding-right:8px; }
+  /* ---------- fiche de jeu ---------- */
+  .sh-shots:not(:has(img)), .sh-shots:not(:has(img)) + .sh-src { display:none; }
+  .sh { display:grid; grid-template-columns:minmax(220px,330px) minmax(0,1fr) minmax(260px,380px); gap:34px; max-width:2000px; margin:0 auto; padding-top:8px; }
+  .sh-cov { width:100%; aspect-ratio:3/4; border-radius:14px; background:#1a163f center/cover no-repeat; box-shadow:0 30px 60px rgba(0,0,0,.5); }
+  .sh-cov.ct { background-size:contain; background-color:transparent; box-shadow:none; }
+  .sh-btns { display:flex; gap:10px; margin-top:18px; }
+  .sh-btns button { flex:1; padding:12px; justify-content:center; }
+  .sh-btns .p { flex:2; background:var(--acc); border-color:var(--acc); color:#fff; }
+  .sh-card { margin-top:18px; padding:16px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); }
+  .sh-side .sh-card:first-child { margin-top:0; }
+  .sh h4 { margin:0 0 10px; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .sh-kv { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .sh-kv b { display:block; font-size:20px; } .sh-kv span, .sh-src { font-size:12px; color:var(--muted); }
+  .sh-src { margin-top:6px; }
+  .sh-sub { color:var(--muted); font-size:15px; }
+  .sh h1 { margin:6px 0 4px; font-size:44px; letter-spacing:-.5px; line-height:1.1; }
+  .sh-tags { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0; }
+  .sh-tags span { padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.08); font-size:13px; }
+  .sh-tags span.c { background:color-mix(in srgb, var(--acc) 45%, transparent); }
+  .sh-sum { font-size:15.5px; line-height:1.6; opacity:.9; max-width:860px; margin:0; }
+  .sh-sum a { color:inherit; text-decoration:underline; cursor:pointer; opacity:.8; }
+  .sh-hl { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:22px; }
+  .sh-hl > div { padding:14px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); }
+  .sh-hl b { font-size:22px; display:block; } .sh-hl span { font-size:12px; color:var(--muted); }
+  .sh-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.1); margin-top:10px; overflow:hidden; }
+  .sh-bar i { display:block; height:100%; background:linear-gradient(90deg,var(--acc),#e0785a); }
+  .sh-shots { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:24px; }
+  .sh-shots img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; background:#1a163f; image-rendering:pixelated; }
+  .sh-prog { display:flex; justify-content:space-between; align-items:baseline; } .sh-prog b { font-size:26px; }
+  .sh-ach { display:flex; gap:10px; align-items:center; padding:8px 0; border-top:1px solid rgba(255,255,255,.06); }
+  .sh-ach:first-of-type { border-top:0; }
+  .sh-ach img { width:40px; height:40px; border-radius:8px; flex:none; }
+  .sh-ach div { font-size:13px; min-width:0; } .sh-ach small { display:block; color:var(--muted); font-size:11.5px; }
+  .sh-file { font-size:12px; color:var(--muted); line-height:1.7; overflow-wrap:anywhere; }
+  .sh-load { opacity:.6; font-size:13px; }
+  @media (max-width: 1300px) { .sh { grid-template-columns:minmax(200px,280px) minmax(0,1fr); } .sh-side { grid-column:1 / -1; } }
+  body.light .sh-card, body.light .sh-hl > div { background:rgba(255,255,255,.7); border-color:#e3e6ee; }
+  body.light .sh-tags span { background:rgba(0,0,0,.06); } body.light .sh-tags span.c { color:#fff; }
+  body.light .sh-bar { background:rgba(0,0,0,.08); } body.light .sh-ach { border-color:rgba(0,0,0,.06); }
   .ovh input { padding:9px 14px; border-radius:20px; border:1px solid #3a3560; background:#1a1636; color:#fff; width:280px; font:inherit; }
   .ovh button, dialog button { background:#262046; color:#fff; border:1px solid #3a3560; padding:8px 14px; border-radius:10px; cursor:pointer; font:inherit; }
   .ovh button:hover, dialog button:hover { border-color:#8f7bff; }
@@ -109,12 +148,30 @@
   #c-body #c-list { flex:1; min-width:0; }
   #c-pad { width:300px; flex:none; }
   #c-pad svg { width:100%; display:block; }
-  #c-pad .pbody { fill:#151133; stroke:#3a3560; stroke-width:2; }
-  #c-pad [data-b] { fill:#2a2550; stroke:#4a4380; stroke-width:1.5; transition:fill .06s; }
-  #c-pad [data-b].on { fill:#ffc83d; stroke:#fff; }
-  #c-pad .sbase { fill:#1d1840; }
+  #c-pad .pbody { fill:url(#pg-body); stroke:#4a4290; stroke-width:1.5; }
+  #c-pad .prim { fill:none; stroke:url(#pg-rim); stroke-width:2; stroke-linecap:round; }
+  #c-pad .pwell { fill:rgba(0,0,0,.18); }
+  #c-pad .dpc { fill:#1a1640; stroke:#3d367a; stroke-width:1; }
+  #c-pad [data-b] { fill:url(#pg-btn); stroke:#5a52a8; stroke-width:1; transition:fill .06s, filter .06s; }
+  #c-pad .trig { fill:url(#pg-trig); } #c-pad .bump { fill:url(#pg-trig); }
+  #c-pad .dp { stroke:none; fill:#2c2660; }
+  #c-pad .mb { fill:#2a2456; }
+  #c-pad .gring { fill:none; stroke:color-mix(in srgb, var(--acc) 55%, transparent); stroke-width:1.5; }
+  #c-pad [data-b].on { fill:var(--acc); stroke:#fff; filter:drop-shadow(0 0 5px var(--acc)); }
+  #c-pad .swell { fill:url(#pg-well); }
+  #c-pad .sbase { fill:#1a1640; stroke:#3d367a; }
+  #c-dz { display:flex; align-items:center; gap:12px; margin:8px 0 4px; }
+  #c-dz[hidden] { display:none; }
+  #c-dz svg { width:120px; height:120px; flex:none; }
+  #c-dz .zr { fill:#1d1840; stroke:#4a4380; stroke-width:1.5; }
+  #c-dz .zx { stroke:#2e2858; stroke-width:1; }
+  #c-dz .zd { fill:rgba(255,90,90,.22); stroke:rgba(255,90,90,.75); stroke-width:1.5; transition:r .08s; }
+  #c-dz .zm { fill:none; stroke:rgba(255,255,255,.55); stroke-width:1; stroke-dasharray:3 3; }
+  #c-dz .zt { fill:#8f7dff; } #c-dz .zt.dead { fill:#6b6690; } #c-dz .zt.live { fill:#ffc83d; }
+  #c-dz div { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); min-width:0; flex:1; overflow-wrap:anywhere; }
+  #c-dz b { color:inherit; font-size:13px; }
   #c-pad .sdz { fill:rgba(255,90,90,.18); stroke:rgba(255,90,90,.6); stroke-dasharray:3 3; }
-  #c-pad .sdot { fill:#8f7dff; } #c-pad .sdot.dead { fill:#6b6690; } #c-pad .sdot.live { fill:#ffc83d; }
+  #c-pad .sdot { fill:url(#pg-cap); stroke:#7d72d8; stroke-width:1.5; } #c-pad .sdot.dead { stroke:#6b6690; } #c-pad .sdot.live { stroke:#ffc83d; fill:#3a3280; }
   #c-pad text { fill:#cfc9f5; font-size:10px; text-anchor:middle; pointer-events:none; }
   #c-live { color:var(--muted); font-size:13px; margin-top:8px; min-height:3.6em; }
   #c-live b { color:#ffc83d; font-weight:600; }
@@ -343,6 +400,7 @@
   #gbar button:hover { border-color:#8f7bff; }
   #g-state { color:var(--muted); font-size:13px; }
   #gview { flex:1; position:relative; background:#000; }
+  #g-mirror { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; background:#000; }
   #g-volw { display:inline-flex; align-items:center; gap:8px; }
   #g-volw[hidden], #g-quick[hidden], #gquick[hidden] { display:none; }
   #g-vol { width:110px; accent-color:#8f7bff; }
@@ -473,7 +531,7 @@
     <div id="f-title"></div>
     <div id="f-sub"></div>
     <div id="prog"></div>
-    <div class="actions"><button class="btn" id="btn-play">Jouer</button><button class="btn round" id="btn-rand" title="Jeu au hasard (touche R)"><i data-ic="dice"></i></button><button class="btn round" id="btn-more" title="Options"><i data-ic="more"></i></button><button class="btn round" id="btn-sort" title="Trier / filtrer"><i data-ic="sort"></i></button></div>
+    <div class="actions"><button class="btn" id="btn-play">Jouer</button><button class="btn round" id="btn-sheet" title="Fiche du jeu (touche I)"><i data-ic="list"></i></button><button class="btn round" id="btn-rand" title="Jeu au hasard (touche R)"><i data-ic="dice"></i></button><button class="btn round" id="btn-more" title="Options"><i data-ic="more"></i></button><button class="btn round" id="btn-sort" title="Trier / filtrer"><i data-ic="sort"></i></button></div>
   </div>
   <div id="bottom"></div>
 </div>
@@ -481,6 +539,11 @@
 <div class="overlay" id="ov-lib" hidden>
   <div class="ovh"><h2>Bibliothèque</h2><input id="lib-q" placeholder="Rechercher un jeu…"><button id="lib-less">Tout réduire</button><button id="lib-more">Tout ouvrir</button><button id="lib-close"><i data-ic="close"></i> Fermer</button></div>
   <div class="ovb" id="lib-body"></div>
+</div>
+
+<div class="overlay" id="ov-sheet" hidden>
+  <div class="ovh"><span style="flex:1"></span><button id="sh-close"><i data-ic="close"></i> Fermer</button></div>
+  <div class="ovb" id="sh-body"></div>
 </div>
 
 <div class="overlay" id="ov-tro" hidden>
@@ -494,7 +557,7 @@
     <button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
     <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
   <div id="gquick" hidden><div id="gq-list"></div><div id="gq-note"></div></div>
-  <div id="gview"><div id="g-wait"></div></div>
+  <div id="gview"><video id="g-mirror" muted playsinline hidden></video><div id="g-wait"></div></div>
 </div>
 
 <div class="overlay" id="ov-pro" hidden>
@@ -589,19 +652,32 @@
   <label>Émulateur</label><select id="c-emu"></select>
   <div id="c-tabs"></div>
   <div id="c-body"><div id="c-list"></div>
-  <div id="c-pad"><svg viewBox="0 0 340 230" aria-label="Manette">
-    <path class="pbody" d="M70 48 Q170 30 270 48 Q318 58 330 120 Q342 190 308 212 Q284 226 262 196 L236 164 Q170 150 104 164 L78 196 Q56 226 32 212 Q-2 190 10 120 Q22 58 70 48 Z"/>
-    <rect data-b="6" x="44" y="6" width="58" height="20" rx="8"/><rect data-b="7" x="238" y="6" width="58" height="20" rx="8"/>
-    <rect data-b="4" x="40" y="30" width="66" height="14" rx="7"/><rect data-b="5" x="234" y="30" width="66" height="14" rx="7"/>
-    <rect data-b="12" x="66" y="70" width="16" height="22" rx="3"/><rect data-b="13" x="66" y="106" width="16" height="22" rx="3"/>
-    <rect data-b="14" x="44" y="91" width="22" height="16" rx="3"/><rect data-b="15" x="82" y="91" width="22" height="16" rx="3"/>
-    <circle data-b="3" cx="268" cy="72" r="12"/><circle data-b="0" cx="268" cy="124" r="12"/><circle data-b="2" cx="242" cy="98" r="12"/><circle data-b="1" cx="294" cy="98" r="12"/>
-    <rect data-b="8" x="130" y="82" width="24" height="12" rx="6"/><rect data-b="9" x="186" y="82" width="24" height="12" rx="6"/><circle data-b="16" cx="170" cy="110" r="10"/>
-    <g class="stk" data-s="0"><circle data-b="10" class="sbase" cx="122" cy="166" r="26"/><circle class="sdz" cx="122" cy="166" r="0"/><circle class="sdot" cx="122" cy="166" r="7"/></g>
-    <g class="stk" data-s="2"><circle data-b="11" class="sbase" cx="218" cy="166" r="26"/><circle class="sdz" cx="218" cy="166" r="0"/><circle class="sdot" cx="218" cy="166" r="7"/></g>
-    <text x="73" y="20">LT</text><text x="267" y="20">RT</text><text x="73" y="40">LB</text><text x="267" y="40">RB</text>
+  <div id="c-pad"><svg viewBox="0 0 340 236" aria-label="Manette">
+    <defs>
+      <linearGradient id="pg-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3370"/><stop offset=".55" stop-color="#211c48"/><stop offset="1" stop-color="#141030"/></linearGradient>
+      <linearGradient id="pg-rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8f84e0" stop-opacity=".7"/><stop offset=".5" stop-color="#5a50a8" stop-opacity=".25"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></linearGradient>
+      <linearGradient id="pg-trig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4290"/><stop offset="1" stop-color="#231e4c"/></linearGradient>
+      <radialGradient id="pg-btn" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#4c4590"/><stop offset=".7" stop-color="#2a2456"/><stop offset="1" stop-color="#1c1840"/></radialGradient>
+      <radialGradient id="pg-well" cx=".5" cy=".5" r=".5"><stop offset=".6" stop-color="#0c0a20"/><stop offset="1" stop-color="#1c1840"/></radialGradient>
+      <radialGradient id="pg-cap" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#5a52a8"/><stop offset=".75" stop-color="#2c2660"/><stop offset="1" stop-color="#1e1946"/></radialGradient>
+      <filter id="pg-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".45"/></filter>
+    </defs>
+    <path data-b="6" class="trig" d="M48 26 Q50 8 72 6 L90 6 Q104 8 106 26 Z"/><path data-b="7" class="trig" d="M234 26 Q236 8 250 6 L268 6 Q290 8 292 26 Z"/>
+    <rect data-b="4" class="bump" x="38" y="28" width="72" height="15" rx="7.5"/><rect data-b="5" class="bump" x="230" y="28" width="72" height="15" rx="7.5"/>
+    <g filter="url(#pg-shadow)"><path class="pbody" d="M74 44 Q170 30 266 44 Q314 52 328 112 Q342 182 316 212 Q292 236 266 206 L240 172 Q170 156 100 172 L74 206 Q48 236 24 212 Q-2 182 12 112 Q26 52 74 44 Z"/></g>
+    <path class="prim" d="M74 46 Q170 32 266 46 Q312 54 325 110"/><path class="prim" d="M74 46 Q28 54 15 110"/>
+    <circle class="pwell" cx="74" cy="99" r="38"/><circle class="pwell" cx="268" cy="98" r="40"/>
+    <path class="dpc" d="M66 67 h16 a3 3 0 0 1 3 3 v18 h18 a3 3 0 0 1 3 3 v16 a3 3 0 0 1 -3 3 h-18 v18 a3 3 0 0 1 -3 3 h-16 a3 3 0 0 1 -3 -3 v-18 h-18 a3 3 0 0 1 -3 -3 v-16 a3 3 0 0 1 3 -3 h18 v-18 a3 3 0 0 1 3 -3 z"/>
+    <path data-b="12" class="dp" d="M67 70 h14 v17 l-7 7 l-7 -7 z"/><path data-b="13" class="dp" d="M67 128 h14 v-17 l-7 -7 l-7 7 z"/>
+    <path data-b="14" class="dp" d="M45 92 v14 h17 l7 -7 l-7 -7 z"/><path data-b="15" class="dp" d="M103 92 v14 h-17 l-7 -7 l7 -7 z"/>
+    <circle data-b="3" class="fb" cx="268" cy="72" r="12"/><circle data-b="0" class="fb" cx="268" cy="124" r="12"/><circle data-b="2" class="fb" cx="242" cy="98" r="12"/><circle data-b="1" class="fb" cx="294" cy="98" r="12"/>
+    <rect data-b="8" class="mb" x="132" y="84" width="22" height="11" rx="5.5"/><rect data-b="9" class="mb" x="186" y="84" width="22" height="11" rx="5.5"/>
+    <circle class="gring" cx="170" cy="114" r="13"/><circle data-b="16" class="fb gb" cx="170" cy="114" r="9"/>
+    <g class="stk" data-s="0"><circle class="swell" cx="122" cy="166" r="31"/><circle data-b="10" class="sbase" cx="122" cy="166" r="26"/><circle class="sdz" cx="122" cy="166" r="0"/><circle class="sdot" cx="122" cy="166" r="9"/></g>
+    <g class="stk" data-s="2"><circle class="swell" cx="218" cy="166" r="31"/><circle data-b="11" class="sbase" cx="218" cy="166" r="26"/><circle class="sdz" cx="218" cy="166" r="0"/><circle class="sdot" cx="218" cy="166" r="9"/></g>
+    <text x="77" y="20">LT</text><text x="263" y="20">RT</text><text x="74" y="39">LB</text><text x="266" y="39">RB</text>
     <text x="268" y="76">Y</text><text x="268" y="128">A</text><text x="242" y="102">X</text><text x="294" y="102">B</text>
-  </svg><div id="c-live">Branche une manette et appuie sur ses boutons : la manette s'allume et l'action réglée s'affiche ici.</div></div></div>
+  </svg><div id="c-dz" hidden><svg viewBox="-70 -70 140 140" aria-label="Zone morte"><circle class="zr" r="60"/><line class="zx" x1="-60" x2="60"/><line class="zx" y1="-60" y2="60"/><circle class="zd" r="0"/><circle class="zm" r="0"/><circle class="zt" r="4"/></svg><div><b id="c-dz-t">Zone morte</b><span id="c-dz-v"></span><span id="c-dz-n"></span></div></div><div id="c-live">Branche une manette et appuie sur ses boutons : la manette s'allume et l'action réglée s'affiche ici.</div></div></div>
   <div id="c-note"></div>
   <div class="row"><button id="c-cancel" style="margin-right:auto">Annuler</button><button id="c-save" style="background:#5b46d6">Enregistrer</button></div>
 </dialog>
@@ -621,6 +697,7 @@
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-embed" style="width:auto"> Intégrer l'émulateur dans la fenêtre Emuglob (expérimental, Windows)</label>
   <label>Mode d'intégration</label>
   <select id="s-mode"><option value="overlay">Superposé : fenêtre sans bordure collée sur Emuglob (recommandé, garde le menu de l'émulateur)</option><option value="child">Enfant : vraie fenêtre dans Emuglob (l'image peut rester noire)</option></select>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-stream" style="width:auto"> Mode stream : recopier l'image du jeu dans Emuglob, pour la voir en partageant la fenêtre Emuglob sur Discord (mode Superposé)</label>
   <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="s-log">Ouvrir le journal d'intégration</button></div>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-hide" style="width:auto"> Sinon, masquer Emuglob pendant le jeu (Ctrl+Maj+E pour le rouvrir)</label>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-saves" style="width:auto"> Partager les sauvegardes entre émulateurs (+ copie de secours dans Emuglob)</label>
@@ -631,6 +708,9 @@
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-wall">Choisir une image…</button><button id="s-wall-reset">Par défaut</button></div>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-fs" style="width:auto"> Démarrer Emuglob en plein écran</label>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-auto" style="width:auto"> Lancer Emuglob au démarrage de Windows</label>
+  <label>Mode portable</label>
+  <small class="muted" id="s-portst">…</small>
+  <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="s-port">Rendre portable</button></div>
     </div>
   <div data-sec="discord">
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-dc" style="width:auto"> Afficher le jeu en cours sur mon profil Discord</label>
@@ -1268,7 +1348,7 @@ function raLine(g) {
 }
 function renderInfo() {
   const g = cur(), n = cfg.games.length;
-  $('#btn-play').style.visibility = $('#btn-more').style.visibility = $('#btn-rand').style.visibility = g ? '' : 'hidden';
+  $('#btn-play').style.visibility = $('#btn-sheet').style.visibility = $('#btn-more').style.visibility = $('#btn-rand').style.visibility = g ? '' : 'hidden';
   $('#tint').style.setProperty('--fcc', g ? flowColor(g) : '#5b46d6');
   if (!g) {
     $('#f-title').textContent = n ? 'Aucun jeu dans cet onglet' : 'Bienvenue dans Emuglob';
@@ -1452,7 +1532,7 @@ async function launch(g, opts = {}) {
   const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
   if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
   const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '' } : null;
-  const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', sync, cover: { title: g.title, emu: emu.name, id: emu.id, img: artUrl(g), c: flowColor(g), f: cartForm(g, emu), k: (/^(dolphin|pcsx2|cemu|ppsspp)$/.test(emu.id) || g.platform === 'ps1' || g.system === 12) ? 'disc' : 'cart' } });
+  const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', stream: !!cfg.streamMirror, sync, cover: { title: g.title, emu: emu.name, id: emu.id, img: artUrl(g), c: flowColor(g), f: cartForm(g, emu), k: (/^(dolphin|pcsx2|cemu|ppsspp)$/.test(emu.id) || g.platform === 'ps1' || g.system === 12) ? 'disc' : 'cart' } });
   if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
   playing = g; playStart = Date.now(); presence(g);
   if (g.raId > 0) loadProg(g).then(() => { if (playing === g) presence(g); });
@@ -1522,8 +1602,96 @@ function setTop(name) {
 }
 function closeOv() {
   $('#ov-pro').hidden = true; setTop('jeux');
-  $('#ov-lib').hidden = true; $('#ov-tro').hidden = true; $('#ov-fr').hidden = true; $('#ov-set').hidden = true; mode = 'home';
+  $('#ov-lib').hidden = true; $('#ov-tro').hidden = true; $('#ov-fr').hidden = true; $('#ov-set').hidden = true; $('#ov-sheet').hidden = true; mode = 'home';
 }
+
+/* ---------- fiche de jeu : infos RetroAchievements, résumé Wikipédia, durée de vie (temps médians RA) ---------- */
+const sheetX = {};   // données chargées par jeu : { gp: GetGameProgression, wiki }
+const fmtH = (sec) => { const h = sec / 3600; return h < 1 ? Math.max(1, Math.round(sec / 60)) + ' min' : (h < 10 ? Math.round(h * 2) / 2 : Math.round(h)).toString().replace('.', ',') + ' h'; };
+const dayFr = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+async function openSheet(g = cur()) {
+  if (!g) return;
+  closeOv();
+  mode = 'sheet'; sheetGame = g; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
+  renderSheet();
+  const x = sheetX[g.id] || (sheetX[g.id] = {});
+  const jobs = [];
+  if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
+    if (g.raId > 0 && !x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
+  }));
+  if (!x.wiki || x.wiki.error) jobs.push((async () => {
+    const p = g.raId > 0 && prog[g.raId] && prog[g.raId].data;
+    const r = await api.wiki(g.raTitle || (p && p.Title) || g.title, p ? p.ConsoleName : labelOf(g));
+    x.wiki = r && r.ok ? r : { none: true, error: r && (r.offline ? 'hors ligne' : r.error) };
+  })());
+  for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) renderSheet(); }).catch(() => {});
+}
+let sheetGame = null;
+function renderSheet() {
+  const g = sheetGame; if (!g) return;
+  const x = sheetX[g.id] || {}, p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), gp = x.gp, emu = emuOf(g);
+  const year = p && p.Released ? p.Released.slice(0, 4) : '';
+  const who = [year, p && p.Publisher, p && p.Developer && p.Developer !== p.Publisher ? p.Developer : ''].filter(Boolean).join(' · ');
+  const genres = p && p.Genre ? p.Genre.split(/,\s*/).filter(Boolean) : [];
+  const art = artUrl(g);
+  const w = x.wiki;
+  const sum = !w ? '<span class="sh-load">Recherche du résumé…</span>'
+    : w.text ? `${esc(w.text)} ${w.url ? `<a data-wiki="${esc(w.url)}">Lire la suite</a>` : ''}`
+    : `<span class="sh-load">${w.error === 'hors ligne' ? 'Résumé indisponible hors ligne.' : w.error ? 'Résumé indisponible pour le moment.' : 'Pas de résumé trouvé sur Wikipédia.'}</span>`;
+  const hl = gp ? [['Histoire principale', gp.MedianTimeToBeatHardcore || gp.MedianTimeToBeat], ['Tous les succès (softcore)', gp.MedianTimeToComplete], ['Maîtrise (hardcore)', gp.MedianTimeToMaster]].filter(([, v]) => v > 0) : [];
+  const hmax = Math.max(1, ...hl.map(([, v]) => v));
+  const shots = p ? [p.ImageTitle, p.ImageIngame].filter((u) => u && !/000002\.png$/.test(u)) : [];
+  const players = p && (p.NumDistinctPlayers || p.NumDistinctPlayersCasual);
+  let ach = '';
+  if (s) {
+    const date = (a) => a.DateEarned || a.DateEarnedHardcore;
+    const last = [...s.got].sort((a, b) => date(b).localeCompare(date(a)))[0];
+    const next = s.all.filter((a) => !date(a)).sort((a, b) => (b.NumAwarded || 0) - (a.NumAwarded || 0)).slice(0, last ? 4 : 5);
+    const rare = (a) => (players ? ` · ${(Math.round((1000 * (a.NumAwarded || 0)) / players) / 10).toString().replace('.', ',')} % des joueurs` : '');
+    const row = (a, lock, sub) => `<div class="sh-ach"><img src="${RAM}/Badge/${esc(a.BadgeName)}${lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(a.Title)}</b><small>${esc(sub)}</small></div></div>`;
+    ach = (last ? row(last, false, 'Débloqué le ' + dayFr(date(last).replace(' ', 'T'))) : '') + next.map((a) => row(a, true, a.Description + rare(a))).join('');
+  }
+  const pc = s && s.total ? Math.round((100 * s.got.length) / s.total) : 0;
+  const totalPts = p && p.Achievements ? Object.values(p.Achievements).reduce((n, a) => n + (a.Points || 0), 0) : 0;
+  $('#sh-body').innerHTML = `<div class="sh">
+  <div>
+    <div class="sh-cov ${g.cover || g.thumb ? 'ct' : ''}" style="${art ? `background-image:url('${art.replace(/'/g, '%27')}')` : ''}"></div>
+    <div class="sh-btns"><button class="btn p" data-sh="play">▶ Jouer</button><button class="btn" data-sh="fav" title="Favori">${ic('star')}</button><button class="btn" data-sh="menu" title="Options">${ic('more')}</button></div>
+    <div class="sh-card"><h4>Ma partie</h4><div class="sh-kv">
+      <div><b>${g.playSeconds >= 60 ? fmtDur(g.playSeconds) : '–'}</b><span>Temps de jeu</span></div><div><b>${g.playCount || 0}</b><span>Parties</span></div>
+      <div><b>${g.lastPlayed ? ago(g.lastPlayed) : 'Jamais'}</b><span>Dernière fois</span></div><div><b>${g.added ? dayFr(g.added) : '–'}</b><span>Ajouté le</span></div></div></div>
+  </div>
+  <div>
+    <div class="sh-sub">${esc(labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
+    <h1>${esc(g.title)}</h1>
+    ${who ? `<div class="sh-sub">${esc(who)}</div>` : ''}
+    ${genres.length || g.favorite ? `<div class="sh-tags">${genres.map((t, i) => `<span class="${i ? '' : 'c'}">${esc(t)}</span>`).join('')}${g.favorite ? '<span>★ Favori</span>' : ''}</div>` : '<div style="height:18px"></div>'}
+    <p class="sh-sum">${sum}</p>
+    ${w && w.text ? `<div class="sh-src">Résumé : Wikipédia${w.lang === 'en' ? ' (en anglais, pas de page en français)' : ''}, licence CC BY-SA</div>` : ''}
+    ${hl.length ? `<div class="sh-hl">${hl.map(([t, v]) => `<div><b>${fmtH(v)}</b><span>${t}</span><div class="sh-bar"><i style="width:${Math.round((100 * v) / hmax)}%"></i></div></div>`).join('')}</div>
+      <div class="sh-src">Durée de vie : temps médian des joueurs RetroAchievements</div>` : ''}
+    ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}
+  </div>
+  <div class="sh-side">
+    ${!raOn() ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.</div></div>'
+      : !raSys(g) ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Pas de succès RetroAchievements pour cette console.</div></div>'
+      : g.raId === -1 ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Jeu non reconnu par RetroAchievements. Renseigne son ID dans Options, Modifier.</div></div>'
+      : !s ? '<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-load">Chargement…</div></div>'
+      : `<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
+        <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString('fr-FR')} joueurs sur RetroAchievements</div>` : ''}</div>
+        ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
+    <div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>
+  </div></div>`;
+}
+$('#sh-close').onclick = () => closeOv();
+$('#sh-body').onclick = (e) => {
+  const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
+  const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
+  const g = sheetGame;
+  if (b.dataset.sh === 'play') { closeOv(); launch(g); }
+  else if (b.dataset.sh === 'fav') { toggleFav(g); renderSheet(); }
+  else if (b.dataset.sh === 'menu') openMenu(g);
+};
 
 /* ---------- trophées = succès RetroAchievements ---------- */
 const achRow = (a) => `<div class="ach ${a.lock ? 'lock' : ''}"><img src="${RAM}/Badge/${esc(a.badge)}${a.lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'">
@@ -2052,8 +2220,20 @@ function openSettings(sec) {
   api.appInfo().then((i) => { autoInit = !!i.autostart; $('#s-auto').checked = autoInit; });
   $('#s-embed').checked = cfg.embedGames !== false;
   $('#s-mode').value = cfg.embedMode || 'overlay';
+  $('#s-stream').checked = !!cfg.streamMirror;
   $('#s-log').onclick = () => api.openEmbedLog();
-  const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { ...(cfg.discord || {}), on: $('#s-dc').checked };
+  api.portableStatus().then((p) => {
+    $('#s-port').hidden = p.portable;
+    $('#s-portst').textContent = p.portable ? `Actif : tes réglages, jaquettes et sauvegardes sont dans ${p.dir}. Les chemins du même disque sont enregistrés en relatif (clé USB, changement de lettre). Supprime portable.txt à côté d'Emuglob.exe pour revenir à l'installation normale.`
+      : `Range réglages, jaquettes et sauvegardes dans ${p.dir}, à côté d'Emuglob.exe, pour l'emporter sur une clé USB ou un autre disque.`;
+  });
+  $('#s-port').onclick = async () => {
+    if (!confirm("Rendre Emuglob portable ?\n\nTes données sont copiées dans le dossier data à côté d'Emuglob.exe (celles de %APPDATA% restent intactes), puis Emuglob redémarre.")) return;
+    await save();
+    const r = await api.portableMake();
+    toast(r.ok ? 'Mode portable activé : redémarrage…' : 'Impossible : ' + r.error);
+  };
+  const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.streamMirror = $('#s-stream').checked; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { ...(cfg.discord || {}), on: $('#s-dc').checked };
     if (autoInit !== null && $('#s-auto').checked !== autoInit) { autoInit = $('#s-auto').checked; api.autostart(autoInit); } save(); };
   $('#s-test').onclick = async () => {
     commit();
@@ -2133,7 +2313,7 @@ async function openControls(pick) {
   const emus = cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
     .filter((e, i, a) => a.findIndex((x) => x.exe.toLowerCase() === e.exe.toLowerCase()) === i);   // même exécutable déclaré deux fois
   if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin ou Azahar). Renseigne son chemin dans Paramètres, Émulateurs.');
-  let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '';
+  let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '', dzSel = -1;
   $('#c-emu').innerHTML = emus.map((e, i) => `<option value="${i}" ${e === emu ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
   const loadEmu = async () => {
     changes.clear();
@@ -2154,7 +2334,7 @@ async function openControls(pick) {
       const c = changes.get(g.id + '\u0000' + it.key);
       if (it.num) {
         const v = c ? c.num : it.value;
-        return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><input type="range" min="${it.min}" max="${it.max}" step="1" value="${v}" data-num="${n}"><b class="cnum ${c ? 'chg' : ''}">${v} ${esc(it.unit)}</b></div>`;
+        return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><input type="range" min="${it.min}" max="${it.max}" step="${it.step || 1}" value="${v}" data-num="${n}"><b class="cnum ${c ? 'chg' : ''}">${v} ${esc(it.unit)}</b></div>`;
       }
       return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><button class="cv ${c ? 'chg' : ''}" data-n="${n}" title="${esc(c ? c.raw : it.raw)}">${esc(c ? c.text : it.text)}</button><button class="cx" data-x="${n}" title="Effacer">✕</button></div>`;
     }).join('');
@@ -2170,11 +2350,13 @@ async function openControls(pick) {
   };
   $('#c-list').oninput = (e) => {   // zone morte : glisser met à jour la valeur et l'aperçu tout de suite
     const r = e.target.closest('[data-num]'); if (!r) return;
+    dzSel = +r.dataset.num;
     const g = data.groups.find((x) => x.id === tab), it = g.items[+r.dataset.num], v = +r.value;
     if (v === it.value) changes.delete(g.id + '\u0000' + it.key); else changes.set(g.id + '\u0000' + it.key, { group: g.id, key: it.key, num: v });
     const b = r.parentNode.querySelector('.cnum'); b.textContent = `${v} ${it.unit}`; b.classList.toggle('chg', v !== it.value);
   };
-  $('#c-tabs').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b || capturing) return; tab = b.dataset.g; tabs(); list(); };
+  $('#c-tabs').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b || capturing) return; tab = b.dataset.g; dzSel = -1; tabs(); list(); };
+  $('#c-list').addEventListener('pointerdown', (e) => { const r = e.target.closest('[data-num]'); if (r) dzSel = +r.dataset.num; });
   $('#c-list').onclick = async (e) => {
     if (capturing) return;
     const x = e.target.closest('[data-x]'); if (x) return assign(+x.dataset.x, { t: 'none' });
@@ -2198,10 +2380,15 @@ async function openControls(pick) {
   const AXN = (a, dir) => `${a < 2 ? 'Stick G' : 'Stick D'} ${a % 2 ? (dir < 0 ? '↑' : '↓') : (dir < 0 ? '←' : '→')}`;
   let raf = 0, lastLive = '';
   const padOf = (g, it) => { const c = changes.get(g.id + '\u0000' + it.key); return c ? c.pad : it.pad; };
+  const RA_MIN = 0.125;   // RALibretro ignore toujours les 12,5 % centraux du stick, quel que soit le core
+  const dzItem = (s) => {   // réglage de zone morte suivi pour le stick physique s : le dernier curseur touché, sinon le premier
+    const g = data && data.ok && data.groups.find((x) => x.id === tab); if (!g) return null;
+    const sel = g.items[dzSel];
+    return sel && sel.num && sel.sticks.includes(s) ? sel : g.items.find((x) => x.num && x.sticks.includes(s)) || null;
+  };
   const dzFor = (s) => {   // zone morte réglée (onglet courant) pour le stick physique s (0 gauche, 2 droit), de 0 à 1
-    const g = data && data.ok && data.groups.find((x) => x.id === tab); if (!g) return 0;
-    const it = g.items.find((x) => x.num && x.sticks.includes(s)); if (!it) return 0;
-    const c = changes.get(g.id + '\u0000' + it.key); return (c ? c.num : it.value) / 100;
+    const it = dzItem(s); if (!it) return 0;
+    const c = changes.get(tab + '\u0000' + it.key); return (c ? c.num : it.value) / 100;
   };
   const frame = () => {
     if (!d.open) return;
@@ -2212,11 +2399,23 @@ async function openControls(pick) {
     for (const s of [0, 2]) {
       const x = gp ? gp.axes[s] || 0 : 0, y = gp ? gp.axes[s + 1] || 0 : 0, dz = dzFor(s), mag = Math.hypot(x, y);
       const grp = document.querySelector(`#c-pad .stk[data-s="${s}"]`), base = grp.querySelector('.sbase'), cx = +base.getAttribute('cx'), cy = +base.getAttribute('cy');
-      grp.querySelector('.sdz').setAttribute('r', (26 * dz).toFixed(1));
+      grp.querySelector('.sdz').setAttribute('r', (19 * dz).toFixed(1));   // même échelle que le point du stick
       const dot = grp.querySelector('.sdot');
       dot.setAttribute('cx', (cx + x * 19).toFixed(1)); dot.setAttribute('cy', (cy + y * 19).toFixed(1));
       dot.classList.toggle('dead', mag > 0.05 && mag <= dz); dot.classList.toggle('live', mag > dz && mag > 0.05);
       if (mag > Math.max(dz, 0.5)) { if (Math.abs(x) >= Math.abs(y)) active.push({ t: 'axis', a: s, dir: Math.sign(x) }); else active.push({ t: 'axis', a: s + 1, dir: Math.sign(y) }); }
+    }
+    const dzi = dzItem(0);   // grande vue de la zone morte (stick gauche)
+    $('#c-dz').hidden = !dzi;
+    if (dzi) {
+      const x = gp ? gp.axes[0] || 0 : 0, y = gp ? gp.axes[1] || 0 : 0, mag = Math.min(1, Math.hypot(x, y)), dz = dzFor(0), ra = emu.exe && /ralibretro/i.test(emu.exe) ? RA_MIN : 0, eff = Math.max(dz, ra);
+      const v = $('#c-dz svg');
+      v.querySelector('.zd').setAttribute('r', (60 * dz).toFixed(1));
+      v.querySelector('.zm').setAttribute('r', (60 * ra).toFixed(1));
+      const t = v.querySelector('.zt'); t.setAttribute('cx', (x * 60).toFixed(1)); t.setAttribute('cy', (y * 60).toFixed(1));
+      t.classList.toggle('dead', mag > 0.02 && mag <= eff); t.classList.toggle('live', mag > eff && mag > 0.02);
+      const txt = `${dzi.label} : ${Math.round(dz * 100)} %|${gp ? `Stick à ${Math.round(mag * 100)} % : ${mag <= eff ? 'ignoré' : 'pris en compte'}` : 'Branche une manette pour voir le stick.'}|${ra ? 'Pointillés : 12,5 % minimum imposés par RALibretro.' : ''}`;
+      if (txt !== frame.dzTxt) { frame.dzTxt = txt; const [a, b, c] = txt.split('|'); $('#c-dz-t').textContent = a; $('#c-dz-v').textContent = b; $('#c-dz-n').textContent = c; }
     }
     const same = (p, q) => p && q && p.t === q.t && (p.t === 'btn' ? p.i === q.i : p.a === q.a && p.dir === q.dir);
     const hits = [];
@@ -2239,11 +2438,12 @@ async function openControls(pick) {
 function openMenu(g = cur()) {
   if (!g) return;
   const d = $('#dlg-menu');
-  $('#m-list').innerHTML = `<button data-a="fav">${g.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><button data-a="edit">Modifier…</button><button data-a="reveal">Afficher le fichier</button><button data-a="window">Lancer en fenêtre séparée</button><button data-a="saves">Copies de sauvegarde</button><button data-a="del">Retirer de la bibliothèque</button><button data-a="x">Annuler</button>`;
+  $('#m-list').innerHTML = `<button data-a="sheet">Fiche du jeu</button><button data-a="fav">${g.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><button data-a="edit">Modifier…</button><button data-a="reveal">Afficher le fichier</button><button data-a="window">Lancer en fenêtre séparée</button><button data-a="saves">Copies de sauvegarde</button><button data-a="del">Retirer de la bibliothèque</button><button data-a="x">Annuler</button>`;
   d.onclick = async (e) => {
     const a = e.target.dataset.a; if (!a) return;
     d.close();
-    if (a === 'fav') toggleFav(g);
+    if (a === 'sheet') openSheet(g);
+    else if (a === 'fav') toggleFav(g);
     else if (a === 'edit') { await openEdit(g, false); save(); render(); autoMatch(); findThumbs(); }
     else if (a === 'reveal') api.reveal(g.path);
     else if (a === 'window') launch(g, { embed: false });
@@ -2274,12 +2474,30 @@ function enterGame(g) {
   $('#g-wait').textContent = `Lancement de ${g.title}…`;
   $('#game').hidden = false;
 }
+function stopMirror() {
+  const v = $('#g-mirror');
+  if (v.srcObject) { v.srcObject.getTracks().forEach((t) => t.stop()); v.srcObject = null; }
+  v.hidden = true;
+}
+async function startMirror() {
+  try {
+    const st = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60 }, audio: false });
+    if (mode !== 'game') { st.getTracks().forEach((t) => t.stop()); return; }
+    const v = $('#g-mirror'); v.srcObject = st; v.hidden = false; v.play().catch(() => {});
+    st.getVideoTracks()[0].onended = stopMirror;
+  } catch (err) { toast("Mode stream indisponible pour cet émulateur : l'image du jeu ne sera pas visible dans le partage de la fenêtre."); }
+}
 function leaveGame() {
+  stopMirror();
   $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true;
   if (mode === 'game') mode = 'home';
 }
-api.onGameEmbedded(({ ok, reason }) => {
-  if (ok) { $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools(); return; }
+api.onGameEmbedded(({ ok, reason, stream }) => {
+  if (ok) {
+    $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools();
+    if (stream) startMirror(); else if (cfg.streamMirror && (cfg.embedMode || 'overlay') === 'overlay') toast("Mode stream : fenêtre de l'émulateur introuvable pour la capture.");
+    return;
+  }
   leaveGame();
   toast(`Intégration impossible : ${reason}. L'émulateur tourne dans sa propre fenêtre (journal : Paramètres).`);
 });
@@ -2379,6 +2597,7 @@ $('#btn-play').onclick = () => launch(cur());
 $('#btn-more').onclick = () => openMenu();
 $('#btn-sort').onclick = () => openSort();
 $('#btn-rand').onclick = () => randomGame();
+$('#btn-sheet').onclick = () => openSheet();
 $('#avatar').onclick = openProfile;
 $('#pro-close').onclick = closeOv;
 $('#pro-acc').onclick = openSettings;
@@ -2499,6 +2718,7 @@ document.addEventListener('keydown', (e) => {
   if (mode === 'game') return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Escape' && mode !== 'home') return closeOv();
+  if (mode === 'sheet' && e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); const g = sheetGame; closeOv(); return launch(g); }
   if (e.target.tagName === 'INPUT') return;
   if (mode === 'home') {
     const k = e.key, kl = k.toLowerCase();
@@ -2509,6 +2729,7 @@ document.addEventListener('keydown', (e) => {
     else if (k === 'Enter') launch(cur());
     else if (kl === 'f') toggleFav();
     else if (kl === 'm') openMenu();
+    else if (kl === 'i') openSheet();
     else if (kl === 'r') randomGame();
     else if (k === '/') $('#q').focus();
     else return;
@@ -2544,6 +2765,11 @@ function pad() {
     } else if (mode === 'library' || mode === 'settings') {
       if (step) { lastMove = t; moveFocus(navSel(), dx, dy); }
       if (a && document.activeElement.matches(navSel())) document.activeElement.click();
+      if (b) closeOv();
+    } else if (mode === 'sheet') {
+      if (dy) $('#sh-body').scrollBy(0, dy * 40);
+      if (a) { const g = sheetGame; closeOv(); launch(g); }
+      if (y && sheetGame) { toggleFav(sheetGame); renderSheet(); }
       if (b) closeOv();
     } else if (mode === 'trophies' || mode === 'friends' || mode === 'profile') {
       if (dy) $(mode === 'friends' ? '#fr-body' : mode === 'profile' ? '#pro-body' : '#tro-body').scrollBy(0, dy * 40);
@@ -2824,7 +3050,7 @@ const TUTO = [
     <div class="tip">« Lancement des jeux » (Paramètres) règle l'intégration de l'émulateur dans Emuglob et le partage des sauvegardes.</div>` },
   { ic:'gamepad', t:'Contrôles', go:() => openControls(), h:`Paramètres, <b>Contrôles</b> : choisis l'émulateur en haut, clique sur une action, puis appuie sur la touche ou le bouton de manette voulu.
     <ul><li>La <b>manette dessinée</b> s'allume quand tu appuies : tu vois tout de suite ce qui est réglé.</li>
-    <li>La <b>zone morte</b> des sticks se règle pour PCSX2 et Dolphin.</li>
+    <li>La <b>zone morte</b> des sticks se règle pour PCSX2, Dolphin et, dans RALibretro, les cores N64 et DS.</li>
     <li>Une copie .bak de la config de l'émulateur est gardée. Ferme l'émulateur avant de modifier.</li></ul>` },
   { ic:'shield', t:'Sauvegardes', go:() => openFindSaves(), h:`<ul><li>Les sauvegardes « cartouche » (.srm, .sav…) sont <b>partagées entre émulateurs</b> : Emuglob donne toujours la plus récente à celui que tu lances.</li>
     <li>Chaque jeu a son <b>historique</b> (20 dernières versions) : rien n'est jamais perdu.</li>
