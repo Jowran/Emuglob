@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('api', {
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateDownload: () => ipcRenderer.invoke('update:download'),
   updatePage: () => ipcRenderer.invoke('update:page'),
+  updateList: () => ipcRenderer.invoke('update:list'),
+  updateInstallTag: (tag) => ipcRenderer.invoke('update:installTag', tag),
   savesOpen: (id) => ipcRenderer.invoke('saves:open', id),
   savesFind: (q) => ipcRenderer.invoke('saves:find', q),
   savesImport: (items) => ipcRenderer.invoke('saves:import', items),

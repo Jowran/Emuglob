@@ -1098,9 +1098,8 @@ ipcMain.handle('update:check', async () => {
     };
   } catch (e) { return { ok: false, error: e.message }; }
 });
-ipcMain.handle('update:download', async () => {
+async function installRelease(rel) {
   if (!canUpdate()) return { ok: false, error: "disponible seulement dans l'application installée" };
-  const rel = lastRelease;
   const asset = rel && (rel.assets || []).find((a) => a.name === 'app.asar');
   if (!asset) return { ok: false, error: "cette version n'a pas de fichier app.asar : télécharge-la à la main" };
   try {
@@ -1118,6 +1117,29 @@ ipcMain.handle('update:download', async () => {
     launchUpdater(file);
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
+}
+ipcMain.handle('update:download', () => installRelease(lastRelease));
+// toutes les versions publiées (pour en choisir une, même plus ancienne)
+let allReleases = [];
+ipcMain.handle('update:list', async () => {
+  try {
+    const list = await (await ghFetch(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=50`)).json();
+    allReleases = (Array.isArray(list) ? list : []).filter((r) => !r.draft);
+    const cur = app.getVersion();
+    return {
+      ok: true, current: cur, packaged: canUpdate(),
+      list: allReleases.map((r) => {
+        const asar = (r.assets || []).find((a) => a.name === 'app.asar');
+        const v = String(r.tag_name || '').replace(/^v/i, '');
+        return { tag: r.tag_name, version: v, date: r.published_at || '', pre: !!r.prerelease, notes: r.body || '', hasAsar: !!asar, size: asar ? asar.size : 0,
+          current: !newerThan(v, cur) && !newerThan(cur, v) };
+      }),
+    };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('update:installTag', (_e, tag) => {
+  const rel = allReleases.find((r) => r.tag_name === tag);
+  return rel ? installRelease(rel) : { ok: false, error: 'version introuvable, actualise la liste' };
 });
 ipcMain.handle('update:page', () => { if (lastRelease && /^https:\/\/github\.com\//.test(lastRelease.html_url)) shell.openExternal(lastRelease.html_url); });
 ipcMain.handle('update:rollback', () => {

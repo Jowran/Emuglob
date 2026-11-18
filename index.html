@@ -472,7 +472,7 @@
   .case.miss { filter:grayscale(1) brightness(.5); }
   .mrow { display:flex; gap:10px; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #2a2550; font-size:13px; }
   .mrow span { min-width:0; overflow-wrap:anywhere; }
-  #dlg-maint, #dlg-bak, #dlg-upd { min-width:540px; max-width:min(680px, 92vw); }
+  #dlg-maint, #dlg-bak, #dlg-upd, #dlg-vers { min-width:540px; max-width:min(680px, 92vw); }
   dialog p { margin:8px 0; }
   dialog button:disabled { opacity:.4; cursor:default; }
   #toast { position:fixed; bottom:170px; left:50%; transform:translateX(-50%); background:#5b46d6; padding:10px 18px; border-radius:10px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:30; }
@@ -830,6 +830,14 @@
   <p class="muted">Sinon, à la main : télécharge le nouveau fichier <b>app.asar</b>, puis choisis-le ici : Emuglob se ferme, le remplace et se relance tout seul. L'ancienne version est gardée pour pouvoir revenir en arrière.</p>
   <div class="row" style="justify-content:flex-start"><button id="up-pick">Choisir un nouvel app.asar…</button><button id="up-back">Revenir à la version précédente</button></div>
   <div class="row"><button id="up-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-vers">
+  <h2>Choisir une version</h2>
+  <p id="vs-cur"></p>
+  <p class="muted">Installe n'importe quelle version publiée, même plus ancienne. Emuglob se ferme, la remplace et se relance ; la version actuelle est gardée pour revenir en arrière. Une version antérieure à 1.2.3 n'a pas ce choix : pour revenir, accepte la mise à jour proposée au lancement.</p>
+  <div id="vs-list" style="max-height:50vh;overflow:auto"></div>
+  <div class="row"><button id="vs-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
 <dialog id="dlg-menu"><div id="m-list"></div></dialog>
@@ -2025,6 +2033,33 @@ async function openBackups() {
   $('#bk-ok').onclick = () => d.close();
   d.showModal();
 }
+async function openVersions() {
+  const d = $('#dlg-vers');
+  $('#vs-cur').textContent = T('Chargement…');
+  $('#vs-list').innerHTML = `<p class="muted">${T('Chargement…')}</p>`;
+  $('#vs-ok').onclick = () => d.close();
+  d.showModal();
+  const r = await api.updateList();
+  if (!r.ok) { $('#vs-list').innerHTML = `<p class="muted">${esc(T('Recherche impossible : ' + r.error))}</p>`; return; }
+  $('#vs-cur').textContent = T('Version installée : ' + r.current);
+  $('#vs-list').innerHTML = r.list.length ? r.list.map((v) => `<div class="mrow"><span><b>${esc(v.version)}</b>${v.pre ? ' · ' + T('préversion') : ''} · ${v.date ? esc(new Date(v.date).toLocaleDateString(LOC)) : ''}${v.current ? ' · ' + T('installée') : ''}${v.hasAsar ? '' : ' · ' + T('sans app.asar')}</span>`
+    + `<button data-tag="${esc(v.tag)}" ${v.current || !v.hasAsar || !r.packaged ? 'disabled' : ''}>${T('Installer')}</button></div>`).join('')
+    : `<p class="muted">${T('Aucune version publiée.')}</p>`;
+  $('#vs-list').onclick = async (e) => {
+    const b = e.target.closest('[data-tag]');
+    if (!b || b.disabled) return;
+    const v = r.list.find((x) => x.tag === b.dataset.tag);
+    const older = verLess(v.version, r.current);
+    let msg = T(`Installer la version ${v.version} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.`);
+    if (older && verLess(v.version, '1.2.3')) msg += '\n\n' + T("Cette version n'a pas le choix de version : pour revenir, accepte la mise à jour proposée au lancement.");
+    if (!confirm(msg)) return;
+    document.querySelectorAll('#vs-list button').forEach((x) => { x.disabled = true; });
+    b.textContent = T('Téléchargement…');
+    const a = await api.updateInstallTag(v.tag);
+    if (!a.ok) { toast(T('Mise à jour impossible : ' + a.error)); openVersions(); }
+  };
+}
+const verLess = (a, b) => { const p = (v) => String(v).replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0); const x = p(a), y = p(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); return false; };
 async function openUpdate() {
   const d = $('#dlg-upd');
   const info = await api.appInfo();
@@ -2226,6 +2261,7 @@ const SET_ITEMS = [
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
+  { g:'sys', ic:'list', t:'Choisir une version', s:'Installer une version publiée, même plus ancienne', act:() => openVersions() },
   { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { g:'sys', ic:'refresh', t:'Relancer Emuglob', s:'Fermer puis rouvrir l\'application', act:() => api.relaunch() },
   { g:'sys', ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },

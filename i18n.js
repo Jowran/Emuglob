@@ -12,6 +12,12 @@
   document.documentElement.lang = 'en';
 
   const D = {
+    // choisir une version
+    'Choisir une version': 'Choose a version', 'Installer une version publiée, même plus ancienne': 'Install any published version, even an older one',
+    'préversion': 'pre-release', 'installée': 'installed', 'sans app.asar': 'no app.asar', 'Aucune version publiée.': 'No published version.',
+    "Installe n'importe quelle version publiée, même plus ancienne. Emuglob se ferme, la remplace et se relance ; la version actuelle est gardée pour revenir en arrière. Une version antérieure à 1.2.3 n'a pas ce choix : pour revenir, accepte la mise à jour proposée au lancement.":
+      'Install any published version, even an older one. Emuglob closes, replaces it and restarts; the current version is kept so you can go back. Versions before 1.2.3 do not have this choice: to come back, accept the update offered at startup.',
+    "Cette version n'a pas le choix de version : pour revenir, accepte la mise à jour proposée au lancement.": 'This version has no version picker: to come back, accept the update offered at startup.',
     // barre du haut, accueil
     'Jeux': 'Games', 'Amis': 'Friends', 'Paramètres': 'Settings', 'Succès': 'Achievements', 'Hors ligne': 'Offline', 'Jouer': 'Play', '▶ Jouer': '▶ Play',
     'Bibliothèque': 'Library', 'Tout réduire': 'Collapse all', 'Tout ouvrir': 'Expand all', 'Fermer': 'Close', 'Réglages': 'Settings', 'Plein écran': 'Full screen',
@@ -241,6 +247,7 @@
 
   // modèles : {} = trou, traduit à son tour ; {1} {2}… pour changer l'ordre en anglais
   const P = [
+    ['Installer la version {} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.', 'Install version {}? Emuglob will close and restart. The current version is kept.'],
     ['il y a {} min', '{} min ago'], ['il y a {} h', '{} h ago'], ['il y a {} j', '{} d ago'], ['Vu {}', 'Seen {}'],
     ['{} h {} min', '{} h {} min'], ['{} {}/{} succès · {} pts', '{} {}/{} achievements · {} pts'], ['{}/{} succès', '{}/{} achievements'], ['{} succès', '{} achievements'],
     ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
