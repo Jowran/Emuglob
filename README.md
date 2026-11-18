@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.svg" width="110" alt="Logo Emuglob">
+
 # EMUGLOB
 
 **Ta bibliothèque de jeux rétro, dans un seul lanceur.**
