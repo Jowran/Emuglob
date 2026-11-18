@@ -99,6 +99,9 @@ function createWindow() {
   let t;
   const later = () => { clearTimeout(t); t = setTimeout(saveWinState, 500); };
   win.on('resize', later); win.on('move', later); win.on('close', saveWinState);
+  // l'écran de chargement (fenêtre séparée) suit la fenêtre quand on la déplace ou la redimensionne
+  const follow = () => { if (cover && coverRect) moveCover(coverRect); };
+  for (const ev of ['move', 'moved', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
   win.loadFile('index.html');
 }
 
@@ -453,7 +456,10 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
     if (!Array.isArray(args) || !args.every((a) => typeof a === 'string')) return resolve({ ok: false, error: 'Arguments invalides.' });
     // sauvegardes partagées : la plus récente (autre émulateur ou coffre Emuglob) est mise en place avant le lancement
     let saves = null;
-    if (sync && sync.rom && sync.emu) {
+    if (sync && sync.rom && sync.emu && sync.emu.id === 'cemu') {   // Wii U : sauvegarde plus récente d'un autre Cemu du PC
+      try { saves = getVault().cemuPrepare({ gameId: sync.gameId, exe, rom: sync.rom, tid: sync.tid, title: sync.title }); } catch (err) { saves = { action: 'error', error: err.message }; }
+      embedLog('sauvegardes Cemu : ' + JSON.stringify(saves));
+    } else if (sync && sync.rom && sync.emu) {
       try { saves = getVault().prepare(sync); } catch (err) { saves = { action: 'error', error: err.message }; }
       embedLog('sauvegardes : ' + JSON.stringify(saves));
     }
@@ -483,6 +489,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
             try {
               const loc = cemuSaveDir(exe, sync.rom, { tid: sync.tid, since: t0 });
               saved = loc.dir ? { ...getVault().snapDir(sync.gameId, loc.dir), tid: loc.tid } : { action: 'none', tid: loc.tid };
+              if (loc.dir) { const pushed = getVault().cemuPush({ gameId: sync.gameId, exe, dir: loc.dir, tid: loc.tid }); if (pushed.length) saved.others = pushed; }
             } catch (err) { saved = { action: 'error', error: err.message }; }
             embedLog('sauvegarde Wii U : ' + JSON.stringify(saved));
           } else if (sync && sync.rom && sync.emu) {
@@ -788,6 +795,8 @@ ipcMain.handle('win:fullscreen', (_e, force) => {
   return next;
 });
 ipcMain.handle('app:quit', () => app.quit());
+// relance : app.quit() (et non app.exit) pour garder le nettoyage de before-quit (Discord, émulateur intégré)
+ipcMain.handle('app:relaunch', () => { app.relaunch(); app.quit(); });
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
 const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
