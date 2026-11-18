@@ -80,11 +80,13 @@ function saveWinState() {
   if (!win || win.isDestroyed() || win.isFullScreen() || win.isMinimized()) return;
   try { fs.writeFileSync(winStatePath(), JSON.stringify({ ...win.getNormalBounds(), maximized: win.isMaximized() })); } catch { /* ignoré */ }
 }
+// fond de la fenêtre avant le premier affichage, assorti au thème (évite un flash sombre en thème clair)
+const START_BG = { neon: '#080418', oled: '#000000', crt: '#0b0700', clair: '#eef2f7', pastel: '#f3eaff' };
 function createWindow() {
   let st = null;
   try { st = readJson(winStatePath()); } catch { /* première ouverture */ }
   const opts = {
-    width: 1400, height: 820, backgroundColor: '#140e3a', autoHideMenuBar: true,
+    width: 1400, height: 820, backgroundColor: START_BG[(() => { try { return readCfg().theme; } catch { return ''; } })()] || '#140e3a', autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'logo.ico' : 'logo.png'),   // logo Emuglob (barre des tâches, fenêtre)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   };
