@@ -1,6 +1,6 @@
 {
   "name": "emuglob-launcher",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Launcher personnalisé pour RALibretro et d'autres émulateurs",
   "main": "main.js",
   "scripts": {
