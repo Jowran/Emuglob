@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld('api', {
   updateDownload: () => ipcRenderer.invoke('update:download'),
   updatePage: () => ipcRenderer.invoke('update:page'),
   savesOpen: (id) => ipcRenderer.invoke('saves:open', id),
-  discord: (clientId, activity) => ipcRenderer.invoke('discord:set', { clientId, activity }),
+  discord: (on, activity, legacyId) => ipcRenderer.invoke('discord:set', { on, activity, legacyId }),
   discordStatus: () => ipcRenderer.invoke('discord:status'),
   onGameExit: (cb) => ipcRenderer.on('game:exit', (_e, d) => cb(d)),
   coresInstalled: (exe) => ipcRenderer.invoke('cores:installed', exe),

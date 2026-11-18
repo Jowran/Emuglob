@@ -382,11 +382,10 @@
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-auto" style="width:auto"> Lancer Emuglob au démarrage de Windows</label>
     </div>
   <div data-sec="discord">
-  <label>Discord Rich Presence : ID d'application (vide = désactivé)</label>
-  <div style="display:flex;gap:8px"><input id="s-dc" placeholder="ex : 1234567890123456789" autocomplete="off"><button id="s-dctest">Tester</button></div>
-  <small class="muted" id="s-dcst">Crée une application nommée « Emuglob » sur discord.com/developers/applications, copie son « Application ID » ici. Discord (application de bureau) doit être ouvert.</small>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-dc" style="width:auto"> Afficher le jeu en cours sur mon profil Discord</label>
+  <small class="muted" id="s-dcst">Automatique : il suffit que Discord soit ouvert sur ce PC.</small>
   </div>
-  <div class="row"><button id="s-full">Plein écran (F11)</button><button id="s-ok" style="background:#5b46d6">Fermer</button></div>
+  <div class="row" style="justify-content:flex-end"><button id="s-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
 <dialog id="dlg-maint">
@@ -1142,9 +1141,8 @@ async function launch(g, opts = {}) {
 let playing = null, playStart = 0;
 const plainEmu = (e) => ({ id: e.id, name: e.name, kind: e.kind, exe: e.exe || '', shareSaves: !!e.shareSaves, saveDir: e.saveDir || '', saveExt: e.saveExt || '' });
 function presence(g) {
-  const id = cfg.discord && cfg.discord.id;
-  if (!id) return api.discord('', null);
-  if (!g) return api.discord(id, null);
+  const on = dcOn(), id = cfg.discord && cfg.discord.id;
+  if (!on || !g) return api.discord(on, null, id);
   const txt = (s) => { s = String(s); return (s.length < 2 ? s + '  ' : s).slice(0, 128); };
   const st = stats(g);
   const a = { type: 0, status_display_type: 2, details: txt(g.title), timestamps: { start: playStart || Date.now() },
@@ -1155,8 +1153,9 @@ function presence(g) {
   if (profile && profile.UserPic && cfg.ra && cfg.ra.user) { assets.small_image = RAM + profile.UserPic; assets.small_text = txt(cfg.ra.user + (profile.TotalPoints ? ` · ${profile.TotalPoints} pts` : '')); }
   if (Object.keys(assets).length) a.assets = assets;
   if (g.raId > 0) a.buttons = [{ label: 'Voir sur RetroAchievements', url: `https://retroachievements.org/game/${g.raId}` }];
-  return api.discord(id, a);
+  return api.discord(on, a, id);
 }
+const dcOn = () => !cfg.discord || cfg.discord.on !== false;
 
 /* ---------- bibliothèque (par console, sections repliables) ---------- */
 function openLibrary(focusSearch) {
@@ -1509,7 +1508,7 @@ const SET_ITEMS = [
   { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
   { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, plein écran, Windows', act:() => openSettings('app') },
   { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
-  { g:'acc', ic:'user', t:'Discord', get s() { return cfg.discord && cfg.discord.id ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
+  { g:'acc', ic:'user', t:'Discord', get s() { return dcOn() ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
   { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
@@ -1680,23 +1679,15 @@ function openSettings(sec) {
   $('#s-hide').checked = cfg.hideWhilePlaying !== false;
   $('#s-fs').checked = !!cfg.startFullscreen;
   $('#s-saves').checked = cfg.shareSaves !== false;
-  $('#s-dc').value = (cfg.discord && cfg.discord.id) || '';
-  $('#s-dctest').onclick = async () => {
-    commit();
-    if (!cfg.discord.id) { $('#s-dcst').textContent = 'Renseigne d\'abord l\'ID d\'application.'; return; }
-    $('#s-dcst').textContent = 'Connexion à Discord…';
-    await api.discord(cfg.discord.id, { type: 0, details: 'Test Emuglob', state: 'Rich Presence OK', timestamps: { start: Date.now() } });
-    await new Promise((r) => setTimeout(r, 2500));
-    const st = await api.discordStatus();
-    $('#s-dcst').textContent = st === 'connecté' ? 'Connecté : regarde ton profil Discord (« Test Emuglob »).' : 'Échec : ' + st + '. Discord est ouvert ? ID correct ?';
-    if (!playing) setTimeout(() => presence(null), 8000);
-  };
+  $('#s-dc').checked = dcOn();
+  $('#s-dc').onchange = () => { commit(); presence(playing); };
+  api.discordStatus().then((st) => { $('#s-dcst').textContent = st === 'connecté' ? 'Connecté à Discord.' : 'Automatique : il suffit que Discord soit ouvert sur ce PC.'; });
   autoInit = null;
   api.appInfo().then((i) => { autoInit = !!i.autostart; $('#s-auto').checked = autoInit; });
   $('#s-embed').checked = cfg.embedGames !== false;
   $('#s-mode').value = cfg.embedMode || 'overlay';
   $('#s-log').onclick = () => api.openEmbedLog();
-  const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { id: $('#s-dc').value.replace(/\D/g, '') };
+  const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { ...(cfg.discord || {}), on: $('#s-dc').checked };
     if (autoInit !== null && $('#s-auto').checked !== autoInit) { autoInit = $('#s-auto').checked; api.autostart(autoInit); } save(); };
   $('#s-test').onclick = async () => {
     commit();
@@ -1721,7 +1712,6 @@ function openSettings(sec) {
     const ok = cfg.games.filter((g) => g.raId > 0).length, hl = cfg.games.filter((g) => raSys(g)).length;
     toast(`${ok} jeu(x) reconnu(s) sur ${hl}.`);
   };
-  $('#s-full').onclick = () => api.fullscreen();
   $('#s-ok').onclick = () => d.close();
   d.onclose = () => { commit(); prog = {}; refreshRA(); autoMatch(); ensureRA(cur()); };
   d.showModal();

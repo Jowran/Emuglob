@@ -12,6 +12,8 @@ let win;
 let vault = null;
 const getVault = () => vault || (vault = new SaveVault(path.join(app.getPath('userData'), 'saves')));
 const discord = new DiscordPresence((m) => embedLog(m));
+// ID public de l'application Discord « Emuglob » (pas un secret) : intégré pour que l'utilisateur n'ait rien à configurer.
+const DISCORD_APP_ID = '1572304397411680318';
 const cfgPath = () => path.join(app.getPath('userData'), 'config.json');
 const coverDir = () => path.join(app.getPath('userData'), 'covers');
 const raCacheDir = () => path.join(app.getPath('userData'), 'ra-cache');
@@ -348,7 +350,8 @@ ipcMain.handle('game:stop', () => {
   else killTree(c.pid);
 });
 ipcMain.handle('saves:open', (_e, gameId) => { const d = getVault().dir(String(gameId)); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
-ipcMain.handle('discord:set', (_e, { clientId, activity }) => { discord.set(clientId, activity); return discord.status; });
+// on = interrupteur des Paramètres ; legacyId = ancien ID saisi à la main (repli si DISCORD_APP_ID est vide)
+ipcMain.handle('discord:set', (_e, { on, activity, legacyId }) => { discord.set(on ? (DISCORD_APP_ID || String(legacyId || '').replace(/\D/g, '')) : '', activity); return discord.status; });
 ipcMain.handle('discord:status', () => discord.status);
 ipcMain.handle('embed:openlog', () => shell.openPath(embedLogPath()));
 app.on('before-quit', () => { discord.close(); if (helperObj && current && current.embedded) helperObj.send('close'); });
