@@ -1229,6 +1229,12 @@ async function launch(g, opts = {}) {
   }
   const emu = emuOf(g);
   if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
+  if (extOf(g.path) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
+    const c = await api.wiiuCheck(g.path);
+    if (!c.ok) return toast(c.alone
+      ? "Jeu Wii U incomplet : ce .rpx est seul. Il faut le dossier complet du jeu (code, content et meta) et ajouter le .rpx qui est dans code. Un .wua, .wux ou .wud marche aussi."
+      : `Jeu Wii U incomplet : dossier ${c.missing.join(' et ')} absent à côté de code (${c.root}). Recopie le jeu en entier.`);
+  }
   let args;
   if (emu.kind === 'libretro') {
     if (!g.system) return toast('Définis le système (Options, puis Modifier).');
@@ -1719,10 +1725,13 @@ function applyDisc(g, r) {
 }
 async function identifyDiscs() {
   // Wii U extrait (.rpx dans code\) : titre lu dans meta\meta.xml, sinon nom du dossier du jeu
-  for (const g of cfg.games.filter((x) => extOf(x.path) === '.rpx' && !x.wiiuNamed)) {
-    const t = await api.wiiuTitle(g.path);
-    if (!g.titleManual) g.title = t || g.path.split(/[\\/]/).slice(-3, -2)[0] || g.title;
-    g.wiiuNamed = true;
+  // jamais un dossier système (Bureau, Téléchargements…) : meta.xml, sinon dossier du jeu (parent de code\), sinon nom du .rpx
+  const SYS_DIR = /^(desktop|bureau|downloads|t[ée]l[ée]chargements|documents|users|utilisateurs|code|content|meta|games|jeux|roms|wii ?u|[a-z]:)$/i;
+  for (const g of cfg.games.filter((x) => extOf(x.path) === '.rpx' && x.wiiuNamed !== 2)) {
+    const parts = g.path.split(/[\\/]/), t = await api.wiiuTitle(g.path);
+    const dir = /^code$/i.test(parts[parts.length - 2] || '') ? parts[parts.length - 3] : '';
+    g.title = t || (dir && !SYS_DIR.test(dir) ? dir.replace(/\s*[[(][0-9A-Fa-f]{8,16}[\])]\s*/g, ' ').trim() : '') || stem(g.path);
+    g.wiiuNamed = 2;
   }
   const todo = cfg.games.filter((g) => g.disc === undefined && (DISC_EXT.has(extOf(g.path)) || g.emulator === 'dolphin'));
   for (const g of todo) applyDisc(g, (await api.identify(g.path)) || { platform: 'unknown', id: '' });

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   pickExe: () => ipcRenderer.invoke('dialog:exe'),
   instStatus: (id, exe) => ipcRenderer.invoke('inst:status', { id, exe }),
   instInstall: (id, exe) => ipcRenderer.invoke('inst:install', { id, exe }),
+  wiiuCheck: (p) => ipcRenderer.invoke('wiiu:check', p),
   wiiuTitle: (p) => ipcRenderer.invoke('wiiu:title', p),
   coreList: (exe) => ipcRenderer.invoke('cores:list', exe),
   coreDelete: (exe, core) => ipcRenderer.invoke('cores:delete', { exe, core }),

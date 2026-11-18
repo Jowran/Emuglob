@@ -197,6 +197,13 @@ ipcMain.handle('wiiu:title', (_e, rpx) => {
     return tag('longname_fr') || tag('longname_en') || tag('shortname_fr') || tag('shortname_en') || '';
   } catch { return ''; }
 });
+// jeu Wii U extrait : <jeu>\code\*.rpx avec content\ et meta\ à côté ; un .rpx seul fait planter Cemu
+ipcMain.handle('wiiu:check', (_e, rpx) => {
+  const code = path.dirname(rpx), root = path.dirname(code), missing = [];
+  if (path.basename(code).toLowerCase() !== 'code') return { ok: false, alone: true, missing: ['code', 'content', 'meta'] };
+  for (const d of ['content', 'meta']) { try { if (!fs.statSync(path.join(root, d)).isDirectory()) missing.push(d); } catch { missing.push(d); } }
+  return { ok: !missing.length, missing, root };
+});
 ipcMain.handle('files:exist', (_e, paths) => Promise.all(paths.map((p) => fs.promises.access(p).then(() => true, () => false))));
 ipcMain.handle('shell:reveal', (_e, p) => { shell.showItemInFolder(p); });
 
