@@ -858,6 +858,43 @@ ipcMain.handle('subset:patches', async (_e, dir) => {
   return [...new Set(out)];
 });
 // patchs .xdelta des subsets : liste (nom + fichier) puis création d'une ISO patchée à côté de l'originale, jamais modifiée
+const PATCH_RX = /\.(xdelta|vcdiff|bps|ips)$/i;
+// CRC32 (BPS)
+const CRC_T = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
+const crc32 = (b) => { let c = -1; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+// patchs de cartouche (ROM chargée en mémoire, 512 Mo max) : IPS et BPS ; la BPS vérifie la CRC de la ROM de base et du résultat
+function applyIps(src, p) {
+  if (p.toString('latin1', 0, 5) !== 'PATCH') throw new Error('Fichier IPS invalide.');
+  let out = Buffer.from(src), i = 5;
+  const grow = (n) => { if (n > out.length) { const b = Buffer.alloc(n); out.copy(b); out = b; } };
+  while (i + 3 <= p.length) {
+    if (p.toString('latin1', i, i + 3) === 'EOF') { i += 3; if (i + 3 <= p.length) { const t = p.readUIntBE(i, 3); out = out.subarray(0, t); } return out; }
+    const off = p.readUIntBE(i, 3), len = p.readUInt16BE(i + 3); i += 5;
+    if (len) { grow(off + len); p.copy(out, off, i, i + len); i += len; }
+    else { const n = p.readUInt16BE(i), v = p[i + 2]; i += 3; grow(off + n); out.fill(v, off, off + n); }
+  }
+  throw new Error('Fichier IPS tronqué.');
+}
+function applyBps(src, p) {
+  if (p.toString('latin1', 0, 4) !== 'BPS1') throw new Error('Fichier BPS invalide.');
+  let i = 4;
+  const num = () => { let d = 0, s = 1; for (;;) { const x = p[i++]; d += (x & 0x7f) * s; if (x & 0x80) break; s *= 128; d += s; } return d; };
+  const srcSize = num(), tgtSize = num(), meta = num(); i += meta;
+  const end = p.length - 12, srcCrc = p.readUInt32LE(end), tgtCrc = p.readUInt32LE(end + 4);
+  if (src.length !== srcSize || crc32(src) !== srcCrc) throw new Error('BADBASE');
+  const out = Buffer.alloc(tgtSize);
+  let o = 0, sRel = 0, tRel = 0;
+  while (i < end) {
+    const d = num(), cmd = d & 3, len = Math.floor(d / 4) + 1;
+    if (cmd === 0) { src.copy(out, o, o, o + len); o += len; }
+    else if (cmd === 1) { p.copy(out, o, i, i + len); i += len; o += len; }
+    else { const x = num(), off = (x & 1 ? -1 : 1) * Math.floor(x / 2);
+      if (cmd === 2) { sRel += off; src.copy(out, o, sRel, sRel + len); sRel += len; o += len; }
+      else { tRel += off; for (let k = 0; k < len; k++) out[o++] = out[tRel++]; } }
+  }
+  if (crc32(out) !== tgtCrc) throw new Error('Résultat incorrect (CRC).');
+  return out;
+}
 ipcMain.handle('subset:patchFiles', async (_e, dir) => {
   const out = [];
   const walk = async (d, depth) => {
@@ -865,13 +902,17 @@ ipcMain.handle('subset:patchFiles', async (_e, dir) => {
     try { ents = await fs.promises.readdir(d, { withFileTypes: true }); } catch { return; }
     for (const e of ents) {
       if (e.isDirectory() && depth < 2) await walk(path.join(d, e.name), depth + 1);
-      else if (e.isFile() && /\.(xdelta|vcdiff)$/i.test(e.name)) {
-        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name);
-        if (m) out.push({ name: m[1], file: path.join(d, e.name) });
+      else if (e.isFile() && PATCH_RX.test(e.name)) {
+        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name), f = path.join(d, e.name);
+        if (m && !out.some((o) => o.file === f)) out.push({ name: m[1], file: f });
       }
     }
   };
-  if (typeof dir === 'string' && dir) await walk(dir, 0);
+  if (typeof dir === 'string' && dir) {
+    await walk(dir, 0);
+    const up = path.dirname(dir);   // ROM rangée dans son propre dossier : le patch peut être dans le dossier de la console (ex. NDS\Jeu [Subset - X].xdelta)
+    if (up && up !== dir) await walk(up, 99);
+  }
   return out;
 });
 function bundledXdelta() {
@@ -887,9 +928,8 @@ function bundledXdelta() {
 let patching = null;
 ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
   if (patching) return { ok: false, error: 'Un patch est déjà en cours.' };
-  if (typeof src !== 'string' || typeof patch !== 'string' || !/\.(xdelta|vcdiff)$/i.test(patch)) return { ok: false, error: 'Patch invalide.' };
-  const xd = bundledXdelta();
-  if (!xd) return { ok: false, error: 'xdelta3 introuvable.' };
+  if (typeof src !== 'string' || typeof patch !== 'string' || !PATCH_RX.test(patch)) return { ok: false, error: 'Patch invalide.' };
+  if (/\.(zip|7z|rar)$/i.test(src)) return { ok: false, error: 'ROM compressée (.zip/.7z) : décompresse-la pour appliquer le patch.' };
   const ext = path.extname(src), safe = String(name || 'Subset').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim() || 'Subset';
   const out = path.join(path.dirname(src), path.basename(src, ext) + ` [Subset - ${safe}]` + ext), part = out + '.part';
   if (path.resolve(out) === path.resolve(src)) return { ok: false, error: 'Nom de sortie identique à la ROM.' };
@@ -897,6 +937,20 @@ ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
   let size = 0;
   try { size = (await fs.promises.stat(src)).size; } catch { return { ok: false, error: 'ROM de base introuvable : ' + src }; }
   const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('subset:progress', p); };
+  if (/\.(ips|bps)$/i.test(patch)) {
+    if (size > 512 * 1048576) return { ok: false, error: 'ROM trop grosse pour un patch IPS/BPS.' };
+    try {
+      const [s, p] = await Promise.all([fs.promises.readFile(src), fs.promises.readFile(patch)]);
+      const outBuf = /\.bps$/i.test(patch) ? applyBps(s, p) : applyIps(s, p);
+      await fs.promises.writeFile(part, outBuf); await fs.promises.rename(part, out);
+      return { ok: true, out };
+    } catch (e) {
+      fs.rm(part, { force: true }, () => {});
+      return { ok: false, error: e.message === 'BADBASE' ? 'Ce patch ne correspond pas à ta ROM de base (mauvaise version/région ou ROM déjà modifiée).' : e.message };
+    }
+  }
+  const xd = bundledXdelta();
+  if (!xd) return { ok: false, error: 'xdelta3 introuvable.' };
   return new Promise((resolve) => {
     // -d décode, -s source (lue seulement) ; les sommes adler32 du patch font échouer xdelta si la ROM de base n'est pas la bonne
     const c = spawn(xd, ['-d', '-f', '-s', src, patch, part], { windowsHide: true });
@@ -908,8 +962,8 @@ ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
     c.on('error', (e) => done({ ok: false, error: e.message }));
     c.on('close', (code) => {
       if (code !== 0) {
-        const bad = /checksum|adler|source file too short|invalid/i.test(err);
-        return done({ ok: false, error: bad ? "Ce patch ne correspond pas à ta ROM de base (mauvais dump ou ROM déjà modifiée)." : 'xdelta3 a échoué : ' + (err.trim().split('\n').pop() || 'code ' + code) });
+        const bad = /checksum|adler|source file too short|invalid|source/i.test(err);
+        return done({ ok: false, error: bad ? "Ce patch ne correspond pas à ta ROM de base (mauvaise version/région ou ROM déjà modifiée)." : 'xdelta3 a échoué : ' + (err.trim().split('\n').pop() || 'code ' + code) });
       }
       fs.rename(part, out, (e3) => (e3 ? done({ ok: false, error: e3.message }) : done({ ok: true, out })));
     });

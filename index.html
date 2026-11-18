@@ -1594,20 +1594,20 @@ async function nameSubsets(vars) {   // nom du subset : tag du titre/fichier, si
   }
   if (vars.some((v) => v.subName)) save();
 }
-// patchs .xdelta « [Subset - Nom] » rangés près de la ROM de base et pas encore appliqués (ISO patchée absente de la bibliothèque)
+// patchs « [Subset - Nom] » (.xdelta, .bps, .ips) rangés près de la ROM de base et pas encore appliqués (ROM patchée absente de la bibliothèque)
 async function pendingPatches(g, vars) {
-  const key = looseKey(fileOf(g.path)), keyT = looseKey(g.title);
+  const keys = new Set([looseKey(fileOf(g.path)), looseKey(g.title), looseKey(fileOf(dirOf(g.path) + '.x'))].filter(Boolean));   // nom du fichier, titre, dossier de la ROM (régions ignorées)
   const list = ((await api.subsetPatchFiles(dirOf(g.path)).catch(() => [])) || [])
-    .filter((p) => { const k = looseKey(fileOf(p.file)); return k && (k === key || k === keyT || key.startsWith(k) || k.startsWith(key)); });
+    .filter((p) => keys.has(looseKey(fileOf(p.file))));
   const seen = new Set();
   return list.filter((p) => !vars.some((v) => (v.subName || '').toLowerCase() === p.name.toLowerCase()) && !seen.has(p.name.toLowerCase()) && seen.add(p.name.toLowerCase()));
 }
 async function applyPatch(g, p, opts) {
   const d = $('#dlg-menu');
-  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div><p id="sp-state" style="margin:4px 2px;max-width:420px">Création de l'ISO patchée « ${esc(p.name)} »… L'ISO d'origine n'est pas modifiée.</p><button data-a="x" disabled>Patienter…</button>`;
+  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div><p id="sp-state" style="margin:4px 2px;max-width:420px">Création de la ROM patchée « ${esc(p.name)} »… La ROM d'origine n'est pas modifiée.</p><button data-a="x" disabled>Patienter…</button>`;
   d.onclick = (e) => { const b = e.target.closest('button'); if (b && !b.disabled) d.close(); };
   if (!d.open) d.showModal();
-  api.onSubsetProgress && !applyPatch.hooked && (applyPatch.hooked = true, api.onSubsetProgress((x) => { const el = $('#sp-state'); if (el) el.textContent = `Création de l'ISO patchée… ${x.pct} %`; }));
+  api.onSubsetProgress && !applyPatch.hooked && (applyPatch.hooked = true, api.onSubsetProgress((x) => { const el = $('#sp-state'); if (el) el.textContent = `Création de la ROM patchée… ${x.pct} %`; }));
   const r = await api.subsetApply({ src: g.path, patch: p.file, name: p.name });
   if (!r.ok) {
     $('#sp-state').textContent = 'Échec : ' + r.error;
@@ -1623,7 +1623,7 @@ async function applyPatch(g, p, opts) {
     cfg.games.push(v);
   }
   g.subLast = v.id; save();
-  toast(r.existed ? `ISO patchée déjà présente : ${p.name}.` : `ISO patchée créée : ${p.name}.`);
+  toast(r.existed ? `ROM patchée déjà présente : ${p.name}.` : `ROM patchée créée : ${p.name}.`);
   launch(g, { ...opts, rom: v.path, subset: p.name });
 }
 async function pickSubset(g, vars, opts, pend) {
@@ -1634,7 +1634,7 @@ async function pickSubset(g, vars, opts, pend) {
   $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div>`
     + btn('', 'Jeu de base (sans subset)')
     + vars.map((v) => btn(v.id, 'Subset · ' + esc(v.subName || v.title))).join('')
-    + pend.map((p, i) => `<button data-p="${i}" title="Patch trouvé : ${esc(fileOf(p.file))}. Emuglob crée une nouvelle ISO à côté de l'originale (qui n'est pas modifiée), puis lance le jeu.">Subset · ${esc(p.name)} <small style="opacity:.7">(créer l'ISO patchée)</small></button>`).join('')
+    + pend.map((p, i) => `<button data-p="${i}" title="Patch trouvé : ${esc(fileOf(p.file))}. Emuglob crée une nouvelle ROM à côté de l'originale (qui n'est pas modifiée), puis lance le jeu.">Subset · ${esc(p.name)} <small style="opacity:.7">(appliquer le patch)</small></button>`).join('')
     + (g.raId > 0 ? '<button data-ra="1" title="Les subsets « bonus » se chargent avec le jeu de base, sans ROM patchée (multiset : PCSX2 2.6+, RetroArch 1.22.1+…). On les active ou désactive sur la page du jeu.">Subsets bonus sur RetroAchievements…</button>' : '')
     + '<button data-a="x">Annuler</button>';
   d.onclick = (e) => {
