@@ -1742,11 +1742,20 @@ const achRow = (a) => `<div class="ach ${a.lock ? 'lock' : ''}"><img src="${RAM}
 async function openTrophies() {
   closeOv();
   if (!raOn()) { toast('Renseigne ton pseudo et ta clé API RetroAchievements.'); return openSettings(); }
-  mode = 'trophies'; setTop('tro'); $('#ov-tro').hidden = false; renderTro();
+  mode = 'trophies'; setTop('tro'); $('#ov-tro').hidden = false; allProg = null; renderTro();
+  if (tab === 'all') loadAllProg();
   await refreshRA();
   const g = cur();
   if (g && g.raId > 0) await loadProg(g, true);
   if (mode === 'trophies') renderTro();
+}
+let allProg = null;
+async function loadAllProg() {
+  if (allProg) return;
+  const r = await api.ra('GetUserCompletionProgress', { c: 500, o: 0 }, 600);
+  const arr = r && r.ok && r.data ? (r.data.Results || r.data.results || []) : [];
+  allProg = arr.sort((a, b) => String(b.MostRecentAwardedDate || '').localeCompare(String(a.MostRecentAwardedDate || '')));
+  if (mode === 'trophies' && tab === 'all') renderTro();
 }
 function renderTro() {
   const g = cur(), s = stats(g);
@@ -1767,6 +1776,14 @@ function renderTro() {
         [...un.map((a) => ({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, extra:'Débloqué le ' + date(a).slice(0, 10) })),
          ...lo.map((a) => ({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, lock:true }))].map(achRow).join('');
     }
+  } else if (tab === 'all') {
+    const done = (x) => (x.NumAwarded ?? x.numAwarded ?? 0);
+    const max = (x) => (x.MaxPossible ?? x.maxPossible ?? 0);
+    body = !allProg ? '<p class="muted">Chargement…</p>'
+      : !allProg.length ? '<p class="muted">Aucun jeu commencé sur RetroAchievements.</p>'
+      : `<h3>Tous mes jeux <small>${allProg.length}</small></h3>` + allProg.map((x) => `<div class="ach"><img src="${RAM}${esc(x.ImageIcon || x.imageIcon || '')}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="tx"><b translate="no">${esc(x.Title || x.title || '')}</b><small translate="no">${esc(x.ConsoleName || x.consoleName || '')}</small><div class="sh-bar"><i style="width:${max(x) ? Math.round((100 * done(x)) / max(x)) : 0}%"></i></div></div>
+        <div class="pts">${done(x)} / ${max(x)}</div></div>`).join('');
   } else {
     body = recent.length
       ? recent.map((a) => achRow({ title:a.Title, desc:a.Description, badge:a.BadgeName, pts:a.Points, extra:`${a.GameTitle} · ${a.ConsoleName} · ${a.Date.slice(0, 10)}` })).join('')
@@ -2783,7 +2800,7 @@ $('#lib-body').onclick = (e) => {
 };
 $('#ov-tro').onclick = (e) => {
   if (e.target.id === 'tro-close') return closeOv();
-  if (e.target.dataset.t) { tab = e.target.dataset.t; renderTro(); }
+  if (e.target.dataset.t) { tab = tab === e.target.dataset.t ? 'all' : e.target.dataset.t; renderTro(); if (tab === 'all') loadAllProg(); }
 };
 window.addEventListener('focus', () => {
   const now = Date.now();

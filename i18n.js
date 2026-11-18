@@ -170,7 +170,7 @@
     'Renseigne ton pseudo et ta clé API RetroAchievements.': 'Enter your RetroAchievements username and API key.', 'Jeu sélectionné': 'Selected game', 'Débloqués (7 jours)': 'Unlocked (7 days)',
     'Sélectionne un jeu sur l\'accueil pour voir ses succès.': 'Select a game on the home screen to see its achievements.',
     'Ce jeu n\'a pas été reconnu. Renseigne son ID RetroAchievements dans Options, puis Modifier.': 'This game was not recognized. Enter its RetroAchievements ID in Options, then Edit.',
-    'Aucun succès débloqué ces 7 derniers jours.': 'No achievements unlocked in the last 7 days.', 'Lie ton compte RetroAchievements pour voir tes points et tes succès ici.': 'Link your RetroAchievements account to see your points and achievements here.',
+    'Aucun succès débloqué ces 7 derniers jours.': 'No achievements unlocked in the last 7 days.', 'Aucun jeu commencé sur RetroAchievements.': 'No game started on RetroAchievements.', 'Tous mes jeux': 'All my games', 'Lie ton compte RetroAchievements pour voir tes points et tes succès ici.': 'Link your RetroAchievements account to see your points and achievements here.',
     'Lier mon compte': 'Link my account', 'Chargement du profil…': 'Loading profile…', 'Réglages du compte': 'Account settings', 'Points (hardcore)': 'Points (hardcore)',
     'Points (softcore)': 'Points (softcore)', 'Jeux terminés': 'Games beaten', 'Jeux maîtrisés': 'Games mastered', 'Jeux joués': 'Games played', 'Succès débloqués': 'Achievements unlocked',
     'Récompenses': 'Awards', 'Succès (7 jours)': 'Achievements (7 days)', 'Terminé': 'Beaten', 'Maîtrisé': 'Mastered', 'Complété': 'Completed', 'Derniers jeux terminés': 'Latest games beaten',
