@@ -106,6 +106,16 @@
   .sh-hash .sh-tags { margin:6px 0 0; gap:5px; }
   .sh-hash .sh-tags span { padding:2px 8px; font-size:11px; }
   .sh-card .fb { margin-top:8px; font-size:12px; padding:5px 10px; }
+  .sh-tabs { display:flex; gap:6px; margin:16px 0 4px; }
+  .sh-tabs button { background:rgba(255,255,255,.08); border:1px solid transparent; color:inherit; font:inherit; font-size:14px; padding:6px 16px; border-radius:999px; cursor:pointer; }
+  .sh-tabs button.on { background:color-mix(in srgb, var(--acc) 45%, transparent); border-color:var(--acc); }
+  .sh-subs { display:flex; flex-direction:column; gap:6px; margin:14px 0 10px; max-width:860px; }
+  .sh-sub-r { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,.06); cursor:pointer; }
+  .sh-sub-r:hover, .sh-sub-r:focus { background:rgba(255,255,255,.12); outline:none; }
+  .sh-sub-r img { width:44px; height:44px; border-radius:8px; flex:none; }
+  .sh-sub-r > div { flex:1; min-width:0; } .sh-sub-r b { display:block; } .sh-sub-r small { color:var(--muted); font-size:12px; }
+  .sh-own { font-size:12px; color:var(--muted); white-space:nowrap; } .sh-own.on { color:var(--acc); }
+  body.light .sh-tabs button, body.light .sh-sub-r { background:rgba(0,0,0,.05); } body.light .sh-tabs button.on { color:#fff; }
   .sh-load { opacity:.6; font-size:13px; }
   @media (max-width: 1300px) { .sh { grid-template-columns:minmax(200px,280px) minmax(0,1fr); } .sh-side { grid-column:1 / -1; } }
   body.light .sh-card, body.light .sh-hl > div { background:rgba(255,255,255,.7); border-color:#e3e6ee; }
@@ -1701,7 +1711,7 @@ async function openSheet(g = cur(), from = '') {
   closeOv();
   sheetFrom = from;
   if (from === 'friends') setTop('fr');
-  mode = 'sheet'; sheetGame = g; hashAll = false; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
+  mode = 'sheet'; sheetGame = g; hashAll = false; sheetTab = 'info'; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
@@ -1719,7 +1729,35 @@ async function openSheet(g = cur(), from = '') {
     const r = await api.wiki(g.raTitle || (p && p.Title) || g.title, p ? p.ConsoleName : labelOf(g), LANG);
     x.wiki = r && r.ok ? r : { none: true, error: r && (r.offline ? 'hors ligne' : r.error) };
   })());
+  if (raOn() && g.raId > 0 && !x.subs) jobs.push(Promise.allSettled(jobs.slice()).then(() => loadSubsets(g, x)));
   for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) renderSheet(); }).catch(() => {});
+}
+// subsets RetroAchievements du jeu : jeux « Titre [Subset - Nom] » de la même console (GetGameList, gardée 7 jours)
+const SUBSET_RX = /\s*\[\s*subset\s*-\s*([^\]]*?)\s*\]\s*/i;
+let sheetTab = 'info';
+async function loadSubsets(g, x) {
+  const p = prog[g.raId] && prog[g.raId].data;
+  const cid = (p && p.ConsoleID) || (!g.virtual && raSys(g)) || 0;
+  const title = (p && p.Title) || g.raTitle || g.title;
+  if (!cid || !title) return;
+  const r = await api.ra('GetGameList', { i: cid, f: 1 }, 604800);
+  if (!r.ok || !Array.isArray(r.data)) return;
+  const base = title.replace(SUBSET_RX, ' ').trim().toLowerCase();
+  x.subs = r.data.map((y) => ({ id: +(y.ID || y.id), title: y.Title || y.title || '', icon: y.ImageIcon || y.imageIcon || '', ach: y.NumAchievements || 0, pts: y.Points || 0, cons: y.ConsoleName || (p && p.ConsoleName) || '' }))
+    .filter((y) => y.id !== +g.raId && y.title.replace(SUBSET_RX, ' ').trim().toLowerCase() === base)
+    .map((y) => { const m = SUBSET_RX.exec(y.title); return { ...y, name: m ? m[1] : '', base: !m }; })
+    .sort((a, b) => b.base - a.base || a.name.localeCompare(b.name));
+}
+function subsetsHTML(x) {
+  return `<div class="sh-subs">${x.subs.map((y, k) => {
+    const own = cfg.games.find((z) => z.raId === y.id);
+    return `<div class="sh-sub-r" data-sub="${k}" tabindex="0">
+      <img src="${RAM}${esc(y.icon)}" alt="" onerror="this.style.visibility='hidden'">
+      <div><b translate="no">${esc(y.base ? y.title : y.name || y.title)}</b>
+      <small>${y.base ? '<span>Jeu de base</span> · ' : ''}<span>${y.ach} succès</span> · ${y.pts} pts</small></div>
+      <span class="sh-own ${own ? 'on' : ''}">${own ? 'Dans ta bibliothèque' : 'Pas dans ta bibliothèque'}</span></div>`;
+  }).join('')}</div>
+  <div class="sh-src">Un subset est un set de succès en plus (défis, bonus…). Il se joue avec une ROM patchée ou, pour les subsets bonus, avec le jeu de base (émulateurs récents). Clic pour ouvrir sa fiche et voir ses hash.</div>`;
 }
 let sheetGame = null;
 function renderSheet() {
@@ -1764,12 +1802,14 @@ function renderSheet() {
     <div class="sh-sub">${esc(g.virtual ? (p && p.ConsoleName) || g.raConsole || '' : labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
     <h1 translate="no">${esc(g.title)}</h1>
     ${who ? `<div class="sh-sub">${esc(who)}</div>` : ''}
+    ${x.subs && x.subs.length ? `<div class="sh-tabs"><button class="${sheetTab === 'info' ? 'on' : ''}" data-tab="info">Infos</button><button class="${sheetTab === 'sub' ? 'on' : ''}" data-tab="sub">Subsets (${x.subs.length})</button></div>` : ''}
+    ${sheetTab === 'sub' && x.subs && x.subs.length ? subsetsHTML(x) : `
     ${genres.length || g.favorite ? `<div class="sh-tags">${genres.map((t, i) => `<span class="${i ? '' : 'c'}">${esc(t)}</span>`).join('')}${g.favorite ? '<span>★ Favori</span>' : ''}</div>` : '<div style="height:18px"></div>'}
     <p class="sh-sum">${sum}</p>
     ${w && w.text ? `<div class="sh-src">Résumé : Wikipédia${w.lang !== LANG ? (LANG === 'en' ? ' (en français, pas de page en anglais)' : ' (en anglais, pas de page en français)') : ''}, licence CC BY-SA</div>` : ''}
     ${hl.length ? `<div class="sh-hl">${hl.map(([t, v]) => `<div><b>${fmtH(v)}</b><span>${t}</span><div class="sh-bar"><i style="width:${Math.round((100 * v) / hmax)}%"></i></div></div>`).join('')}</div>
       <div class="sh-src">Durée de vie : temps médian des joueurs RetroAchievements</div>` : ''}
-    ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}
+    ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}`}
   </div>
   <div class="sh-side">
     ${!raOn() ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.</div></div>'
@@ -1803,6 +1843,13 @@ $('#sh-body').onclick = (e) => {
   const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
   const md = e.target.closest('[data-md5]'); if (md) { navigator.clipboard.writeText(md.dataset.md5).then(() => toast('MD5 copié.'), () => {}); return; }
   if (e.target.closest('[data-hmore]')) { hashAll = !hashAll; return renderSheet(); }
+  const tb = e.target.closest('[data-tab]'); if (tb) { sheetTab = tb.dataset.tab; return renderSheet(); }
+  const sb = e.target.closest('[data-sub]');
+  if (sb) {
+    const y = ((sheetX[sheetGame.id] || {}).subs || [])[+sb.dataset.sub]; if (!y) return;
+    const own = cfg.games.find((z) => z.raId === y.id);
+    return openSheet(own || { id: 'ra-' + y.id, title: y.title, raId: y.id, raConsole: y.cons, raIcon: y.icon || undefined, virtual: true, path: '' }, sheetFrom);
+  }
   const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
   const g = sheetGame;
   if (b.dataset.sh === 'play') { closeOv(); launch(g); }
@@ -3399,6 +3446,11 @@ const TUTO = [
     <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li></ol>
     <ul><li><b>Hardcore</b> : pas de sauvegarde d'état, de retour arrière ni de ralenti, mais les points comptent pleinement. <b>Softcore</b> : tout est permis, les succès sont marqués à part.</li>
     <li>Seules les ROMs <b>reconnues</b> par RetroAchievements (bonne version, non modifiée) ont des succès.</li></ul>` },
+  { ic:'search', t:'Rechercher et fiche de jeu', go:() => $('#q').focus(), h:`<ul><li>La <b>barre de recherche</b> (en haut) trouve tes jeux, puis <b>tous les jeux RetroAchievements</b>, même ceux que tu n'as pas. Flèches et Entrée pour choisir.</li>
+    <li>La <b>fiche du jeu</b> (touche <b>I</b> ou le bouton à droite de Jouer) : résumé, durée de vie, captures et succès.</li>
+    <li>Pour un jeu que tu n'as pas, la fiche liste les <b>hash supportés</b> : les versions de ROM exactes qui débloquent les succès (clic sur un MD5 pour le copier).</li>
+    <li>L'onglet <b>Subsets</b> de la fiche montre les sets de succès en plus du jeu (défis, bonus…). Une ROM patchée « [Subset - Nom] » est rangée sous son jeu de base : Jouer te demande lequel lancer.</li></ul>
+    <div class="tip">Le catalogue RetroAchievements se télécharge à la première recherche, puis reste disponible hors ligne.</div>` },
   { ic:'user', t:'Profil, amis et Discord', go:() => openSettings('discord'), h:`<ul><li><b>Profil</b> (le rond en haut à droite) : temps de jeu, jeux les plus joués, puis tes stats RetroAchievements.</li>
     <li><b>Amis</b> : ce que jouent les gens que tu suis sur RetroAchievements.</li>
     <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
@@ -3443,6 +3495,11 @@ const TUTO_EN = [
     <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li></ol>
     <ul><li><b>Hardcore</b>: no save states, rewind or slow motion, but points count fully. <b>Softcore</b>: anything goes, achievements are marked separately.</li>
     <li>Only ROMs <b>recognized</b> by RetroAchievements (right version, unmodified) have achievements.</li></ul>` },
+  { t:'Search and game sheet', h:`<ul><li>The <b>search bar</b> (at the top) finds your games, then <b>every RetroAchievements game</b>, even the ones you don't have. Arrows and Enter to pick.</li>
+    <li>The <b>game sheet</b> (<b>I</b> key or the button right of Play): summary, length, screenshots and achievements.</li>
+    <li>For a game you don't have, the sheet lists the <b>supported hashes</b>: the exact ROM versions that unlock achievements (click an MD5 to copy it).</li>
+    <li>The sheet's <b>Subsets</b> tab shows the game's extra achievement sets (challenges, bonus…). A patched "[Subset - Name]" ROM is filed under its base game: Play asks which one to launch.</li></ul>
+    <div class="tip">The RetroAchievements catalog downloads on your first search, then stays available offline.</div>` },
   { t:'Profile, friends and Discord', h:`<ul><li><b>Profile</b> (the circle at the top right): play time, most played games, then your RetroAchievements stats.</li>
     <li><b>Friends</b>: what the people you follow on RetroAchievements are playing.</li>
     <li><b>Discord</b>: shows the current game on your Discord profile. A simple switch in Settings, Accounts.</li></ul>` },
