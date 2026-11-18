@@ -742,6 +742,13 @@ ipcMain.handle('game:vol', (_e, { level, mute }) => new Promise((resolve) => {
 ipcMain.handle('quick:get', (_e, exe) => { try { return emucfg.quick(exe); } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('quick:save', (_e, { exe, values }) => { try { return { ok: true, n: emucfg.quickSave(exe, values) }; } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('game:focus', () => { if (helperObj && current && current.embedded) helperObj.send('focus'); });
+// cache / remontre la fenêtre de l'émulateur, le temps d'un panneau d'Emuglob par-dessus le jeu (contrôles)
+ipcMain.handle('game:park', (_e, on) => {
+  if (!helperObj || !current || !current.embedded) return false;
+  helperObj.send(on ? 'hide' : 'show');
+  if (on && win && !win.isDestroyed()) win.focus();   // Emuglob reprend le clavier
+  return true;
+});
 ipcMain.handle('game:stop', () => {
   if (!current) return;
   const c = current.child;

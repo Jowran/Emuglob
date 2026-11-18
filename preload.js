@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
   wikiOpen: (url) => ipcRenderer.invoke('wiki:open', url),
   gameMove: (r) => ipcRenderer.invoke('game:move', r),
   gameFocus: () => ipcRenderer.invoke('game:focus'),
+  gamePark: (on) => ipcRenderer.invoke('game:park', !!on),
   stopGame: () => ipcRenderer.invoke('game:stop'),
   gameVol: (level, mute) => ipcRenderer.invoke('game:vol', { level, mute }),
   quickGet: (exe) => ipcRenderer.invoke('quick:get', exe),

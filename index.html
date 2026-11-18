@@ -522,7 +522,7 @@
   #gview { flex:1; position:relative; background:#000; }
   #g-mirror { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; background:#000; }
   #g-volw { display:inline-flex; align-items:center; gap:8px; }
-  #g-volw[hidden], #g-quick[hidden], #gquick[hidden] { display:none; }
+  #g-volw[hidden], #g-quick[hidden], #g-ctl[hidden], #gquick[hidden] { display:none; }
   #g-vol { width:110px; accent-color:#8f7bff; }
   #g-voln { min-width:34px; font-weight:500; color:var(--muted); font-size:13px; }
   #g-mute.off { color:#ff8a8a; border-color:#6a3550; }
@@ -694,7 +694,7 @@
 <div id="game" hidden>
   <div id="gbar"><b id="g-title" translate="no"></b><span id="g-state"></span><span class="sp"></span>
     <span id="g-volw" hidden><button id="g-mute" title="Couper / remettre le son"><i data-ic="volume"></i></button><input id="g-vol" type="range" min="0" max="100" step="1" value="100" title="Volume de l'émulateur"><b id="g-voln">–</b></span>
-    <button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
+    <button id="g-ctl" hidden title="Changer les touches de l'émulateur sans quitter le jeu"><i data-ic="gamepad"></i> Contrôles</button><button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
     <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
   <div id="gquick" hidden><div id="gq-list"></div><div id="gq-note"></div></div>
   <div id="gview"><video id="g-mirror" muted playsinline hidden></video><div id="g-wait"></div></div>
@@ -830,7 +830,7 @@
     <text x="268" y="76">Y</text><text x="268" y="128">A</text><text x="242" y="102">X</text><text x="294" y="102">B</text>
   </svg><div id="c-dz" hidden><svg viewBox="-70 -70 140 140" aria-label="Zone morte"><circle class="zr" r="60"/><line class="zx" x1="-60" x2="60"/><line class="zx" y1="-60" y2="60"/><circle class="zd" r="0"/><circle class="zm" r="0"/><circle class="zt" r="4"/></svg><div><b id="c-dz-t">Zone morte</b><span id="c-dz-v"></span><span id="c-dz-n"></span></div></div><div id="c-live">Branche une manette et appuie sur ses boutons : la manette s'allume et l'action réglée s'affiche ici.</div></div></div>
   <div id="c-note"></div>
-  <div class="row"><button id="c-cancel" style="margin-right:auto">Annuler</button><button id="c-save" style="background:#5b46d6">Enregistrer</button></div>
+  <div class="row"><button id="c-cancel" style="margin-right:auto">Annuler</button><button id="c-later" hidden>Au prochain lancement</button><button id="c-save" style="background:#5b46d6">Enregistrer</button></div>
 </dialog>
 
 <dialog id="dlg-set">
@@ -2892,19 +2892,27 @@ function captureInput() {
   });
 }
 const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra/i;   // émulateurs que emucfg.js sait modifier
-async function openControls(pick) {
+// en jeu : changements gardés ici et écrits juste après la fermeture de l'émulateur (il réécrit sa config en quittant)
+let ctlPending = null, relaunchId = null;   // { exe, name, list } ; jeu à relancer une fois les contrôles écrits
+const ctlEmu = (e) => !!(e && e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()));
+async function openControls(pick, inGame = false) {
   const d = $('#dlg-ctl'), changes = new Map();
-  const emus = cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
+  const emus = inGame ? [pick] : cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
     .filter((e, i, a) => a.findIndex((x) => x.exe.toLowerCase() === e.exe.toLowerCase()) === i);   // même exécutable déclaré deux fois
   if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin ou Azahar). Renseigne son chemin dans Paramètres, Émulateurs.');
   let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '', dzSel = -1;
+  $('#c-emu').disabled = inGame; $('#c-later').hidden = !inGame;
+  $('#c-save').textContent = inGame ? 'Appliquer et relancer le jeu' : 'Enregistrer';
   $('#c-emu').innerHTML = emus.map((e, i) => `<option value="${i}" ${e === emu ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
   const loadEmu = async () => {
     changes.clear();
     data = await api.emuCfgLoad(emu.exe);
     if (!data.ok) { $('#c-tabs').innerHTML = ''; $('#c-list').innerHTML = `<div style="color:var(--muted);padding:10px 0">${esc(data.error)}</div>`; $('#c-note').textContent = ''; return; }
     tab = data.groups[0].id;
-    $('#c-note').textContent = `Fichier(s) modifié(s) : ${data.files.join(' · ')} (une copie .bak est gardée). Clique une case puis appuie sur une touche ou un bouton de manette.`;
+    if (inGame && ctlPending && ctlPending.exe === emu.exe) ctlPending.list.forEach((c) => changes.set(c.group + '\u0000' + c.key, c));   // déjà modifiés pendant cette partie
+    $('#c-note').textContent = inGame
+      ? `${data.name} lit ses contrôles au démarrage et les réécrit en quittant : Emuglob les enregistre juste après la fermeture du jeu, puis peut le relancer tout de suite.`
+      : `Fichier(s) modifié(s) : ${data.files.join(' · ')} (une copie .bak est gardée). Clique une case puis appuie sur une touche ou un bouton de manette.`;
     tabs(); list();
   };
   $('#c-emu').onchange = async () => {
@@ -2952,8 +2960,20 @@ async function openControls(pick) {
   };
   d.oncancel = (e) => { if (capturing) e.preventDefault(); };
   $('#c-cancel').onclick = () => { if (captureInput.cancel) captureInput.cancel(); d.close(); };
+  const keep = () => { ctlPending = changes.size ? { exe: emu.exe, name: data.name, list: [...changes.values()] } : null; };
+  $('#c-later').onclick = () => {
+    if (capturing) return;
+    keep(); d.close();
+    if (ctlPending) toast(`${changes.size} contrôle(s) modifié(s) : ils seront enregistrés à la fermeture du jeu.`);
+  };
   $('#c-save').onclick = async () => {
     if (capturing) return;
+    if (inGame) {
+      keep(); d.close();
+      if (!ctlPending || !playing) return;
+      relaunchId = playing.id; toast('Fermeture du jeu pour appliquer les contrôles…'); api.stopGame();
+      return;
+    }
     if (!changes.size) return d.close();
     const r = await api.emuCfgSave(emu.exe, [...changes.values()].map(({ group, key, raw, num }) => ({ group, key, raw, num })));
     if (!r.ok) return toast(r.error);
@@ -3015,8 +3035,13 @@ async function openControls(pick) {
     if (live !== lastLive) { $('#c-live').innerHTML = live; lastLive = live; }
     raf = requestAnimationFrame(frame);
   };
-  d.addEventListener('close', () => cancelAnimationFrame(raf), { once: true });
-  await loadEmu(); d.showModal(); raf = requestAnimationFrame(frame);
+  d.addEventListener('close', () => {
+    cancelAnimationFrame(raf);
+    if (inGame && mode === 'game') { api.gamePark(false); api.gameFocus(); }   // l'émulateur revient
+  }, { once: true });
+  await loadEmu();
+  if (inGame) await api.gamePark(true);   // la fenêtre de l'émulateur passerait au-dessus du panneau : on la cache le temps du réglage
+  d.showModal(); raf = requestAnimationFrame(frame);
 }
 
 function openMenu(g = cur()) {
@@ -3073,7 +3098,8 @@ async function startMirror() {
 }
 function leaveGame() {
   stopMirror();
-  $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true;
+  $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true; $('#g-ctl').hidden = true;
+  if ($('#dlg-ctl').open) $('#dlg-ctl').close();
   if (mode === 'game') mode = 'home';
 }
 api.onGameEmbedded(({ ok, reason, stream }) => {
@@ -3100,6 +3126,7 @@ async function gameTools() {
   $('#g-volw').hidden = false;
   showVol(await api.gameVol());
   setTimeout(async () => { if (mode === 'game') showVol(await api.gameVol()); }, 4000);   // le son démarre souvent après la fenêtre
+  $('#g-ctl').hidden = !ctlEmu(emu);
   const q = emu && emu.exe ? await api.quickGet(emu.exe) : null;
   $('#g-quick').hidden = !(q && q.ok);
   if (!(q && q.ok)) return;
@@ -3117,13 +3144,30 @@ async function gameTools() {
 $('#g-vol').oninput = (e) => { $('#g-voln').textContent = e.target.value + ' %'; clearTimeout(gameTools.t); gameTools.t = setTimeout(async () => showVol(await api.gameVol(+e.target.value, false)), 60); };
 $('#g-mute').onclick = async () => showVol(await api.gameVol(undefined, !$('#g-mute').classList.contains('off')));
 $('#g-quick').onclick = () => { $('#gquick').hidden = !$('#gquick').hidden; api.gameFocus(); };
+$('#g-ctl').onclick = () => { const emu = playing && emuOf(playing); if (ctlEmu(emu)) openControls(emu, true); };
 new ResizeObserver(() => { if (mode === 'game') api.gameMove(gameRect()); }).observe($('#gview'));
 
 /* ---------- retour au launcher quand l'émulateur se ferme ---------- */
 api.onGameExit(({ id, seconds, short, saved }) => {
-  if (quickPending && Object.keys(quickPending.values).length) {   // réglages rapides choisis pendant la partie
-    const qp = quickPending; quickPending = null;
-    setTimeout(async () => { const r = await api.quickSave(qp.exe, qp.values); toast(r.ok ? `Réglages enregistrés (${r.n}) : ils s'appliquent au prochain lancement.` : 'Réglages non enregistrés : ' + r.error); }, 1500);
+  {   // réglages rapides et contrôles choisis pendant la partie : écrits une fois l'émulateur fermé, puis relance éventuelle
+    const qp = quickPending && Object.keys(quickPending.values).length ? quickPending : null, cp = ctlPending, again = relaunchId === id ? id : null;
+    quickPending = null; ctlPending = null; relaunchId = null;
+    if (qp || cp || again) setTimeout(async () => {
+      if (qp) { const r = await api.quickSave(qp.exe, qp.values); toast(r.ok ? `Réglages enregistrés (${r.n}) : ils s'appliquent au prochain lancement.` : 'Réglages non enregistrés : ' + r.error); }
+      let ok = true;
+      if (cp) {
+        let r;
+        for (let i = 0; i < 6; i++) {   // l'émulateur peut mettre quelques secondes à se fermer complètement
+          r = await api.emuCfgSave(cp.exe, cp.list.map(({ group, key, raw, num }) => ({ group, key, raw, num })));
+          if (r.ok || !/est ouvert/.test(r.error || '')) break;
+          await new Promise((res) => setTimeout(res, 1000));
+        }
+        ok = r.ok;
+        toast(r.ok ? `${cp.list.length} contrôle(s) enregistré(s) dans ${cp.name}.` : 'Contrôles non enregistrés : ' + r.error);
+      }
+      const g = again && find(again);
+      if (g && ok && mode !== 'game') launch(g);
+    }, 1500);
   }
   { const gg = find(id); if (gg && saved && saved.tid && gg.wiiuTid !== saved.tid) { gg.wiiuTid = saved.tid; save(); } }
   leaveGame();

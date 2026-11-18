@@ -95,6 +95,7 @@ public static class EmbedHelper
     static IntPtr embedded = IntPtr.Zero;   // fenêtre de l'émulateur
     static IntPtr topWin = IntPtr.Zero;     // fenêtre principale d'Emuglob
     static string curMode = "child";
+    static bool parked = false;             // fenêtre cachée le temps d'un panneau d'Emuglob par-dessus le jeu (contrôles)
     static bool streamMode = false;
     static int rx, ry, rw, rh;              // zone de jeu (pixels physiques, relative à la zone cliente d'Emuglob)
 
@@ -209,7 +210,7 @@ public static class EmbedHelper
                 IntPtr cur;
                 string m;
                 lock (gate) { cur = embedded; m = curMode; rx = int.Parse(p[1]); ry = int.Parse(p[2]); rw = int.Parse(p[3]); rh = int.Parse(p[4]); }
-                if (cur != IntPtr.Zero)
+                if (cur != IntPtr.Zero && !parked)
                 {
                     if (m == "overlay") PlaceOverlay(cur, false);
                     else SetWindowPos(cur, IntPtr.Zero, rx, ry, rw, rh, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -217,6 +218,16 @@ public static class EmbedHelper
                 break;
             case "focus":
                 Focus();
+                break;
+            case "hide":
+            case "show":
+                IntPtr hw;
+                lock (gate) { hw = embedded; parked = p[0] == "hide"; }
+                if (hw != IntPtr.Zero && IsWindow(hw))
+                {
+                    ShowWindow(hw, parked ? SW_HIDE : SW_SHOWNOACTIVATE);
+                    if (!parked) Focus();
+                }
                 break;
             case "close":
                 IntPtr c;
@@ -363,7 +374,7 @@ public static class EmbedHelper
         HideStop(false, win);   // la fenêtre principale va être placée ; les autres (boîtes de dialogue) reviennent à l'écran
         string err = mode == "overlay" ? ApplyOverlay(win, parent) : Reparent(win, parent, x, y, w, h);
         if (err != null) { Out("error " + err); return; }
-        lock (gate) { embedded = win; }
+        lock (gate) { embedded = win; parked = false; }
         Out("embedded " + win.ToInt64());
         Focus();
         if (mode == "child")
@@ -485,7 +496,9 @@ public static class EmbedHelper
         IntPtr top; int x, y, w, h;
         lock (gate) { top = topWin; x = rx; y = ry; w = rw; h = rh; }
         if (!IsWindow(top)) return false;
-        if (IsIconic(top) || !IsWindowVisible(top))
+        bool off;
+        lock (gate) { off = parked; }
+        if (off || IsIconic(top) || !IsWindowVisible(top))
         {
             if (IsWindowVisible(win)) ShowWindow(win, SW_HIDE);
             return false;
@@ -526,7 +539,7 @@ public static class EmbedHelper
     static void Release()
     {
         IntPtr win;
-        lock (gate) { win = embedded; embedded = IntPtr.Zero; }
+        lock (gate) { win = embedded; embedded = IntPtr.Zero; parked = false; }
         if (win == IntPtr.Zero || !IsWindow(win)) return;
         uint style = (uint)(GetWindowLongPtr(win, GWL_STYLE).ToInt64() & 0xFFFFFFFFL);
         style = (style & ~WS_CHILD & ~WS_POPUP) | WS_OVERLAPPEDWINDOW | WS_VISIBLE;

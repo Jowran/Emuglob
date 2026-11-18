@@ -91,6 +91,8 @@
     'Passer le tuto': 'Skip tutorial', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
     // contrôles
     'Contrôles': 'Controls', 'Zone morte': 'Dead zone', 'Branche une manette et appuie sur ses boutons : la manette s\'allume et l\'action réglée s\'affiche ici.': 'Plug in a controller and press its buttons: the controller lights up and the assigned action shows here.',
+    'Appliquer et relancer le jeu': 'Apply and restart game', 'Au prochain lancement': 'On next launch', "Changer les touches de l'émulateur sans quitter le jeu": "Change the emulator's buttons without leaving the game",
+    'Fermeture du jeu pour appliquer les contrôles…': 'Closing the game to apply the controls…',
     'Enregistrer': 'Save', 'Changer d\'émulateur sans enregistrer les modifications ?': 'Switch emulator without saving changes?', 'Appuie sur une touche…': 'Press a key…',
     'Croix ↑': 'D-pad ↑', 'Croix ↓': 'D-pad ↓', 'Croix ←': 'D-pad ←', 'Croix →': 'D-pad →', 'rien de réglé dans cet onglet': 'nothing set in this tab',
     'Branche une manette pour voir le stick.': 'Plug in a controller to see the stick.', 'Pointillés : 12,5 % minimum imposés par RALibretro.': 'Dotted line: 12.5% minimum enforced by RALibretro.',
@@ -273,7 +275,10 @@
     ['Range réglages, jaquettes et sauvegardes dans {}, à côté d\'Emuglob.exe, pour l\'emporter sur une clé USB ou un autre disque.', 'Stores settings, covers and saves in {}, next to Emuglob.exe, to carry it on a USB stick or another drive.'],
     ['{} jaquette(s) trouvée(s) sur {} jeu(x) testé(s).', '{} cover(s) found out of {} game(s) checked.'], ['{} jeu(x) reconnu(s) sur {}.', '{} game(s) recognized out of {}.'],
     ['Fichier(s) modifié(s) : {} (une copie .bak est gardée). Clique une case puis appuie sur une touche ou un bouton de manette.', 'File(s) changed: {} (a .bak copy is kept). Click a box then press a key or controller button.'],
-    ['{} réglage(s) enregistré(s) dans {}.', '{} setting(s) saved to {}.'], ['Manette détectée : {}. Appuie sur un bouton.', 'Controller detected: {}. Press a button.'],
+    ['{} réglage(s) enregistré(s) dans {}.', '{} setting(s) saved to {}.'],
+    ['{} lit ses contrôles au démarrage et les réécrit en quittant : Emuglob les enregistre juste après la fermeture du jeu, puis peut le relancer tout de suite.', '{} reads its controls at startup and rewrites them when quitting: Emuglob saves them right after the game closes, then can restart it right away.'],
+    ['{} contrôle(s) modifié(s) : ils seront enregistrés à la fermeture du jeu.', '{} control(s) changed: they will be saved when the game closes.'],
+    ['{} contrôle(s) enregistré(s) dans {}.', '{} control(s) saved to {}.'], ['Manette détectée : {}. Appuie sur un bouton.', 'Controller detected: {}. Press a button.'],
     ['Stick à {}', 'Stick at {}'], ['Lancement de {}…', 'Launching {}…'], ['Chargement de {}…', 'Loading {}…'],
     ['Intégration impossible : {}. L\'émulateur tourne dans sa propre fenêtre (journal : Paramètres).', "Embedding failed: {}. The emulator runs in its own window (log: Settings)."],
     ['S\'applique au prochain lancement : {} réécrit ses réglages en quittant, Emuglob les enregistre donc juste après la fermeture du jeu.', 'Applies on next launch: {} rewrites its settings when quitting, so Emuglob saves them right after the game closes.'],
@@ -298,11 +303,11 @@
   ];
   // préfixes « Libellé : suite » (la suite est traduite si possible)
   const PRE = ['Erreur :', 'Impossible :', 'Échec :', 'Connecté :', 'Fichier refusé :', 'Export impossible :', 'Import impossible :', 'Restauration impossible :', 'Recherche impossible :',
-    'Mise à jour impossible :', 'Version installée :', 'keys.txt non importé :', 'Sauvegardes non synchronisées :', 'Réglages non enregistrés :', 'Sauvegardes de', 'Déjà dans Emuglob : sauvegarde du',
+    'Mise à jour impossible :', 'Version installée :', 'keys.txt non importé :', 'Sauvegardes non synchronisées :', 'Réglages non enregistrés :', 'Contrôles non enregistrés :', 'Sauvegardes de', 'Déjà dans Emuglob : sauvegarde du',
     'Membre depuis le', 'Débloqué le', 'Ajouté le'];
   const PREEN = { 'Erreur :': 'Error:', 'Impossible :': 'Failed:', 'Échec :': 'Failed:', 'Connecté :': 'Connected:', 'Fichier refusé :': 'File rejected:', 'Export impossible :': 'Export failed:',
     'Import impossible :': 'Import failed:', 'Restauration impossible :': 'Restore failed:', 'Recherche impossible :': 'Check failed:', 'Mise à jour impossible :': 'Update failed:',
-    'Version installée :': 'Installed version:', 'keys.txt non importé :': 'keys.txt not imported:', 'Sauvegardes non synchronisées :': 'Saves not synced:', 'Réglages non enregistrés :': 'Settings not saved:',
+    'Version installée :': 'Installed version:', 'keys.txt non importé :': 'keys.txt not imported:', 'Sauvegardes non synchronisées :': 'Saves not synced:', 'Réglages non enregistrés :': 'Settings not saved:', 'Contrôles non enregistrés :': 'Controls not saved:',
     'Sauvegardes de': 'Saves of', 'Déjà dans Emuglob : sauvegarde du': 'Already in Emuglob: save from', 'Membre depuis le': 'Member since', 'Débloqué le': 'Unlocked on', 'Ajouté le': 'Added on' };
 
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
