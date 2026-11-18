@@ -100,8 +100,11 @@ function createWindow() {
   const later = () => { clearTimeout(t); t = setTimeout(saveWinState, 500); };
   win.on('resize', later); win.on('move', later); win.on('close', saveWinState);
   // l'écran de chargement (fenêtre séparée) suit la fenêtre quand on la déplace ou la redimensionne
-  const follow = () => { if (cover && coverRect) moveCover(coverRect); };
-  for (const ev of ['move', 'moved', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
+  // (regroupé, seulement une fois l'écran affiché et seulement si la position change vraiment : sous Windows, des
+  //  setBounds pendant le démarrage empêchaient l'animation de s'afficher)
+  let ft = null;
+  const follow = () => { if (!ft) ft = setTimeout(() => { ft = null; if (cover && coverRect) moveCover(coverRect); }, 30); };
+  for (const ev of ['move', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
   win.loadFile('index.html');
 }
 
@@ -433,7 +436,7 @@ function showCover(r, info) {
   coverAt = Date.now();
   if (info.img && /^(file:|https:)/.test(info.img)) query.img = info.img;
   cover.loadFile(path.join(__dirname, 'loading.html'), { query });
-  cover.once('ready-to-show', () => { if (cover && !cover.isDestroyed()) cover.showInactive(); });
+  cover.once('ready-to-show', () => { if (cover && !cover.isDestroyed()) { cover.showInactive(); moveCover(coverRect); } });
   cover.on('closed', () => { cover = null; });
   setTimeout(() => hideCover(), 45000);   // sécurité : jamais d'écran de chargement bloqué
 }
@@ -445,7 +448,12 @@ function hideCover(now) {
   c.webContents.executeJavaScript("document.body.classList.add('out')").catch(() => {});
   setTimeout(() => { if (!c.isDestroyed()) c.destroy(); }, 280);
 }
-function moveCover(r) { coverRect = r; if (cover && !cover.isDestroyed() && win && !win.isDestroyed()) cover.setBounds(coverBounds(r)); }
+function moveCover(r) {
+  coverRect = r;
+  if (!cover || cover.isDestroyed() || !cover.isVisible() || !win || win.isDestroyed()) return;   // pas encore affiché : il sera posé au bon endroit à l'affichage
+  const b = coverBounds(r), o = cover.getBounds();
+  if (b.x !== o.x || b.y !== o.y || b.width !== o.width || b.height !== o.height) cover.setBounds(b);
+}
 function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
