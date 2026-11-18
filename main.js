@@ -73,6 +73,7 @@ function createWindow() {
   try { st = readJson(winStatePath()); } catch { /* première ouverture */ }
   const opts = {
     width: 1400, height: 820, backgroundColor: '#140e3a', autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'logo.ico' : 'logo.png'),   // logo Emuglob (barre des tâches, fenêtre)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   };
   if (st && st.width >= 600 && st.height >= 400) {
