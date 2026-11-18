@@ -547,6 +547,32 @@ ipcMain.handle('saves:find', (_e, { games, emus, dirs, files }) => {
   try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), files: (files || []).filter((f) => typeof f === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
+// Cemu : keys.txt (clés tirées de la console de l'utilisateur, jamais fournies) — où Cemu le lit
+function cemuKeysTargets(exe) {
+  const d = exe ? path.dirname(exe) : '', A = process.env.APPDATA ? path.join(process.env.APPDATA, 'Cemu') : '';
+  const out = [];
+  if (d && fs.existsSync(path.join(d, 'portable'))) out.push(path.join(d, 'portable', 'keys.txt'));   // Cemu 2.x portable
+  if (A && fs.existsSync(A)) out.push(path.join(A, 'keys.txt'));                                    // Cemu 2.x installé
+  if (d) out.push(path.join(d, 'keys.txt'));                                                         // ancien Cemu, à côté de l'exe
+  return [...new Set(out)];
+}
+ipcMain.handle('cemu:keysStatus', (_e, exe) => { const t = cemuKeysTargets(exe); const f = t.find((x) => fs.existsSync(x)); return { has: !!f, file: f || '', target: t[0] || '' }; });
+ipcMain.handle('cemu:keysImport', async (_e, exe) => {
+  const t = cemuKeysTargets(exe);
+  if (!t.length) return { ok: false, error: 'règle ou installe Cemu d\'abord' };
+  const r = await dialog.showOpenDialog(win, { title: 'Ton keys.txt (clés tirées de ta propre console)', properties: ['openFile'], filters: [{ name: 'keys.txt', extensions: ['txt'] }, { name: 'Tous', extensions: ['*'] }] });
+  if (r.canceled) return { ok: false, canceled: true };
+  let txt; try { txt = fs.readFileSync(r.filePaths[0], 'utf-8'); } catch (e) { return { ok: false, error: e.message }; }
+  const n = (txt.match(/^\s*[0-9a-fA-F]{32}\b/gm) || []).length;
+  if (!n || txt.length > 1048576) return { ok: false, error: "ce fichier ne ressemble pas à un keys.txt (une clé de 32 caractères hexadécimaux par ligne)" };
+  const dst = t.find((x) => fs.existsSync(x)) || t[0];
+  try {
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    if (fs.existsSync(dst)) fs.copyFileSync(dst, dst + '.bak');
+    fs.copyFileSync(r.filePaths[0], dst);
+    return { ok: true, file: dst, keys: n };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
 ipcMain.handle('saves:pickfiles', async () => {
   const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1)).concat('dat');   // .dat : seulement à la main (trop de faux positifs pour la recherche auto)
   const r = await dialog.showOpenDialog(win, { title: 'Fichiers de sauvegarde', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Sauvegardes', extensions: exts }, { name: 'Tous', extensions: ['*'] }] });

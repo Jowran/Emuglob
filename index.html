@@ -433,7 +433,7 @@
   <label id="i-src">Dernière version</label><div id="i-new">…</div>
   <div id="i-state" style="margin-top:12px;color:var(--muted);min-height:1.2em"></div>
   <div id="i-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5"></div>
-  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-cores" hidden>Cores de base</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
+  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-cores" hidden>Cores de base</button><button id="i-keys" hidden>Importer mon keys.txt</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
 </dialog>
 
 <dialog id="dlg-fsav">
@@ -1253,6 +1253,13 @@ async function launch(g, opts = {}) {
   }
   const emu = emuOf(g);
   if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
+  if (['.wud', '.wux'].includes(extOf(g.path)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
+    if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
+      const r = await api.cemuKeysImport(emu.exe);
+      if (!r.ok) return r.canceled ? undefined : toast('keys.txt non importé : ' + r.error);
+      toast(`keys.txt importé (${r.keys} clés).`);
+    }
+  }
   if (extOf(g.path) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
     const c = await api.wiiuCheck(g.path);
     if (!c.ok) return toast(c.alone
@@ -2351,7 +2358,7 @@ async function adoptDetectedEmus() {
 /* ---------- Installation : émulateurs depuis leurs sources officielles ---------- */
 const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
-  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
+  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés tirées de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. « Importer mon keys.txt » le copie au bon endroit pour Cemu. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
 api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte
@@ -2387,6 +2394,11 @@ async function openInstall(id) {
   // RALibretro installé : bouton pour les cores de base (un par console)
   const cb = $('#i-cores');
   cb.hidden = true;
+  $('#i-keys').hidden = id !== 'cemu';
+  $('#i-keys').onclick = async () => {
+    const r = await api.cemuKeysImport(emu.exe || '');
+    if (!r.canceled) $('#i-state').textContent = r.ok ? `keys.txt importé (${r.keys} clés) dans ${r.file}.` : 'Échec : ' + r.error;
+  };
   if (id === 'ralibretro') {
     const refresh = async () => {
       const have = emu.exe && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
