@@ -72,7 +72,8 @@
 <script>
   const q = new URLSearchParams(location.search);
   document.getElementById('t').textContent = q.get('t') || '';
-  if (q.get('e')) document.getElementById('s').textContent = 'Chargement de ' + q.get('e') + '…';
+  const en = q.get('l') === 'en';
+  document.getElementById('s').textContent = q.get('e') ? (en ? 'Loading ' : 'Chargement de ') + q.get('e') + '…' : en ? 'Loading…' : 'Chargement…';
   const c = q.get('c');
   if (c && CSS.supports('color', c)) document.documentElement.style.setProperty('--c', c);
   const media = document.getElementById('media');
