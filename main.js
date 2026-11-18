@@ -857,6 +857,64 @@ ipcMain.handle('subset:patches', async (_e, dir) => {
   if (typeof dir === 'string' && dir) await walk(dir, 0);
   return [...new Set(out)];
 });
+// patchs .xdelta des subsets : liste (nom + fichier) puis création d'une ISO patchée à côté de l'originale, jamais modifiée
+ipcMain.handle('subset:patchFiles', async (_e, dir) => {
+  const out = [];
+  const walk = async (d, depth) => {
+    let ents = [];
+    try { ents = await fs.promises.readdir(d, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.isDirectory() && depth < 2) await walk(path.join(d, e.name), depth + 1);
+      else if (e.isFile() && /\.(xdelta|vcdiff)$/i.test(e.name)) {
+        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name);
+        if (m) out.push({ name: m[1], file: path.join(d, e.name) });
+      }
+    }
+  };
+  if (typeof dir === 'string' && dir) await walk(dir, 0);
+  return out;
+});
+function bundledXdelta() {
+  if (process.env.EMUGLOB_XDELTA) return process.env.EMUGLOB_XDELTA;
+  if (process.platform !== 'win32') return null;
+  try {
+    const src = path.join(__dirname, 'tools', 'xdelta3.exe'), out = path.join(app.getPath('userData'), 'tools', 'xdelta3.exe');
+    const buf = fs.readFileSync(src);
+    if (!fs.existsSync(out) || fs.statSync(out).size !== buf.length) { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, buf); }
+    return out;
+  } catch { return null; }
+}
+let patching = null;
+ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
+  if (patching) return { ok: false, error: 'Un patch est déjà en cours.' };
+  if (typeof src !== 'string' || typeof patch !== 'string' || !/\.(xdelta|vcdiff)$/i.test(patch)) return { ok: false, error: 'Patch invalide.' };
+  const xd = bundledXdelta();
+  if (!xd) return { ok: false, error: 'xdelta3 introuvable.' };
+  const ext = path.extname(src), safe = String(name || 'Subset').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim() || 'Subset';
+  const out = path.join(path.dirname(src), path.basename(src, ext) + ` [Subset - ${safe}]` + ext), part = out + '.part';
+  if (path.resolve(out) === path.resolve(src)) return { ok: false, error: 'Nom de sortie identique à la ROM.' };
+  if (fs.existsSync(out)) return { ok: true, out, existed: true };
+  let size = 0;
+  try { size = (await fs.promises.stat(src)).size; } catch { return { ok: false, error: 'ROM de base introuvable : ' + src }; }
+  const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('subset:progress', p); };
+  return new Promise((resolve) => {
+    // -d décode, -s source (lue seulement) ; les sommes adler32 du patch font échouer xdelta si la ROM de base n'est pas la bonne
+    const c = spawn(xd, ['-d', '-f', '-s', src, patch, part], { windowsHide: true });
+    patching = c;
+    let err = '';
+    c.stderr.on('data', (d) => { err += d; });
+    const t = setInterval(() => { fs.stat(part, (e2, st) => { if (!e2 && size) send({ pct: Math.min(99, Math.floor((100 * st.size) / size)) }); }); }, 500);
+    const done = (r) => { clearInterval(t); patching = null; if (!r.ok) fs.rm(part, { force: true }, () => {}); resolve(r); };
+    c.on('error', (e) => done({ ok: false, error: e.message }));
+    c.on('close', (code) => {
+      if (code !== 0) {
+        const bad = /checksum|adler|source file too short|invalid/i.test(err);
+        return done({ ok: false, error: bad ? "Ce patch ne correspond pas à ta ROM de base (mauvais dump ou ROM déjà modifiée)." : 'xdelta3 a échoué : ' + (err.trim().split('\n').pop() || 'code ' + code) });
+      }
+      fs.rename(part, out, (e3) => (e3 ? done({ ok: false, error: e3.message }) : done({ ok: true, out })));
+    });
+  });
+});
 ipcMain.handle('wiki:open', (_e, url) => { if (typeof url === 'string' && /^https:\/\/[a-z]{2}\.wikipedia\.org\/wiki\//.test(url)) shell.openExternal(url); });
 ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   if (!RA_ALLOWED.has(endpoint)) return { ok: false, error: 'Endpoint non autorisé' };

@@ -1570,6 +1570,7 @@ const fileOf = (p) => String(p || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '
 const dirOf = (p) => String(p || '').replace(/[\\/][^\\/]*$/, '');
 const subNorm = (t) => String(t || '').replace(/\[\s*subset\s*-[^\]]*\]/ig, ' ').replace(/\([^)]*\b(?:subset|patch(?:ed)?)\b[^)]*\)/ig, ' ')
   .replace(/\b(?:patch(?:ed)?|subset)\b/ig, ' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const looseKey = (t) => String(t || '').replace(/\[[^\]]*\]|\([^)]*\)/g, ' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const isSubVar = (g) => SUB_RX.test(g.title || '') || SUB_RX.test(fileOf(g.path));
 function subsetLinks() {   // id de la variante subset → jeu de base (même émulateur, même nom une fois « subset/patch » retirés)
   const base = new Map(), par = new Map();
@@ -1593,18 +1594,53 @@ async function nameSubsets(vars) {   // nom du subset : tag du titre/fichier, si
   }
   if (vars.some((v) => v.subName)) save();
 }
-async function pickSubset(g, vars, opts) {
+// patchs .xdelta « [Subset - Nom] » rangés près de la ROM de base et pas encore appliqués (ISO patchée absente de la bibliothèque)
+async function pendingPatches(g, vars) {
+  const key = looseKey(fileOf(g.path)), keyT = looseKey(g.title);
+  const list = ((await api.subsetPatchFiles(dirOf(g.path)).catch(() => [])) || [])
+    .filter((p) => { const k = looseKey(fileOf(p.file)); return k && (k === key || k === keyT || key.startsWith(k) || k.startsWith(key)); });
+  const seen = new Set();
+  return list.filter((p) => !vars.some((v) => (v.subName || '').toLowerCase() === p.name.toLowerCase()) && !seen.has(p.name.toLowerCase()) && seen.add(p.name.toLowerCase()));
+}
+async function applyPatch(g, p, opts) {
+  const d = $('#dlg-menu');
+  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div><p id="sp-state" style="margin:4px 2px;max-width:420px">Création de l'ISO patchée « ${esc(p.name)} »… L'ISO d'origine n'est pas modifiée.</p><button data-a="x" disabled>Patienter…</button>`;
+  d.onclick = (e) => { const b = e.target.closest('button'); if (b && !b.disabled) d.close(); };
+  if (!d.open) d.showModal();
+  api.onSubsetProgress && !applyPatch.hooked && (applyPatch.hooked = true, api.onSubsetProgress((x) => { const el = $('#sp-state'); if (el) el.textContent = `Création de l'ISO patchée… ${x.pct} %`; }));
+  const r = await api.subsetApply({ src: g.path, patch: p.file, name: p.name });
+  if (!r.ok) {
+    $('#sp-state').textContent = 'Échec : ' + r.error;
+    const b = $('#m-list button'); b.disabled = false; b.textContent = 'Fermer';
+    return;
+  }
+  d.close();
+  let v = cfg.games.find((x) => x.path === r.out);
+  if (!v) {
+    v = { ...g, id: Math.random().toString(36).slice(2, 10), title: `${g.title} [Subset - ${p.name}]`, path: r.out, subName: p.name,
+      favorite: false, lastPlayed: 0, playCount: 0, playSeconds: 0, raId: 0, raV: 0, hash: '', missing: false };
+    delete v.subLast;
+    cfg.games.push(v);
+  }
+  g.subLast = v.id; save();
+  toast(r.existed ? `ISO patchée déjà présente : ${p.name}.` : `ISO patchée créée : ${p.name}.`);
+  launch(g, { ...opts, rom: v.path, subset: p.name });
+}
+async function pickSubset(g, vars, opts, pend) {
   await nameSubsets(vars);
+  if (!pend) pend = await pendingPatches(g, vars);
   const d = $('#dlg-menu'), last = vars.some((v) => v.id === g.subLast) ? g.subLast : '';
   const btn = (id, label) => `<button data-v="${id}" class="${id === last ? 'sel' : ''}">${label}</button>`;
   $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div>`
     + btn('', 'Jeu de base (sans subset)')
     + vars.map((v) => btn(v.id, 'Subset · ' + esc(v.subName || v.title))).join('')
+    + pend.map((p, i) => `<button data-p="${i}" title="Patch trouvé : ${esc(fileOf(p.file))}. Emuglob crée une nouvelle ISO à côté de l'originale (qui n'est pas modifiée), puis lance le jeu.">Subset · ${esc(p.name)} <small style="opacity:.7">(créer l'ISO patchée)</small></button>`).join('')
     + (g.raId > 0 ? '<button data-ra="1" title="Les subsets « bonus » se chargent avec le jeu de base, sans ROM patchée (multiset : PCSX2 2.6+, RetroArch 1.22.1+…). On les active ou désactive sur la page du jeu.">Subsets bonus sur RetroAchievements…</button>' : '')
     + '<button data-a="x">Annuler</button>';
   d.onclick = (e) => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.ra) return api.raGamePage(g.raId);
+    if (b.dataset.p !== undefined) return applyPatch(g, pend[+b.dataset.p], opts);
     d.close();
     if (b.dataset.v === undefined) return;
     const v = vars.find((x) => x.id === b.dataset.v);
@@ -1619,7 +1655,9 @@ async function launch(g, opts = {}) {
   if (!g) return;
   if (opts.rom === undefined) {   // jeu avec des subsets dans la bibliothèque : on demande lequel lancer
     const vars = subsetsOf(g);
-    if (vars.length) return pickSubset(g, vars, opts);
+    await nameSubsets(vars);
+    const pend = await pendingPatches(g, vars);
+    if (vars.length || pend.length) return pickSubset(g, vars, opts, pend);
   }
   const rom = opts.rom || g.path;
   if (g.missing || rom !== g.path) {   // disque débranché ? on revérifie avant de refuser
