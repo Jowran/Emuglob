@@ -1662,7 +1662,7 @@ function renderSheet() {
   const w = x.wiki;
   const sum = !w ? '<span class="sh-load">Recherche du résumé…</span>'
     : w.text ? `${esc(w.text)} ${w.url ? `<a data-wiki="${esc(w.url)}">Lire la suite</a>` : ''}`
-    : `<span class="sh-load">${w.error === 'hors ligne' ? 'Résumé indisponible hors ligne.' : w.error ? 'Résumé indisponible pour le moment.' : 'Pas de résumé trouvé sur Wikipédia.'}</span>`;
+    : `<span class="sh-load">${w.error === 'hors ligne' ? 'Résumé indisponible hors ligne.' : w.error ? 'Résumé indisponible pour le moment.' : 'Pas de résumé trouvé.'}</span>`;
   const hl = gp ? [['Histoire principale', gp.MedianTimeToBeatHardcore || gp.MedianTimeToBeat], ['Tous les succès (softcore)', gp.MedianTimeToComplete], ['Maîtrise (hardcore)', gp.MedianTimeToMaster]].filter(([, v]) => v > 0) : [];
   const hmax = Math.max(1, ...hl.map(([, v]) => v));
   const shots = p ? [p.ImageTitle, p.ImageIngame].filter((u) => u && !/000002\.png$/.test(u)) : [];
