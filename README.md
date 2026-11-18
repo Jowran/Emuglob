@@ -46,10 +46,6 @@ Windows 10 / 11 · 64 bits · en français
 |---|---|
 | ![Thème Néon](docs/theme-neon.jpg) | ![Thème Clair](docs/theme-clair.jpg) |
 
-| Écran de chargement | Paramètres |
-|---|---|
-| ![Écran de chargement](docs/chargement.png) | ![Paramètres](docs/parametres.png) |
-
 ## Consoles
 
 | Émulateur | Consoles |
