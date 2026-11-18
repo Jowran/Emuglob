@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker, protocol, net, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execFile } = require('child_process');
@@ -192,14 +192,34 @@ ipcMain.handle('dialog:exe', async () => {
   return r.canceled ? '' : r.filePaths[0];
 });
 
+// images choisies par l'utilisateur (fond d'écran, jaquette, icône) : formats d'image standard et GIF uniquement.
+// On vérifie l'extension ET la signature du fichier (un fichier renommé en .png est refusé), puis on le copie sous un nom neutre.
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+function imageKind(file) {
+  const fd = fs.openSync(file, 'r'), b = Buffer.alloc(12);
+  try { fs.readSync(fd, b, 0, 12, 0); } finally { fs.closeSync(fd); }
+  if (b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG') return 'png';
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg';
+  if (b.toString('latin1', 0, 4) === 'GIF8') return 'gif';
+  if (b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return 'webp';
+  if (b.toString('latin1', 0, 2) === 'BM') return 'bmp';
+  return null;
+}
 async function pickImage(title, prefix) {
   const r = await dialog.showOpenDialog(win, {
-    title, properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }],
+    title, properties: ['openFile'], filters: [{ name: 'Images (PNG, JPG, WEBP, BMP, GIF)', extensions: IMG_EXT }],
   });
-  if (r.canceled) return '';
+  if (r.canceled || !r.filePaths[0]) return '';
+  const src = r.filePaths[0], ext = path.extname(src).slice(1).toLowerCase();
+  let kind = null;
+  try { if (fs.statSync(src).size <= 50 * 1024 * 1024) kind = imageKind(src); } catch { /* illisible */ }
+  if (!IMG_EXT.includes(ext) || !kind) {
+    dialog.showMessageBox(win, { type: 'warning', title: 'Fichier refusé', message: "Ce fichier n'est pas une image valide.", detail: 'Formats acceptés : PNG, JPG, WEBP, BMP et GIF (50 Mo maximum).' });
+    return '';
+  }
   fs.mkdirSync(coverDir(), { recursive: true });
-  const dest = path.join(coverDir(), `${prefix}-${Date.now()}${path.extname(r.filePaths[0]).toLowerCase()}`);
-  fs.copyFileSync(r.filePaths[0], dest);
+  const dest = path.join(coverDir(), `${String(prefix).replace(/[^a-z0-9_-]/gi, '')}-${Date.now()}.${kind}`);
+  fs.copyFileSync(src, dest);
   return dest;
 }
 ipcMain.handle('dialog:cover', (_e, id) => pickImage('Choisir une jaquette', id));
@@ -498,10 +518,26 @@ async function latestCemu() {
   if (!asset) throw new Error(`pas d'archive Windows x64 dans la version ${rel.tag_name} (fichiers : ${(rel.assets || []).map((x) => x.name).join(', ') || 'aucun'})`);
   return fromGithubRelease(rel, asset);
 }
+// Dolphin : pas de Releases GitHub ; la page officielle de téléchargement liste les versions (la première = la plus récente)
+async function latestDolphin() {
+  const page = process.env.EMUGLOB_DOLPHIN_PAGE || 'https://dolphin-emu.org/download/';
+  const r = await fetch(page, { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error('dolphin-emu.org a répondu ' + r.status);
+  const html = await r.text();
+  const pick = (re) => { const m = html.match(re); return m ? m[0] : null; };
+  const url = pick(/https:\/\/dl\.dolphin-emu\.org\/releases\/[^"'\s<>]+?-x64\.(?:7z|zip)/i) || pick(/https:\/\/dl\.dolphin-emu\.org\/builds\/[^"'\s<>]+?-x64\.(?:7z|zip)/i);
+  if (!url) throw new Error('aucun lien Windows x64 trouvé sur dolphin-emu.org');
+  const name = url.split('/').pop();
+  const v = (/dolphin-(?:master-)?([\d.]+(?:-\d+)?)-x64/i.exec(name) || [])[1] || name;
+  let size = 0;
+  try { const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(15000) }); size = Number(h.headers.get('content-length')) || 0; } catch { /* taille inconnue */ }
+  return { tag: v, latest: v, date: '', size, asset: { name, browser_download_url: url, size } };
+}
 const INSTALLERS = {
   ralibretro: { name: 'RALibretro', dir: 'RALibretro', exes: ['ralibretro.exe'], latest: latestRalib },
   pcsx2: { name: 'PCSX2', dir: 'PCSX2', exes: ['pcsx2-qt.exe', 'pcsx2.exe'], latest: latestPcsx2 },
   cemu: { name: 'Cemu', dir: 'Cemu', exes: ['cemu.exe'], latest: latestCemu },
+  dolphin: { name: 'Dolphin', dir: 'Dolphin', exes: ['dolphin.exe'], latest: latestDolphin },
 };
 const releases = {};
 const instDefaultDir = (id) => path.join(emuBase(), 'emulators', INSTALLERS[id].dir);
@@ -775,6 +811,25 @@ ipcMain.handle('thumbs:list', async (_e, folder) => {
   }
 });
 
+// rogne les bords transparents d'une jaquette (rendus de boîte avec marges) pour qu'elle remplisse sa place dans la roue
+function trimCover(buf) {
+  try {
+    const img = nativeImage.createFromBuffer(buf);
+    const { width: w, height: h } = img.getSize();
+    if (!w || !h) return buf;
+    const px = img.toBitmap();   // BGRA
+    if (px.length < w * h * 4) return buf;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (px[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return buf;
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+    if (cw >= w - 2 && ch >= h - 2) return buf;            // rien à rogner
+    if (cw < w * 0.3 || ch < h * 0.3) return buf;          // image presque vide : on n'y touche pas
+    return img.crop({ x: x0, y: y0, width: cw, height: ch }).toPNG();
+  } catch { return buf; }
+}
 // télécharge une jaquette dans le dossier de l'app (hôtes autorisés uniquement)
 ipcMain.handle('cover:download', async (_e, { url, id }) => {
   if (!/^https:\/\/(raw\.githubusercontent\.com\/(libretro-thumbnails|xlenore)\/|media\.retroachievements\.org\/|art\.gametdb\.com\/)/.test(url)) return '';
@@ -785,7 +840,7 @@ ipcMain.handle('cover:download', async (_e, { url, id }) => {
     if (buf.length > 8 * 1024 * 1024) return '';
     fs.mkdirSync(coverDir(), { recursive: true });
     const dest = path.join(coverDir(), `${String(id).replace(/[^a-z0-9]/gi, '')}-auto.png`);
-    fs.writeFileSync(dest, buf);
+    fs.writeFileSync(dest, trimCover(buf));
     return dest;
   } catch {
     return '';

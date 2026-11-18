@@ -168,14 +168,25 @@
   .sgrp { margin-bottom:22px; }
   .sgrp h3 { margin:0 0 10px 4px; font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
   .sgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
-  /* écrans larges / ultra-wide : une colonne par section, centrée, au lieu d'une longue ligne */
-  @media (min-width:1700px) {
-    #set-body { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:28px; max-width:2300px; margin:0 auto; width:100%; align-items:start; }
-    .sgrp { margin:0; }
-    .sgrid { grid-template-columns:1fr; }
-    .sset { padding:18px 20px; }
+  /* Paramètres : sections à gauche, réglages de la section à droite, le tout centré (lisible même en ultra-wide) */
+  .sw { display:grid; grid-template-columns:250px minmax(0,1fr); gap:34px; max-width:1200px; margin:0 auto; width:100%; align-items:start; }
+  .snavs { display:flex; flex-direction:column; gap:4px; position:sticky; top:0; }
+  .snav { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; background:none; border:none; color:var(--muted); font:inherit; font-size:15px; text-align:left; cursor:pointer; outline:none; position:relative; }
+  .snav .ico { width:20px; height:20px; opacity:.8; }
+  .snav:hover, .snav:focus { color:inherit; background:rgba(255,255,255,.06); }
+  .snav.on { color:inherit; background:var(--glass); font-weight:600; }
+  .snav.on::before { content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:2px; background:var(--acc,#5b46d6); }
+  .spane h3 { margin:6px 0 16px 4px; font-size:22px; font-weight:700; letter-spacing:0; text-transform:none; color:inherit; }
+  .slist { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:12px; }
+  .slist .sset { padding:18px 20px; }
+  body.light .snav:hover, body.light .snav:focus { background:rgba(0,0,0,.04); }
+  @media (min-width:2400px) {
+    .sw { max-width:1560px; grid-template-columns:310px minmax(0,1fr); gap:44px; margin-top:20px; }
+    .snav { font-size:18px; padding:14px 18px; } .snav .ico { width:24px; height:24px; }
+    .spane h3 { font-size:28px; } .slist { grid-template-columns:repeat(auto-fill, minmax(380px,1fr)); gap:16px; }
+    .slist .sset { padding:22px 24px; } .sset b { font-size:18px; } .sset small { font-size:14px; } .sset .si { font-size:30px; }
   }
-  @media (min-width:2400px) { .sset b { font-size:18px; } .sset small { font-size:14px; } .sset .si { font-size:30px; } .sgrp h3 { font-size:13px; } }
+  @media (max-width:900px) { .sw { grid-template-columns:1fr; } .snavs { flex-direction:row; flex-wrap:wrap; position:static; } }
   .sset { display:flex; gap:14px; align-items:center; padding:14px 18px; border-radius:18px; background:var(--glass); border:2px solid transparent; cursor:pointer; outline:none; backdrop-filter:blur(8px); }
   .sset:hover, .sset:focus { border-color:#fff; box-shadow:0 0 16px var(--glow); }
   .sset .si { font-size:26px; display:flex; opacity:.9; }
@@ -939,14 +950,15 @@ function thumbFolders(g) {
 // jaquettes de secours trouvées grâce au numéro de série / à l'identifiant du jeu
 function gametdbUrls(sys, id) {
   const reg = { E:['US'], P:['FR','EN','DE'], J:['JA'], K:['KO'], U:['AU'], D:['DE'], F:['FR'], I:['IT'], S:['ES'], H:['NL'], R:['RU'], X:['EN'], Y:['EN'] }[id[3]] || ['US', 'EN'];
-  return ['cover3D', 'cover'].flatMap((t) => reg.map((r) => `https://art.gametdb.com/${sys}/${t}/${r}/${id}.png`));
+  // jaquette 2D de face d'abord : le rendu 3D (boîte penchée, avec du vide autour) remplit mal la roue
+  return ['cover', 'coverM', 'cover3D'].flatMap((t) => reg.map((r) => `https://art.gametdb.com/${sys}/${t}/${r}/${id}.png`));
 }
 function extraCoverUrls(g) {
   const id = g.serial || '';
   if (!id) return [];
   const X = 'https://raw.githubusercontent.com/xlenore/';
-  if (g.platform === 'ps2') return [`${X}ps2-covers/main/covers/3d/${id}.png`, `${X}ps2-covers/main/covers/default/${id}.jpg`];
-  if (g.platform === 'ps1' || (hasLib(g) && g.system === 12)) return [`${X}psx-covers/main/covers/3d/${id}.png`, `${X}psx-covers/main/covers/default/${id}.jpg`];
+  if (g.platform === 'ps2') return [`${X}ps2-covers/main/covers/default/${id}.jpg`, `${X}ps2-covers/main/covers/3d/${id}.png`];
+  if (g.platform === 'ps1' || (hasLib(g) && g.system === 12)) return [`${X}psx-covers/main/covers/default/${id}.jpg`, `${X}psx-covers/main/covers/3d/${id}.png`];
   if (g.platform === 'wii' || g.platform === 'gc') return gametdbUrls('wii', id);
   if (hasLib(g) && g.system === 18) return gametdbUrls('ds', id);
   return [];
@@ -974,6 +986,10 @@ function pickThumb(list, g) {
 async function findThumbs() {
   if (!navigator.onLine) return { tried: 0, found: 0 };   // hors ligne : on ne marque aucun jeu « sans jaquette », on réessaiera
   if (thumbBusy) return { tried: 0, found: 0 };
+  cfg.games.forEach((g) => {   // anciennes jaquettes 3D (boîte penchée) : on retente une 2D de face, une seule fois
+    if (!g.cover && g.thumb && !g.flat2d && /\/cover3D\/|\/covers\/3d\//.test(g.thumbUrl || '')) { delete g.thumb; delete g.thumbUrl; delete g.thumbV; delete g.ar; }
+    g.flat2d = 1;
+  });
   const todo = cfg.games.filter((g) => (thumbFolders(g).length || extraCoverUrls(g).length) && !g.cover && !g.thumb && g.thumbV !== 3);
   thumbBusy = true;
   let found = 0, i = 0;
@@ -1282,7 +1298,8 @@ function renderUser() {
   else { a.style.backgroundImage = ''; a.textContent = ((cfg.ra && cfg.ra.user) || 'E').slice(0, 1).toUpperCase(); }
 }
 function applyWall() {
-  document.body.style.setProperty('--wall', cfg.wallpaper ? `url('${fileUrl(cfg.wallpaper)}')` : 'none');
+  if (cfg.wallpaper && !/\.(png|jpe?g|webp|gif|bmp)$/i.test(cfg.wallpaper)) { cfg.wallpaper = ''; save(); }   // ancien fond non autorisé : retiré
+  document.body.style.setProperty('--wall', cfg.wallpaper ? `url("${fileUrl(cfg.wallpaper).replace(/["\\()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}")` : 'none');
 }
 function toggleFav(g = cur()) {
   if (!g) return;
@@ -1829,6 +1846,7 @@ const SET_ITEMS = [
   { g:'inst', ic:'download', t:'RALibretro', s:'Installer ou mettre à jour', act:() => openInstall('ralibretro') },
   { g:'inst', ic:'download', t:'PCSX2', s:'PlayStation 2 · installer ou mettre à jour', act:() => openInstall('pcsx2') },
   { g:'inst', ic:'download', t:'Cemu', s:'Wii U · installer ou mettre à jour', act:() => openInstall('cemu') },
+  { g:'inst', ic:'download', t:'Dolphin', s:'Wii / GameCube · installer ou mettre à jour', act:() => openInstall('dolphin') },
   { g:'inst', ic:'download', t:'Cores RALibretro', s:'Un core par console · installer, mettre à jour', act:() => openCores() },
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
@@ -1846,12 +1864,21 @@ const SET_ITEMS = [
 function openSettingsPanel() {
   closeOv();
   mode = 'settings'; setTop('set'); $('#ov-set').hidden = false;
-  $('#set-body').innerHTML = Object.entries(SET_GROUPS).map(([g, name]) => `<section class="sgrp"><h3>${name}</h3><div class="sgrid">`
-    + SET_ITEMS.map((b, i) => (b.g !== g ? '' : `<div class="sset" tabindex="0" data-i="${i}"><span class="si">${ic(b.ic)}</span><div><b>${b.t}</b><small>${b.s}</small></div></div>`)).join('')
-    + '</div></section>').join('');
-  $('.sset').focus();
+  if (!SET_GROUPS[setSec]) setSec = 'lib';
+  $('#set-body').innerHTML = `<div class="sw"><nav class="snavs">`
+    + Object.entries(SET_GROUPS).map(([g, name]) => `<button class="snav ${g === setSec ? 'on' : ''}" data-g="${g}">${ic(SET_ICON[g])}${name}</button>`).join('')
+    + `</nav><div class="spane" id="spane"></div></div>`;
+  drawSetPane();
+  $('.snav.on').focus();
 }
-const navSel = () => (mode === 'settings' ? '.sset' : '.lcard, .lhead');
+const SET_ICON = { lib:'list', jeu:'gamepad', inst:'download', ctl:'gamepad', look:'star', acc:'user', sys:'shield' };
+let setSec = 'lib';
+function drawSetPane() {
+  $('#spane').innerHTML = `<h3>${SET_GROUPS[setSec]}</h3><div class="slist">`
+    + SET_ITEMS.map((b, i) => (b.g !== setSec ? '' : `<div class="sset" tabindex="0" data-i="${i}"><span class="si">${ic(b.ic)}</span><div><b>${b.t}</b><small>${b.s}</small></div></div>`)).join('') + '</div>';
+  document.querySelectorAll('.snav').forEach((n) => n.classList.toggle('on', n.dataset.g === setSec));
+}
+const navSel = () => (mode === 'settings' ? '.snav, .sset' : '.lcard, .lhead');
 
 /* ---------- amis RetroAchievements ---------- */
 let friends = null, feed = [], frState = '';
@@ -2357,7 +2384,13 @@ $('#pro-acc').onclick = openSettings;
 $('#pro-body').onclick = (e) => { if (e.target.closest('#pro-link')) openSettings(); };
 $('#tab-set').onclick = openSettingsPanel;
 $('#set-close').onclick = closeOv;
+$('#set-body').addEventListener('focusin', (e) => {   // flèches / manette : la section suit le focus
+  const n = e.target.closest('.snav');
+  if (n && n.dataset.g !== setSec) { setSec = n.dataset.g; drawSetPane(); }
+});
 $('#set-body').onclick = (e) => {
+  const n = e.target.closest('.snav');
+  if (n) { setSec = n.dataset.g; drawSetPane(); sfx('cons'); return; }
   const t = e.target.closest('.sset');
   if (!t) return;
   const it = SET_ITEMS[Number(t.dataset.i)];
@@ -2539,6 +2572,7 @@ async function adoptDetectedEmus() {
 const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
   cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés tirées de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. « Importer mon keys.txt » le copie au bon endroit pour Cemu. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
+  dolphin: { src: 'dolphin-emu.org', note: "Tes réglages et sauvegardes (Documents\\Dolphin Emulator) sont gardés. Wii et GameCube n'ont pas besoin de BIOS.<br>Dolphin est un logiciel libre (GPL-2.0+), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
 api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte

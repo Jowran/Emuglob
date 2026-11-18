@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "build-info": "node tools/make-build-info.js",
-    "pack": "electron-packager . Emuglob --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/emulators"
+    "pack": "electron-packager . Emuglob --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/emulators --ignore=^/docs"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
