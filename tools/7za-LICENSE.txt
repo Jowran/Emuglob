@@ -1,0 +1,5 @@
+7za.exe (7-Zip, version autonome en ligne de commande)
+Copyright (C) Igor Pavlov
+Licence : GNU LGPL (+ restriction unRAR non utilisée par 7za). Code source : https://www.7-zip.org
+Binaire repris tel quel du paquet npm 7zip-bin 5.2.0 (https://github.com/develar/7zip-bin, MIT).
+Emuglob s'en sert uniquement pour décompresser les émulateurs téléchargés (ex. PCSX2 en .7z).

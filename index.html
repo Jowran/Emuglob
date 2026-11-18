@@ -93,6 +93,45 @@
   dialog label { display:block; margin:10px 0 4px; color:var(--muted); font-size:12px; }
   dialog input, dialog select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #3a3560; background:#120f2a; color:#fff; font:inherit; }
   .row { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+  #dlg-ctl { width:min(1400px, 96vw); }
+  #c-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 12px; }
+  #c-tabs button.on { background:#5b46d6; }
+  #c-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:6px 14px; max-height:58vh; overflow:auto; padding-right:4px; }
+  .crow { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid #2a2550; }
+  .crow span { flex:1; min-width:0; color:#d8d4f0; font-size:14px; }
+  .crow .cv { min-width:150px; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+  .crow .cv.chg { outline:1px solid #ffc83d; }
+  .crow .cv.wait { background:#5b46d6; animation:cpulse 1s infinite; }
+  .crow .cx { padding:6px 9px; opacity:.6; }
+  @keyframes cpulse { 50% { opacity:.55; } }
+  #c-body { display:flex; gap:18px; align-items:flex-start; }
+  #c-body #c-list { flex:1; min-width:0; }
+  #c-pad { width:300px; flex:none; }
+  #c-pad svg { width:100%; display:block; }
+  #c-pad .pbody { fill:#151133; stroke:#3a3560; stroke-width:2; }
+  #c-pad [data-b] { fill:#2a2550; stroke:#4a4380; stroke-width:1.5; transition:fill .06s; }
+  #c-pad [data-b].on { fill:#ffc83d; stroke:#fff; }
+  #c-pad .sbase { fill:#1d1840; }
+  #c-pad .sdz { fill:rgba(255,90,90,.18); stroke:rgba(255,90,90,.6); stroke-dasharray:3 3; }
+  #c-pad .sdot { fill:#8f7dff; } #c-pad .sdot.dead { fill:#6b6690; } #c-pad .sdot.live { fill:#ffc83d; }
+  #c-pad text { fill:#cfc9f5; font-size:10px; text-anchor:middle; pointer-events:none; }
+  #c-live { color:var(--muted); font-size:13px; margin-top:8px; min-height:3.6em; }
+  #c-live b { color:#ffc83d; font-weight:600; }
+  .crow.hit { background:rgba(255,200,61,.14); border-radius:6px; }
+  .crow input[type=range] { flex:1; min-width:90px; accent-color:#8f7dff; }
+  .crow .cnum { min-width:46px; text-align:right; color:#fff; }
+  .crow .cnum.chg { color:#ffc83d; }
+  @media (max-width: 1100px) { #c-body { flex-direction:column; } #c-pad { width:100%; max-width:340px; } }
+  #dlg-fsav { width:min(1100px, 94vw); }
+  #fs-list { max-height:56vh; overflow:auto; margin-top:10px; }
+  .fsg { padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+  .fsg > b { display:block; margin-bottom:4px; }
+  .fsr { display:flex; gap:10px; align-items:center; font-size:13px; padding:3px 0; color:var(--muted); }
+  dialog label.fsr { display:flex; margin:0; font-size:13px; cursor:pointer; }
+  dialog .fsr input { flex:none; width:auto; padding:0; accent-color:#8f7dff; } .fsr .fp { flex:1; min-width:0; word-break:break-all; color:#e8e5ff; }
+  .fsr .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.08); white-space:nowrap; }
+  .fsr .tag.warn { background:rgba(255,200,61,.18); color:#ffc83d; }
+  #c-note { color:var(--muted); font-size:12px; margin-top:10px; word-break:break-all; }
   #m-list { display:flex; flex-direction:column; gap:8px; min-width:260px; }
   .ico { width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:-.14em; flex:none; }
   .ico.fill { fill:currentColor; stroke:none; }
@@ -353,6 +392,45 @@
   <label>Dossier de ses sauvegardes (vide = à côté du jeu)</label><input id="e-svdir" placeholder="ex : C:\Emus\mGBA\saves">
   <label>Extension de ses sauvegardes (.sav mGBA / melonDS / SameBoy, .srm Snes9x)</label><input id="e-svext" placeholder=".sav"></div>
   <div class="row"><button id="e-add">+ Nouvel émulateur</button><button id="e-del" style="margin-right:auto">Supprimer</button><button id="e-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
+<dialog id="dlg-inst">
+  <h2 id="i-title">Installer</h2>
+  <label>Installé</label><div id="i-cur" style="word-break:break-all"></div>
+  <label id="i-src">Dernière version</label><div id="i-new">…</div>
+  <div id="i-state" style="margin-top:12px;color:var(--muted);min-height:1.2em"></div>
+  <div id="i-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5"></div>
+  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
+</dialog>
+
+<dialog id="dlg-fsav">
+  <h2>Retrouver mes sauvegardes</h2>
+  <div id="fs-state" style="color:var(--muted)"></div>
+  <div id="fs-list"></div>
+  <div id="fs-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Les fichiers trouvés sont <b>copiés</b> dans les sauvegardes d'Emuglob : l'original n'est ni déplacé ni modifié, et une sauvegarde déjà présente dans Emuglob part d'abord dans l'historique du jeu. Au prochain lancement, Emuglob la donne à l'émulateur si elle est plus récente que la sienne.<br>Les cartes mémoire communes à tous les jeux (PCSX2, Dolphin) restent dans leur émulateur.</div>
+  <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
+</dialog>
+
+<dialog id="dlg-ctl">
+  <h2>Contrôles</h2>
+  <label>Émulateur</label><select id="c-emu"></select>
+  <div id="c-tabs"></div>
+  <div id="c-body"><div id="c-list"></div>
+  <div id="c-pad"><svg viewBox="0 0 340 230" aria-label="Manette">
+    <path class="pbody" d="M70 48 Q170 30 270 48 Q318 58 330 120 Q342 190 308 212 Q284 226 262 196 L236 164 Q170 150 104 164 L78 196 Q56 226 32 212 Q-2 190 10 120 Q22 58 70 48 Z"/>
+    <rect data-b="6" x="44" y="6" width="58" height="20" rx="8"/><rect data-b="7" x="238" y="6" width="58" height="20" rx="8"/>
+    <rect data-b="4" x="40" y="30" width="66" height="14" rx="7"/><rect data-b="5" x="234" y="30" width="66" height="14" rx="7"/>
+    <rect data-b="12" x="66" y="70" width="16" height="22" rx="3"/><rect data-b="13" x="66" y="106" width="16" height="22" rx="3"/>
+    <rect data-b="14" x="44" y="91" width="22" height="16" rx="3"/><rect data-b="15" x="82" y="91" width="22" height="16" rx="3"/>
+    <circle data-b="3" cx="268" cy="72" r="12"/><circle data-b="0" cx="268" cy="124" r="12"/><circle data-b="2" cx="242" cy="98" r="12"/><circle data-b="1" cx="294" cy="98" r="12"/>
+    <rect data-b="8" x="130" y="82" width="24" height="12" rx="6"/><rect data-b="9" x="186" y="82" width="24" height="12" rx="6"/><circle data-b="16" cx="170" cy="110" r="10"/>
+    <g class="stk" data-s="0"><circle data-b="10" class="sbase" cx="122" cy="166" r="26"/><circle class="sdz" cx="122" cy="166" r="0"/><circle class="sdot" cx="122" cy="166" r="7"/></g>
+    <g class="stk" data-s="2"><circle data-b="11" class="sbase" cx="218" cy="166" r="26"/><circle class="sdz" cx="218" cy="166" r="0"/><circle class="sdot" cx="218" cy="166" r="7"/></g>
+    <text x="73" y="20">LT</text><text x="267" y="20">RT</text><text x="73" y="40">LB</text><text x="267" y="40">RB</text>
+    <text x="268" y="76">Y</text><text x="268" y="128">A</text><text x="242" y="102">X</text><text x="294" y="102">B</text>
+  </svg><div id="c-live">Branche une manette et appuie sur ses boutons : la manette s'allume et l'action réglée s'affiche ici.</div></div></div>
+  <div id="c-note"></div>
+  <div class="row"><button id="c-cancel" style="margin-right:auto">Annuler</button><button id="c-save" style="background:#5b46d6">Enregistrer</button></div>
 </dialog>
 
 <dialog id="dlg-set">
@@ -1496,7 +1574,7 @@ function openTabsDlg() {
   refresh(); d.showModal();
 }
 // Paramètres rangés par thème : chaque tuile ouvre une fenêtre courte
-const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', look:'Apparence', acc:'Comptes', sys:'Système' };
+const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', inst:'Installation', ctl:'Contrôles', look:'Apparence', acc:'Comptes', sys:'Système' };
 const SET_ITEMS = [
   { g:'lib', ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { g:'lib', ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
@@ -1504,11 +1582,15 @@ const SET_ITEMS = [
   { g:'lib', ic:'refresh', t:'Entretien', s:'Dossiers surveillés, doublons', act:() => openMaint() },
   { g:'jeu', ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
   { g:'jeu', ic:'expand', t:'Lancement des jeux', s:'Intégration, sauvegardes partagées', act:() => openSettings('jeu') },
+  { g:'inst', ic:'download', t:'RALibretro', s:'Installer ou mettre à jour', act:() => openInstall('ralibretro') },
+  { g:'inst', ic:'download', t:'PCSX2', s:'PlayStation 2 · installer ou mettre à jour', act:() => openInstall('pcsx2') },
+  { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
   { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
   { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, plein écran, Windows', act:() => openSettings('app') },
   { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
   { g:'acc', ic:'user', t:'Discord', get s() { return dcOn() ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
+  { g:'jeu', ic:'folder', t:'Rechercher des sauvegardes', s:'Retrouver tes anciennes saves de jeux', act:() => openFindSaves() },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
   { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
@@ -1715,6 +1797,159 @@ function openSettings(sec) {
   $('#s-ok').onclick = () => d.close();
   d.onclose = () => { commit(); prog = {}; refreshRA(); autoMatch(); ensureRA(cur()); };
   d.showModal();
+}
+
+/* ---------- contrôles et raccourcis des émulateurs, édités sans les ouvrir ---------- */
+let capturing = false;   // pendant une capture, la navigation clavier/manette d'Emuglob est suspendue
+async function layoutChar(code, key) {
+  try { const m = await navigator.keyboard.getLayoutMap(); if (m.get(code)) return m.get(code); } catch { /* pas d'accès à la disposition */ }
+  return key && key.length === 1 ? key.toLowerCase() : '';
+}
+// attend une touche ou un bouton ; renvoie une touche « neutre » (voir emucfg.js) ou null si annulé
+function captureInput() {
+  return new Promise((resolve) => {
+    capturing = true;
+    let done = false, modDown = null, raf = 0;
+    const pads = () => [...(navigator.getGamepads() || [])].filter(Boolean);
+    const base = new Map(pads().map((g) => [g.index, { b: g.buttons.map((x) => x.value > 0.5), a: [...g.axes] }]));
+    const finish = (v) => {
+      if (done) return; done = true;
+      cancelAnimationFrame(raf); clearTimeout(to);
+      window.removeEventListener('keydown', kd, true); window.removeEventListener('keyup', ku, true);
+      setTimeout(() => { capturing = false; }, 300);   // laisse le temps de relâcher le bouton
+      resolve(v);
+    };
+    const kd = async (e) => {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.repeat) return;
+      if (/^(Shift|Control|Alt|Meta)(Left|Right)$/.test(e.code)) { modDown = e.code; return; }
+      modDown = null;
+      finish({ t: 'key', code: e.code, ch: await layoutChar(e.code, e.key), ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey });
+    };
+    const ku = (e) => { e.preventDefault(); e.stopImmediatePropagation(); if (modDown && e.code === modDown) finish({ t: 'key', code: e.code, ch: '' }); };
+    const poll = () => {
+      for (const g of pads()) {
+        const b0 = base.get(g.index) || { b: [], a: [] };
+        const i = g.buttons.findIndex((x, k) => x.value > 0.5 && !b0.b[k]);
+        if (i >= 0) return finish({ t: 'btn', i });
+        const a = g.axes.findIndex((v, k) => k < 4 && Math.abs(v) > 0.6 && Math.abs(b0.a[k] || 0) < 0.3);
+        if (a >= 0) return finish({ t: 'axis', a, dir: g.axes[a] < 0 ? -1 : 1 });
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    window.addEventListener('keydown', kd, true); window.addEventListener('keyup', ku, true);
+    raf = requestAnimationFrame(poll);
+    const to = setTimeout(() => finish(null), 8000);
+    captureInput.cancel = () => finish(null);
+  });
+}
+const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra/i;   // émulateurs que emucfg.js sait modifier
+async function openControls(pick) {
+  const d = $('#dlg-ctl'), changes = new Map();
+  const emus = cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
+    .filter((e, i, a) => a.findIndex((x) => x.exe.toLowerCase() === e.exe.toLowerCase()) === i);   // même exécutable déclaré deux fois
+  if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin ou Azahar). Renseigne son chemin dans Paramètres, Émulateurs.');
+  let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '';
+  $('#c-emu').innerHTML = emus.map((e, i) => `<option value="${i}" ${e === emu ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
+  const loadEmu = async () => {
+    changes.clear();
+    data = await api.emuCfgLoad(emu.exe);
+    if (!data.ok) { $('#c-tabs').innerHTML = ''; $('#c-list').innerHTML = `<div style="color:var(--muted);padding:10px 0">${esc(data.error)}</div>`; $('#c-note').textContent = ''; return; }
+    tab = data.groups[0].id;
+    $('#c-note').textContent = `Fichier(s) modifié(s) : ${data.files.join(' · ')} (une copie .bak est gardée). Clique une case puis appuie sur une touche ou un bouton de manette.`;
+    tabs(); list();
+  };
+  $('#c-emu').onchange = async () => {
+    if (changes.size && !confirm('Changer d\'émulateur sans enregistrer les modifications ?')) { $('#c-emu').value = String(emus.indexOf(emu)); return; }
+    emu = emus[+$('#c-emu').value]; await loadEmu();
+  };
+  const tabs = () => { $('#c-tabs').innerHTML = data.groups.map((g) => `<button data-g="${esc(g.id)}" class="${g.id === tab ? 'on' : ''}">${esc(g.title)}</button>`).join(''); };
+  const list = () => {
+    const g = data.groups.find((x) => x.id === tab);
+    $('#c-list').innerHTML = g.items.map((it, n) => {
+      const c = changes.get(g.id + '\u0000' + it.key);
+      if (it.num) {
+        const v = c ? c.num : it.value;
+        return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><input type="range" min="${it.min}" max="${it.max}" step="1" value="${v}" data-num="${n}"><b class="cnum ${c ? 'chg' : ''}">${v} ${esc(it.unit)}</b></div>`;
+      }
+      return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><button class="cv ${c ? 'chg' : ''}" data-n="${n}" title="${esc(c ? c.raw : it.raw)}">${esc(c ? c.text : it.text)}</button><button class="cx" data-x="${n}" title="Effacer">✕</button></div>`;
+    }).join('');
+  };
+  const assign = async (n, bind, btn) => {
+    const g = data.groups.find((x) => x.id === tab), it = g.items[n];
+    const r = await api.emuCfgEncode(emu.exe, g.id, bind);
+    if (!r.ok) { list(); return toast(r.error); }
+    if (r.raw === it.raw) changes.delete(g.id + '\u0000' + it.key);
+    else changes.set(g.id + '\u0000' + it.key, { group: g.id, key: it.key, raw: r.raw, text: r.text, pad: r.pad });
+    list();
+    const next = $(`#c-list .cv[data-n="${n}"]`); if (next) next.focus();
+  };
+  $('#c-list').oninput = (e) => {   // zone morte : glisser met à jour la valeur et l'aperçu tout de suite
+    const r = e.target.closest('[data-num]'); if (!r) return;
+    const g = data.groups.find((x) => x.id === tab), it = g.items[+r.dataset.num], v = +r.value;
+    if (v === it.value) changes.delete(g.id + '\u0000' + it.key); else changes.set(g.id + '\u0000' + it.key, { group: g.id, key: it.key, num: v });
+    const b = r.parentNode.querySelector('.cnum'); b.textContent = `${v} ${it.unit}`; b.classList.toggle('chg', v !== it.value);
+  };
+  $('#c-tabs').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b || capturing) return; tab = b.dataset.g; tabs(); list(); };
+  $('#c-list').onclick = async (e) => {
+    if (capturing) return;
+    const x = e.target.closest('[data-x]'); if (x) return assign(+x.dataset.x, { t: 'none' });
+    const b = e.target.closest('[data-n]'); if (!b) return;
+    b.classList.add('wait'); b.textContent = 'Appuie sur une touche…';
+    const bind = await captureInput();
+    if (!bind) return list();
+    assign(+b.dataset.n, bind, b);
+  };
+  d.oncancel = (e) => { if (capturing) e.preventDefault(); };
+  $('#c-cancel').onclick = () => { if (captureInput.cancel) captureInput.cancel(); d.close(); };
+  $('#c-save').onclick = async () => {
+    if (capturing) return;
+    if (!changes.size) return d.close();
+    const r = await api.emuCfgSave(emu.exe, [...changes.values()].map(({ group, key, raw, num }) => ({ group, key, raw, num })));
+    if (!r.ok) return toast(r.error);
+    toast(`${changes.size} réglage(s) enregistré(s) dans ${data.name}.`); await loadEmu();
+  };
+  // ---------- manette en direct : boutons allumés, lignes concernées en surbrillance, zone morte visible ----------
+  const PADN = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Back', 'Start', 'L3', 'R3', 'Croix ↑', 'Croix ↓', 'Croix ←', 'Croix →', 'Guide'];
+  const AXN = (a, dir) => `${a < 2 ? 'Stick G' : 'Stick D'} ${a % 2 ? (dir < 0 ? '↑' : '↓') : (dir < 0 ? '←' : '→')}`;
+  let raf = 0, lastLive = '';
+  const padOf = (g, it) => { const c = changes.get(g.id + '\u0000' + it.key); return c ? c.pad : it.pad; };
+  const dzFor = (s) => {   // zone morte réglée (onglet courant) pour le stick physique s (0 gauche, 2 droit), de 0 à 1
+    const g = data && data.ok && data.groups.find((x) => x.id === tab); if (!g) return 0;
+    const it = g.items.find((x) => x.num && x.sticks.includes(s)); if (!it) return 0;
+    const c = changes.get(g.id + '\u0000' + it.key); return (c ? c.num : it.value) / 100;
+  };
+  const frame = () => {
+    if (!d.open) return;
+    const gp = [...(navigator.getGamepads() || [])].find(Boolean);
+    const g = data && data.ok && data.groups.find((x) => x.id === tab);
+    const active = [];
+    document.querySelectorAll('#c-pad [data-b]').forEach((el) => { const b = gp && gp.buttons[+el.dataset.b]; const on = !!(b && b.value > 0.4); el.classList.toggle('on', on); if (on) active.push({ t: 'btn', i: +el.dataset.b }); });
+    for (const s of [0, 2]) {
+      const x = gp ? gp.axes[s] || 0 : 0, y = gp ? gp.axes[s + 1] || 0 : 0, dz = dzFor(s), mag = Math.hypot(x, y);
+      const grp = document.querySelector(`#c-pad .stk[data-s="${s}"]`), base = grp.querySelector('.sbase'), cx = +base.getAttribute('cx'), cy = +base.getAttribute('cy');
+      grp.querySelector('.sdz').setAttribute('r', (26 * dz).toFixed(1));
+      const dot = grp.querySelector('.sdot');
+      dot.setAttribute('cx', (cx + x * 19).toFixed(1)); dot.setAttribute('cy', (cy + y * 19).toFixed(1));
+      dot.classList.toggle('dead', mag > 0.05 && mag <= dz); dot.classList.toggle('live', mag > dz && mag > 0.05);
+      if (mag > Math.max(dz, 0.5)) { if (Math.abs(x) >= Math.abs(y)) active.push({ t: 'axis', a: s, dir: Math.sign(x) }); else active.push({ t: 'axis', a: s + 1, dir: Math.sign(y) }); }
+    }
+    const same = (p, q) => p && q && p.t === q.t && (p.t === 'btn' ? p.i === q.i : p.a === q.a && p.dir === q.dir);
+    const hits = [];
+    if (g) g.items.forEach((it, n) => {
+      if (it.num) return;
+      const hit = active.some((q) => same(padOf(g, it), q));
+      const row = document.querySelector(`#c-list [data-row="${n}"]`); if (row) row.classList.toggle('hit', hit);
+      if (hit) hits.push(it.label);
+    });
+    const live = !gp ? "Branche une manette et appuie sur ses boutons : la manette s'allume et l'action réglée s'affiche ici."
+      : !active.length ? `Manette détectée : ${esc(gp.id.replace(/\s*\(.*\)\s*$/, ''))}. Appuie sur un bouton.`
+      : active.map((q) => `<b>${q.t === 'btn' ? PADN[q.i] : AXN(q.a, q.dir)}</b>`).join(' + ') + ' : ' + (hits.length ? esc(hits.join(', ')) : 'rien de réglé dans cet onglet');
+    if (live !== lastLive) { $('#c-live').innerHTML = live; lastLive = live; }
+    raf = requestAnimationFrame(frame);
+  };
+  d.addEventListener('close', () => cancelAnimationFrame(raf), { once: true });
+  await loadEmu(); d.showModal(); raf = requestAnimationFrame(frame);
 }
 
 function openMenu(g = cur()) {
@@ -1930,7 +2165,8 @@ document.addEventListener('keydown', (e) => {
 const prev = {}; let lastMove = 0;
 function pad() {
   const gp = [...(navigator.getGamepads() || [])].find(Boolean);
-  if (gp) {
+  if (gp && capturing) { gp.buttons.forEach((x, i) => { prev[i] = x.pressed; }); }
+  else if (gp) {
     const pr = (i) => gp.buttons[i] && gp.buttons[i].pressed;
     const edge = (i) => { const n = !!pr(i), w = prev[i]; prev[i] = n; return n && !w; };
     const t = performance.now(), ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
@@ -1963,6 +2199,118 @@ function pad() {
 }
 
 /* ---------- démarrage ---------- */
+// émulateurs posés dans le dossier « emulators » à côté d'Emuglob.exe : utilisés si aucun chemin valable n'est réglé
+async function adoptDetectedEmus() {
+  const { found } = await api.detectEmus();
+  const ids = Object.keys(found || {});
+  if (!ids.length) return;
+  const cur = cfg.emulators.filter((e) => ids.includes(e.id));
+  const ok = await api.filesExist(cur.map((e) => e.exe || ''));
+  const took = [];
+  cur.forEach((e, i) => { if (!e.exe || !ok[i]) { e.exe = found[e.id]; took.push(e.name); } });
+  if (!took.length) return;
+  save();
+  setTimeout(() => toast(`Détecté automatiquement : ${took.join(', ')}.`), 1200);
+}
+
+/* ---------- Installation : émulateurs depuis leurs sources officielles ---------- */
+const INST_INFO = {
+  ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
+  pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
+};
+async function openInstall(id) {
+  const d = $('#dlg-inst'), emu = cfg.emulators.find((e) => e.id === id), info = INST_INFO[id];
+  $('#i-title').textContent = 'Installer ' + emu.name.replace(/\s*\(.*\)$/, '');
+  $('#i-src').textContent = `Dernière version (${info.src})`;
+  $('#i-note').innerHTML = 'Téléchargé depuis la source officielle. ' + info.note;
+  $('#i-new').textContent = '…';
+  const show = async () => {
+    $('#i-state').textContent = 'Recherche de la dernière version…'; $('#i-go').disabled = true; $('#i-go').textContent = 'Installer';
+    const st = await api.instStatus(id, emu.exe);
+    $('#i-cur').textContent = st.installed ? `${st.version ? 'Version ' + st.version : 'Version inconnue'} · ${st.exe}` : `Non installé (sera placé dans ${st.defaultDir})`;
+    if (!st.ok) { $('#i-state').textContent = 'Dernière version introuvable. ' + st.error; return; }
+    $('#i-new').textContent = [`Version ${st.latest}`, st.date && new Date(st.date).toLocaleDateString('fr-FR'), st.asset + (st.size ? ` (${(st.size / 1048576).toFixed(1)} Mo)` : '')].filter(Boolean).join(' · ');
+    $('#i-state').textContent = st.upToDate ? `${st.name} est à jour.` : '';
+    $('#i-go').textContent = !st.installed ? `Installer ${st.name}` : st.upToDate ? 'Réinstaller' : `Mettre à jour vers ${st.latest}`;
+    $('#i-go').disabled = false;
+  };
+  if (!openInstall.hooked) openInstall.hooked = true, api.onInstProgress((p) => { $('#i-state').textContent = p.step === 'extract' ? 'Extraction…' : `Téléchargement… ${p.total ? Math.round(p.got * 100 / p.total) + ' %' : (p.got / 1048576).toFixed(1) + ' Mo'}`; });
+  $('#i-go').onclick = async () => {
+    $('#i-go').disabled = true;
+    const r = await api.instInstall(id, emu.exe);
+    if (!r.ok) { $('#i-state').textContent = 'Échec : ' + r.error; $('#i-go').disabled = false; return; }
+    emu.exe = r.exe; save(); render();
+    toast(`${emu.name} ${r.version} installé${r.moved ? ' dans le dossier emulators (l\'ancien dossier était protégé)' : ''}.${id === 'ralibretro' ? ' Les cores se téléchargent dans RALibretro (menu Core).' : id === 'pcsx2' ? ' Pense au BIOS de ta PS2.' : ''}`);
+    show();
+  };
+  $('#i-ok').onclick = () => d.close();
+  d.showModal(); show();
+}
+/* ---------- sauvegardes déjà présentes sur le PC : recherche puis import (copie) après confirmation ---------- */
+async function findSaves(dirs) {
+  const games = cfg.games.filter((g) => !g.missing).map((g) => ({ id: g.id, title: g.title, path: g.path }));
+  return api.savesFind({ games, emus: cfg.emulators.filter((e) => e.exe).map((e) => ({ name: e.name, exe: e.exe })), dirs: dirs || cfg.saveDirs || [] });
+}
+async function openFindSaves(pre) {
+  const d = $('#dlg-fsav');
+  let items = [];
+  const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  const kb = (n) => (n < 1024 ? n + ' o' : (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' Ko');
+  const draw = () => {
+    const by = new Map();
+    items.forEach((c, i) => { if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
+    const todo = items.filter((c) => c.newer).length;
+    $('#fs-state').textContent = !items.length ? 'Aucune sauvegarde trouvée pour les jeux de ta bibliothèque.'
+      : `${items.length} sauvegarde${items.length > 1 ? 's' : ''} trouvée${items.length > 1 ? 's' : ''} pour ${by.size} jeu${by.size > 1 ? 'x' : ''}. Choisis celle à importer pour chaque jeu.`;
+    $('#fs-list').innerHTML = [...by.values()].map((ix) => {
+      const first = ix.find((i) => items[i].newer);   // une seule cochée par jeu : la plus récente
+      const v = items[ix[0]].vault;
+      return `<div class="fsg"><b>${esc(items[ix[0]].title)}</b>${v ? `<div class="fsr">Déjà dans Emuglob : sauvegarde du ${fmt(v.mtime)}</div>` : ''}`
+        + ix.map((i) => { const c = items[i];
+          return `<label class="fsr"><input type="radio" name="fs-${esc(c.gameId)}" value="${i}" ${i === first ? 'checked' : ''} ${c.same ? 'disabled' : ''}>`
+            + `<span class="fp">${esc(c.file)}</span><span>${fmt(c.mtime)} · ${kb(c.size)}</span><span class="tag">${esc(c.where)}</span>`
+            + (c.same ? '<span class="tag">déjà importée</span>' : !c.newer ? '<span class="tag warn">plus ancienne</span>' : '')
+            + (c.match === 'proche' ? '<span class="tag warn">nom proche</span>' : '') + '</label>'; }).join('')
+        + `<label class="fsr"><input type="radio" name="fs-${esc(items[ix[0]].gameId)}" value="-1" ${first === undefined ? 'checked' : ''}><span class="fp">Ne rien importer</span></label></div>`;
+    }).join('');
+    $('#fs-go').disabled = !items.length;
+    $('#fs-go').textContent = todo ? 'Importer la sélection' : 'Importer';
+  };
+  const run = async () => {
+    $('#fs-state').textContent = 'Recherche en cours…'; $('#fs-list').innerHTML = ''; $('#fs-go').disabled = true;
+    const r = pre || await findSaves(); pre = null;
+    if (!r.ok) { $('#fs-state').textContent = 'Erreur : ' + r.error; return; }
+    items = r.items; draw();
+  };
+  $('#fs-dir').onclick = async () => {
+    const dir = await api.savesPickDir(); if (!dir) return;
+    cfg.saveDirs = [...new Set([...(cfg.saveDirs || []), dir])]; save(); run();
+  };
+  $('#fs-go').onclick = async () => {
+    const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }));
+    if (!pick.length) { toast('Rien de coché.'); return; }
+    $('#fs-go').disabled = true;
+    const r = await api.savesImport(pick);
+    const n = r.done.filter((x) => x.action === 'imported').length;
+    toast(`${n} sauvegarde${n > 1 ? 's' : ''} importée${n > 1 ? 's' : ''}${r.errors.length ? `, ${r.errors.length} en échec (${r.errors[0].error})` : ''}.`);
+    run();
+  };
+  $('#fs-ok').onclick = () => d.close();
+  d.showModal(); run();
+}
+async function proposeSaves() {   // une seule fois : si des sauvegardes plus récentes existent ailleurs, on propose l'import
+  if (cfg.savesProposed || !cfg.games.length) return;
+  cfg.savesProposed = true; save();
+  const r = await findSaves();
+  if (r.ok && r.items.some((c) => c.newer) && !document.querySelector('dialog[open]')) openFindSaves(r);
+}
+async function hintRalib() {   // première ouverture sans RALibretro : on indique où l'installer, une seule fois
+  const ra = cfg.emulators.find((e) => e.id === 'ralibretro');
+  if (cfg.ralibHinted || (ra.exe && (await api.filesExist([ra.exe]))[0])) return;
+  cfg.ralibHinted = true; save();
+  toast("RALibretro n'est pas installé : Paramètres, Installation, pour l'installer en un clic.");
+}
+
 (async function init() {
   hydrateIcons();
   cfg = await api.loadConfig();
@@ -1975,6 +2323,9 @@ function pad() {
   }
   const ra = cfg.emulators.find((e) => e.id === 'ralibretro');
   if (!ra.exe && cfg.ralibretro) ra.exe = cfg.ralibretro;
+  await adoptDetectedEmus();
+  setTimeout(hintRalib, 2500);
+  setTimeout(proposeSaves, 6000);
   cfg.open = cfg.open || {};
   cfg.folders = cfg.folders || [];
   cfg.games.forEach((g) => {

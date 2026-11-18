@@ -5,8 +5,9 @@ const { spawn, execFile } = require('child_process');
 const crypto = require('crypto');
 const { romHash } = require('./romhash');
 const { identify } = require('./discid');
-const { SaveVault } = require('./saves');
+const { SaveVault, findExisting, importExisting } = require('./saves');
 const { DiscordPresence } = require('./discord');
+const emucfg = require('./emucfg');
 
 let win;
 let vault = null;
@@ -341,6 +342,152 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
     }
   })
 );
+// contrôles et raccourcis des émulateurs, édités dans leurs fichiers de configuration
+const emuBase = () => (app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..'));
+ipcMain.handle('emus:detect', () => ({ found: emucfg.detect(emuBase()), dir: path.join(emuBase(), 'emulators') }));
+// ---------- installation / mise à jour d'émulateurs depuis leurs sources officielles (RALibretro, PCSX2) ----------
+const RAL_REPO = 'RetroAchievements/RALibretro';
+function exeVersion(exe) {   // version inscrite dans l'exécutable Windows
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve('');
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Item -LiteralPath '${exe.replace(/'/g, "''")}').VersionInfo.ProductVersion`],
+      { windowsHide: true, timeout: 15000 }, (err, out) => resolve(err ? '' : String(out).trim()));
+  });
+}
+const verNum = (v) => String(v || '').replace(/^v/i, '').split(/[.,\s-]/).map((n) => parseInt(n, 10) || 0);
+const sameOrNewer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return true; };
+const fromGithubRelease = (rel, asset) => ({ tag: rel.tag_name, latest: String(rel.tag_name || '').replace(/^v/i, ''), date: rel.published_at, size: asset.size, asset });
+
+// RALibretro est distribué par RetroAchievements (pas dans les Releases GitHub, qui ne contiennent que RAHasher).
+// L'API « latestclient » donne la dernière version et son lien (RALibretro = émulateur n° 7 pour RetroAchievements).
+async function latestRalib() {
+  const errors = [];
+  try {
+    const r = await fetch(process.env.EMUGLOB_RAL_API || 'https://retroachievements.org/dorequest.php?r=latestclient&e=7', { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error('RetroAchievements a répondu ' + r.status);
+    const j = await r.json();
+    const url = j.LatestVersionUrlX64 || j.LatestVersionUrl;
+    if (!j.Success && !url) throw new Error(j.Error || 'réponse inattendue : ' + JSON.stringify(j).slice(0, 200));
+    if (!url || (!/^https:\/\//i.test(url) && !process.env.EMUGLOB_RAL_API)) throw new Error('pas de lien de téléchargement dans la réponse : ' + JSON.stringify(j).slice(0, 200));
+    let size = 0, date = '';
+    try { const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(15000) }); size = +h.headers.get('content-length') || 0; date = h.headers.get('last-modified') || ''; } catch { /* taille inconnue */ }
+    return { tag: j.LatestVersion, latest: String(j.LatestVersion || '').replace(/^v/i, ''), date, size, asset: { name: decodeURIComponent(url.split('/').pop()), browser_download_url: url, size } };
+  } catch (e) { errors.push('RetroAchievements : ' + e.message); }
+  try {   // secours : une Release GitHub qui contiendrait un vrai zip RALibretro
+    const rel = await (await ghFetch(`https://api.github.com/repos/${RAL_REPO}/releases/latest`)).json();
+    const zips = (rel.assets || []).filter((a) => /\.zip$/i.test(a.name) && /^ralibretro/i.test(a.name) && !/linux|mac|osx|src|source/i.test(a.name));
+    const asset = zips.find((a) => /x64|win64/i.test(a.name)) || zips.find((a) => !/x86|win32/i.test(a.name)) || zips[0];
+    if (!asset) throw new Error(`pas de zip RALibretro dans la version ${rel.tag_name}`);
+    return fromGithubRelease(rel, asset);
+  } catch (e) { errors.push('GitHub : ' + e.message); }
+  throw new Error(errors.join(' ; '));
+}
+// PCSX2 : dernière version stable sur GitHub ; on prend l'archive Windows x64 portable (pas l'installeur, pas les symboles de débogage)
+async function latestPcsx2() {
+  const rel = await (await ghFetch(process.env.EMUGLOB_PCSX2_API || 'https://api.github.com/repos/PCSX2/pcsx2/releases/latest')).json();
+  const ok = (rel.assets || []).filter((a) => /windows/i.test(a.name) && /x64/i.test(a.name) && /\.(7z|zip)$/i.test(a.name) && !/symbol|debug|pdb|installer|setup/i.test(a.name));
+  const asset = ok.find((a) => /qt/i.test(a.name) && /\.zip$/i.test(a.name)) || ok.find((a) => /qt/i.test(a.name)) || ok.find((a) => /\.zip$/i.test(a.name)) || ok[0];
+  if (!asset) throw new Error(`pas d'archive Windows x64 dans la version ${rel.tag_name} (fichiers : ${(rel.assets || []).map((x) => x.name).join(', ') || 'aucun'})`);
+  return fromGithubRelease(rel, asset);
+}
+const INSTALLERS = {
+  ralibretro: { name: 'RALibretro', dir: 'RALibretro', exes: ['ralibretro.exe'], latest: latestRalib },
+  pcsx2: { name: 'PCSX2', dir: 'PCSX2', exes: ['pcsx2-qt.exe', 'pcsx2.exe'], latest: latestPcsx2 },
+};
+const releases = {};
+const instDefaultDir = (id) => path.join(emuBase(), 'emulators', INSTALLERS[id].dir);
+const isInstExe = (id, exe) => !!exe && INSTALLERS[id].exes.includes(path.basename(exe).toLowerCase()) && fs.existsSync(exe);
+ipcMain.handle('inst:status', async (_e, { id, exe }) => {
+  const ins = INSTALLERS[id];
+  if (!ins) return { ok: false, error: 'émulateur inconnu' };
+  const out = { id, name: ins.name, installed: isInstExe(id, exe), exe: exe || '', version: '', defaultDir: instDefaultDir(id) };
+  if (out.installed) out.version = await exeVersion(exe);
+  try {
+    const rel = releases[id] = await ins.latest();
+    Object.assign(out, { ok: true, asset: rel.asset.name, latest: rel.latest, date: rel.date, size: rel.size });
+    out.upToDate = out.installed && !!out.version && sameOrNewer(out.version, out.latest);
+  } catch (e) { out.ok = false; out.error = e.message; }
+  return out;
+});
+// extraction : 7za.exe intégré à Emuglob (7-Zip, LGPL, lit zip et 7z) copié hors de l'asar pour pouvoir le lancer,
+// puis tar.exe de Windows 10+, 7-Zip installé, PowerShell (zip) ; hors Windows : EMUGLOB_7ZA, unzip ou 7z (tests)
+function bundled7za() {
+  if (process.env.EMUGLOB_7ZA) return process.env.EMUGLOB_7ZA;
+  if (process.platform !== 'win32') return null;
+  try {
+    const src = path.join(__dirname, 'tools', '7za.exe'), out = path.join(app.getPath('userData'), 'tools', '7za.exe');
+    const buf = fs.readFileSync(src);
+    if (!fs.existsSync(out) || fs.statSync(out).size !== buf.length) { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, buf); }
+    return out;
+  } catch { return null; }
+}
+function extract(file, dest) {
+  const q = (x) => x.replace(/'/g, "''");
+  const z = bundled7za(), sevenArgs = ['x', '-y', '-o' + dest, file];
+  const seven = ['C:\\Program Files\\7-Zip\\7z.exe', 'C:\\Program Files (x86)\\7-Zip\\7z.exe'].filter((x) => fs.existsSync(x));
+  const tries = [...(z ? [[z, sevenArgs]] : []), ...(process.platform === 'win32'
+    ? [['tar.exe', ['-xf', file, '-C', dest]], ...seven.map((x) => [x, sevenArgs]),
+      ...(/\.zip$/i.test(file) ? [['powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Expand-Archive -LiteralPath '${q(file)}' -DestinationPath '${q(dest)}' -Force`]]] : [])]
+    : (/\.zip$/i.test(file) ? [['unzip', ['-oq', file, '-d', dest]]] : [['7z', sevenArgs]]))];
+  let last = null;
+  return tries.reduce((p, [cmd, args]) => p.catch(() => new Promise((res, rej) => execFile(cmd, args, { windowsHide: true, timeout: 300000 }, (err) => (err ? rej((last = err)) : res())))),
+    Promise.reject(new Error('start'))).catch(() => { throw new Error(`impossible d'extraire ${path.basename(file)}${last && last.message ? ' (' + String(last.message).split('\n')[0].slice(0, 160) + ')' : ''}`); });
+}
+function findFile(dir, names, depth = 3) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isFile() && names.includes(e.name.toLowerCase())) return path.join(dir, e.name);
+  if (depth) for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isDirectory()) { const f = findFile(path.join(dir, e.name), names, depth - 1); if (f) return f; }
+  return null;
+}
+ipcMain.handle('inst:install', async (_e, { id, exe }) => {
+  const ins = INSTALLERS[id], rel = releases[id];
+  if (!ins) return { ok: false, error: 'émulateur inconnu' };
+  if (!rel) return { ok: false, error: "vérifie d'abord la dernière version" };
+  if (!rel.asset.browser_download_url) return { ok: false, error: 'lien de téléchargement manquant' };
+  if (isInstExe(id, exe) && emucfg.running(exe)) return { ok: false, error: `${ins.name} est ouvert : ferme-le avant de le mettre à jour.` };
+  // mise à jour sur place (réglages et sauvegardes restent) ; si le dossier est protégé (Program Files), dossier emulators\ d'Emuglob
+  const candidates = [...(isInstExe(id, exe) ? [path.dirname(exe)] : []), instDefaultDir(id), path.join(app.getPath('userData'), 'emulators', ins.dir)];
+  let dest = null;
+  for (const d of candidates) { try { fs.mkdirSync(d, { recursive: true }); const t = path.join(d, '.emuglob-test'); fs.writeFileSync(t, ''); fs.unlinkSync(t); dest = d; break; } catch { /* suivant */ } }
+  if (!dest) return { ok: false, error: `impossible d'écrire dans ${candidates[0]}` };
+  const work = path.join(app.getPath('userData'), 'update', id);
+  const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('inst:progress', { id, ...p }); };
+  try {
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.mkdirSync(path.join(work, 'x'), { recursive: true });
+    const { asset } = rel;
+    const r = await fetch(asset.browser_download_url, { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(600000) });
+    if (!r.ok) throw new Error('téléchargement refusé (' + r.status + ')');
+    const chunks = []; let got = 0;
+    for await (const c of r.body) { chunks.push(c); got += c.length; send({ step: 'download', got, total: asset.size }); }
+    const buf = Buffer.concat(chunks);
+    if (asset.size && buf.length !== asset.size) throw new Error('téléchargement incomplet');
+    const isZip = buf.slice(0, 2).toString() === 'PK', is7z = buf.slice(0, 6).equals(Buffer.from([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]));
+    if (!isZip && !is7z) throw new Error("le fichier téléchargé n'est pas une archive zip ou 7z");
+    const digest = /^sha256:([0-9a-f]{64})$/i.exec(asset.digest || '');
+    if (digest && crypto.createHash('sha256').update(buf).digest('hex') !== digest[1].toLowerCase()) throw new Error('fichier altéré (empreinte SHA-256 différente de celle de GitHub)');
+    const file = path.join(work, asset.name.replace(/[^\w.-]/g, '_'));
+    fs.writeFileSync(file, buf);
+    send({ step: 'extract' });
+    await extract(file, path.join(work, 'x'));
+    const found = findFile(path.join(work, 'x'), ins.exes);
+    if (!found) throw new Error(`${ins.exes[0]} introuvable dans ${asset.name}`);
+    fs.cpSync(path.dirname(found), dest, { recursive: true, force: true });
+    fs.rmSync(work, { recursive: true, force: true });
+    embedLog(`${ins.name} ${rel.tag} installé dans ${dest}`);
+    return { ok: true, exe: path.join(dest, path.basename(found)), version: rel.latest, moved: !!exe && isInstExe(id, exe) && path.dirname(exe) !== dest };
+  } catch (e) {
+    embedLog(`installation ${ins.name} : ${e.message}`);
+    try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignoré */ }
+    return { ok: false, error: e.message };
+  }
+});
+ipcMain.handle('emucfg:load', (_e, exe) => emucfg.load(exe));
+ipcMain.handle('emucfg:encode', (_e, { exe, group, bind }) => emucfg.encode(exe, group, bind));
+ipcMain.handle('emucfg:save', (_e, { exe, changes }) => {
+  const r = emucfg.save(exe, changes);
+  embedLog(`contrôles ${exe} : ${r.ok ? 'enregistrés (' + r.files.join(', ') + ')' : r.error}`);
+  return r;
+});
 ipcMain.handle('game:move', (_e, r) => { if (helperObj && current && current.embedded) helperObj.send(`move ${r.x} ${r.y} ${r.w} ${r.h}`); });
 ipcMain.handle('game:focus', () => { if (helperObj && current && current.embedded) helperObj.send('focus'); });
 ipcMain.handle('game:stop', () => {
@@ -349,6 +496,12 @@ ipcMain.handle('game:stop', () => {
   if (helperObj && current.embedded) { helperObj.send('close'); setTimeout(() => { if (c.exitCode === null) killTree(c.pid); }, 4000); }   // fermeture douce, puis forcée
   else killTree(c.pid);
 });
+// recherche des sauvegardes existantes (dossiers des ROMs, des émulateurs, dossiers habituels, + dossiers choisis)
+ipcMain.handle('saves:find', (_e, { games, emus, dirs }) => {
+  try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
+});
+ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
+ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
 ipcMain.handle('saves:open', (_e, gameId) => { const d = getVault().dir(String(gameId)); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 // on = interrupteur des Paramètres ; legacyId = ancien ID saisi à la main (repli si DISCORD_APP_ID est vide)
 ipcMain.handle('discord:set', (_e, { on, activity, legacyId }) => { discord.set(on ? (DISCORD_APP_ID || String(legacyId || '').replace(/\D/g, '')) : '', activity); return discord.status; });
