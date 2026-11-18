@@ -7,6 +7,13 @@
 <style>
   :root { --t:clamp(110px,9vw,150px); --T:clamp(200px,17.3vw,290px); --muted:#b9b4d4; --glass:rgba(24,18,48,.6); --glow:rgba(95,180,255,.75); }
   * { box-sizing:border-box; }
+  /* barres de défilement : invisibles, une fine barre apparaît seulement au survol de la zone */
+  ::-webkit-scrollbar { width:6px; height:6px; background:transparent; }
+  ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { display:none; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:transparent; border-radius:3px; }
+  :hover::-webkit-scrollbar-thumb { background:rgba(255,255,255,.18); }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.32); }
   html, body { height:100%; margin:0; overflow:hidden; }
   body { display:flex; flex-direction:column; color:#fff; font:15px/1.4 "Segoe UI",system-ui,sans-serif;
     background:var(--wall,none) center/cover, linear-gradient(180deg,var(--th1) 0%,var(--th2) 40%,var(--th3) 72%,var(--th4) 100%);
@@ -95,11 +102,23 @@
   .ovh button { display:inline-flex; align-items:center; gap:6px; }
   .lhead .ch { display:inline-flex; }
   .t3 span { display:inline-flex; align-items:center; gap:5px; }
-  #set-body { display:grid; grid-template-columns:repeat(auto-fill, minmax(270px,1fr)); gap:16px; padding:8px; }
-  .sset { display:flex; gap:16px; align-items:center; padding:22px; border-radius:18px; background:var(--glass); border:2px solid transparent; cursor:pointer; outline:none; backdrop-filter:blur(8px); }
+  #set-body { padding:4px 8px 8px; }
+  .sgrp { margin-bottom:22px; }
+  .sgrp h3 { margin:0 0 10px 4px; font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
+  .sgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+  /* écrans larges / ultra-wide : une colonne par section, centrée, au lieu d'une longue ligne */
+  @media (min-width:1700px) {
+    #set-body { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:28px; max-width:2300px; margin:0 auto; width:100%; align-items:start; }
+    .sgrp { margin:0; }
+    .sgrid { grid-template-columns:1fr; }
+    .sset { padding:18px 20px; }
+  }
+  @media (min-width:2400px) { .sset b { font-size:18px; } .sset small { font-size:14px; } .sset .si { font-size:30px; } .sgrp h3 { font-size:13px; } }
+  .sset { display:flex; gap:14px; align-items:center; padding:14px 18px; border-radius:18px; background:var(--glass); border:2px solid transparent; cursor:pointer; outline:none; backdrop-filter:blur(8px); }
   .sset:hover, .sset:focus { border-color:#fff; box-shadow:0 0 16px var(--glow); }
-  .sset .si { font-size:36px; display:flex; }
-  .sset b { display:block; font-size:18px; }
+  .sset .si { font-size:26px; display:flex; opacity:.9; }
+  .sset b { display:block; font-size:16px; }
+  .sset small { font-size:12.5px; }
   .sset small { color:var(--muted); }
   #ov-flow { padding:0; background:radial-gradient(ellipse at 50% 38%, color-mix(in srgb, var(--fcc,#16a34a) 62%, #000) 0%, color-mix(in srgb, var(--fcc,#16a34a) 20%, #000) 55%, #030504 100%); overflow:hidden; }
   #ov-flow::before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse 60% 18% at 20% 92%, rgba(255,255,255,.08), transparent), radial-gradient(ellipse 50% 14% at 85% 8%, rgba(255,255,255,.07), transparent); }
@@ -177,7 +196,7 @@
   #home.tc .ftab .nm, #home.tc .ftab .ct { display:none; }
   #home.tc .cbadge { width:44px; height:44px; border-radius:22px; font-size:11px; }
   #home.tc .ftab:hover .cbadge, #home.tc .ftab.on .cbadge { border-radius:14px; }
-  #home.tc.th .ftabs-wrap { width:68px; z-index:20; transition:width .18s ease, background .18s; }
+  #home.tc.th .ftabs-wrap { width:68px; z-index:9;   /* sous les pages (.overlay = 10) */ transition:width .18s ease, background .18s; }
   #home.tc.th .ftabs-wrap:hover { width:250px; background:rgba(16,11,36,.92); }
   #home.tc.th .ftabs-wrap:hover .ftabs { align-items:stretch; padding:10px 8px; }
   #home.tc.th .ftabs-wrap:hover .ftab { width:100%; display:flex; gap:12px; padding:3px 8px 3px 3px; }
@@ -337,7 +356,8 @@
 </dialog>
 
 <dialog id="dlg-set">
-  <h2>Compte et affichage</h2>
+  <h2 id="s-title">Réglages</h2>
+  <div data-sec="ra">
   <label>Pseudo RetroAchievements</label><input id="s-user" autocomplete="off">
   <label>Clé API Web (retroachievements.org, Paramètres, Clés)</label><input id="s-key" type="password" autocomplete="off">
   <div class="row" style="justify-content:flex-start"><button id="s-test">Tester la connexion</button></div>
@@ -345,20 +365,27 @@
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-covers">Rechercher les jaquettes manquantes</button></div>
   <label>Succès RetroAchievements (identification par empreinte du fichier, puis par titre)</label>
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-rematch">Relancer la détection des jeux</button></div>
+  </div>
+  <div data-sec="jeu">
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-embed" style="width:auto"> Intégrer l'émulateur dans la fenêtre Emuglob (expérimental, Windows)</label>
   <label>Mode d'intégration</label>
   <select id="s-mode"><option value="overlay">Superposé : fenêtre sans bordure collée sur Emuglob (recommandé, garde le menu de l'émulateur)</option><option value="child">Enfant : vraie fenêtre dans Emuglob (l'image peut rester noire)</option></select>
   <div class="row" style="margin-top:6px;justify-content:flex-start"><button id="s-log">Ouvrir le journal d'intégration</button></div>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-hide" style="width:auto"> Sinon, masquer Emuglob pendant le jeu (Ctrl+Maj+E pour le rouvrir)</label>
+  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-saves" style="width:auto"> Partager les sauvegardes entre émulateurs (+ copie de secours dans Emuglob)</label>
+  <label>Manette : A jouer · X options · Y favori · B retour · Start plein écran · LB/RB rien</label>
+  </div>
+  <div data-sec="app">
+  <label>Fond d'écran</label>
+  <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-wall">Choisir une image…</button><button id="s-wall-reset">Par défaut</button></div>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-fs" style="width:auto"> Démarrer Emuglob en plein écran</label>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-auto" style="width:auto"> Lancer Emuglob au démarrage de Windows</label>
-  <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-saves" style="width:auto"> Partager les sauvegardes entre émulateurs (+ copie de secours dans Emuglob)</label>
+    </div>
+  <div data-sec="discord">
   <label>Discord Rich Presence : ID d'application (vide = désactivé)</label>
   <div style="display:flex;gap:8px"><input id="s-dc" placeholder="ex : 1234567890123456789" autocomplete="off"><button id="s-dctest">Tester</button></div>
   <small class="muted" id="s-dcst">Crée une application nommée « Emuglob » sur discord.com/developers/applications, copie son « Application ID » ici. Discord (application de bureau) doit être ouvert.</small>
-  <label>Fond d'écran</label>
-  <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-wall">Choisir une image…</button><button id="s-wall-reset">Par défaut</button></div>
-  <label>Manette : A jouer · X options · Y favori · B retour · Start plein écran · LB/RB rien</label>
+  </div>
   <div class="row"><button id="s-full">Plein écran (F11)</button><button id="s-ok" style="background:#5b46d6">Fermer</button></div>
 </dialog>
 
@@ -1469,25 +1496,31 @@ function openTabsDlg() {
   $('#tb-ok').onclick = () => d.close();
   refresh(); d.showModal();
 }
+// Paramètres rangés par thème : chaque tuile ouvre une fenêtre courte
+const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', look:'Apparence', acc:'Comptes', sys:'Système' };
 const SET_ITEMS = [
-  { ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
-  { ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
-  { ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
-  { ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
-  { ic:'user', t:'RetroAchievements', s:'Compte, jaquettes, fond', act:() => openSettings() },
-  { ic:'music', t:'Thèmes et sons', s:'Couleurs par console, sons de navigation', act:() => openAmbDlg() },
-  { ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ' · ordre, icônes'; }, act:() => openTabsDlg() },
-  { ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
-  { ic:'folder', t:'Entretien de la bibliothèque', s:'Dossiers surveillés, doublons', act:() => openMaint() },
-  { ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
-  { ic:'download', t:'Mettre à jour Emuglob', s:'En ligne ou depuis un fichier app.asar', act:() => openUpdate() },
-  { ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
+  { g:'lib', ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
+  { g:'lib', ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
+  { g:'lib', ic:'folder', t:'Scanner un dossier', s:'Importer tes ROMs', act:() => scan() },
+  { g:'lib', ic:'refresh', t:'Entretien', s:'Dossiers surveillés, doublons', act:() => openMaint() },
+  { g:'jeu', ic:'gamepad', t:'Émulateurs', s:'Chemins et arguments', act:() => openEmulators() },
+  { g:'jeu', ic:'expand', t:'Lancement des jeux', s:'Intégration, sauvegardes partagées', act:() => openSettings('jeu') },
+  { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
+  { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
+  { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, plein écran, Windows', act:() => openSettings('app') },
+  { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
+  { g:'acc', ic:'user', t:'Discord', get s() { return cfg.discord && cfg.discord.id ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
+  { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
+  { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
+  { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
+  { g:'sys', ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
 ];
 function openSettingsPanel() {
   closeOv();
   mode = 'settings'; setTop('set'); $('#ov-set').hidden = false;
-  $('#set-body').innerHTML = SET_ITEMS.map((b, i) =>
-    `<div class="sset" tabindex="0" data-i="${i}"><span class="si">${ic(b.ic)}</span><div><b>${b.t}</b><small>${b.s}</small></div></div>`).join('');
+  $('#set-body').innerHTML = Object.entries(SET_GROUPS).map(([g, name]) => `<section class="sgrp"><h3>${name}</h3><div class="sgrid">`
+    + SET_ITEMS.map((b, i) => (b.g !== g ? '' : `<div class="sset" tabindex="0" data-i="${i}"><span class="si">${ic(b.ic)}</span><div><b>${b.t}</b><small>${b.s}</small></div></div>`)).join('')
+    + '</div></section>').join('');
   $('.sset').focus();
 }
 const navSel = () => (mode === 'settings' ? '.sset' : '.lcard, .lhead');
@@ -1637,8 +1670,12 @@ function openEmulators() {
   fill(); d.showModal();
 }
 
-function openSettings() {
+const SET_SECS = { ra:'RetroAchievements', jeu:'Lancement des jeux', app:'Fond et démarrage', discord:'Discord' };
+function openSettings(sec) {
   const d = $('#dlg-set');
+  if (!SET_SECS[sec]) sec = 'ra';
+  $('#s-title').textContent = SET_SECS[sec];
+  d.querySelectorAll('[data-sec]').forEach((x) => { x.hidden = x.dataset.sec !== sec; });
   $('#s-user').value = cfg.ra.user || ''; $('#s-key').value = cfg.ra.key || '';
   $('#s-hide').checked = cfg.hideWhilePlaying !== false;
   $('#s-fs').checked = !!cfg.startFullscreen;
