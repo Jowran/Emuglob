@@ -34,6 +34,8 @@ const cfgOut = (d) => (isPortable() ? mapStrings(d, compactPath) : mapStrings(d,
 const listBackupFiles = () => { try { return fs.readdirSync(backupDir()).filter((f) => /^config-.*\.json$/.test(f)).sort(); } catch { return []; } };
 
 // lecture : si le fichier est présent mais illisible, on reprend la dernière sauvegarde valable plutôt que de repartir d'une bibliothèque vide
+// langue des boîtes de dialogue : celle choisie dans Emuglob, sinon celle du système
+const L = (fr, en) => { let l = ''; try { l = readCfg().lang; } catch { /* config illisible */ } if (l !== 'fr' && l !== 'en') l = /^fr/i.test(app.getLocale()) ? 'fr' : 'en'; return l === 'en' ? en : fr; };
 const readCfg = () => {
   try { return cfgIn(readJson(cfgPath())); } catch (err) {
     if (fs.existsSync(cfgPath())) {
@@ -203,12 +205,12 @@ ipcMain.handle('backups:restore', (_e, name) => {
 });
 // export : chemins complets, pour qu'il marche aussi hors mode portable
 ipcMain.handle('backups:export', async () => {
-  const r = await dialog.showSaveDialog(win, { title: 'Exporter la configuration', defaultPath: 'emuglob-config.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
+  const r = await dialog.showSaveDialog(win, { title: L('Exporter la configuration', 'Export configuration'), defaultPath: 'emuglob-config.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled) return { ok: false, canceled: true };
   try { fs.writeFileSync(r.filePath, JSON.stringify(readCfg(), null, 2), 'utf-8'); return { ok: true, path: r.filePath }; } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('backups:import', async () => {
-  const r = await dialog.showOpenDialog(win, { title: 'Importer une configuration', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
+  const r = await dialog.showOpenDialog(win, { title: L('Importer une configuration', 'Import configuration'), properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled) return { ok: false, canceled: true };
   try {
     const d = readJson(r.filePaths[0]);
@@ -222,14 +224,14 @@ ipcMain.handle('backups:import', async () => {
 });
 
 ipcMain.handle('dialog:files', async () => {
-  const r = await dialog.showOpenDialog(win, { title: 'Ajouter des jeux', properties: ['openFile', 'multiSelections'] });
+  const r = await dialog.showOpenDialog(win, { title: L('Ajouter des jeux', 'Add games'), properties: ['openFile', 'multiSelections'] });
   return r.canceled ? [] : r.filePaths;
 });
 
 ipcMain.handle('dialog:exe', async () => {
   const r = await dialog.showOpenDialog(win, {
-    title: "Choisir l'exécutable", properties: ['openFile'],
-    filters: [{ name: 'Exécutable', extensions: ['exe'] }, { name: 'Tous', extensions: ['*'] }],
+    title: L("Choisir l'exécutable", 'Choose the executable'), properties: ['openFile'],
+    filters: [{ name: L('Exécutable', 'Executable'), extensions: ['exe'] }, { name: L('Tous', 'All'), extensions: ['*'] }],
   });
   return r.canceled ? '' : r.filePaths[0];
 });
@@ -256,7 +258,7 @@ async function pickImage(title, prefix) {
   let kind = null;
   try { if (fs.statSync(src).size <= 50 * 1024 * 1024) kind = imageKind(src); } catch { /* illisible */ }
   if (!IMG_EXT.includes(ext) || !kind) {
-    dialog.showMessageBox(win, { type: 'warning', title: 'Fichier refusé', message: "Ce fichier n'est pas une image valide.", detail: 'Formats acceptés : PNG, JPG, WEBP, BMP et GIF (50 Mo maximum).' });
+    dialog.showMessageBox(win, { type: 'warning', title: L('Fichier refusé', 'File rejected'), message: L("Ce fichier n'est pas une image valide.", 'This file is not a valid image.'), detail: L('Formats acceptés : PNG, JPG, WEBP, BMP et GIF (50 Mo maximum).', 'Accepted formats: PNG, JPG, WEBP, BMP and GIF (50 MB max).') });
     return '';
   }
   fs.mkdirSync(coverDir(), { recursive: true });
@@ -264,8 +266,8 @@ async function pickImage(title, prefix) {
   fs.copyFileSync(src, dest);
   return dest;
 }
-ipcMain.handle('dialog:cover', (_e, id) => pickImage('Choisir une jaquette', id));
-ipcMain.handle('dialog:wallpaper', () => pickImage("Choisir un fond d'écran", 'wallpaper'));
+ipcMain.handle('dialog:cover', (_e, id) => pickImage(L('Choisir une jaquette', 'Choose a cover'), id));
+ipcMain.handle('dialog:wallpaper', () => pickImage(L("Choisir un fond d'écran", 'Choose a wallpaper'), 'wallpaper'));
 
 function scanDir(dir, wanted) {
   const files = [];
@@ -287,7 +289,7 @@ function scanDir(dir, wanted) {
   return { files, skipped };
 }
 ipcMain.handle('scan:folder', async (_e, extensions) => {
-  const r = await dialog.showOpenDialog(win, { title: 'Dossier de ROMs', properties: ['openDirectory'] });
+  const r = await dialog.showOpenDialog(win, { title: L('Dossier de ROMs', 'ROM folder'), properties: ['openDirectory'] });
   if (r.canceled) return { files: [], skipped: {}, dir: '' };
   return { ...scanDir(r.filePaths[0], new Set(extensions)), dir: r.filePaths[0] };
 });
@@ -424,7 +426,7 @@ function showCover(r, info) {
     minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false, backgroundColor: '#000000',
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   cover.setAlwaysOnTop(true, 'pop-up-menu');   // au-dessus de la fenêtre de l'émulateur, quelle que soit la façon dont elle est intégrée
-  const query = { t: info.title || '', e: info.emu || '', k: info.k === 'disc' ? 'disc' : 'cart', f: String(info.f || '').replace(/[^a-z0-9]/g, '').slice(0, 12), c: String(info.c || '').slice(0, 40) };
+  const query = { t: info.title || '', e: info.emu || '', k: info.k === 'disc' ? 'disc' : 'cart', f: String(info.f || '').replace(/[^a-z0-9]/g, '').slice(0, 12), c: String(info.c || '').slice(0, 40), l: L('fr', 'en') };
   coverAt = Date.now();
   if (info.img && /^(file:|https:)/.test(info.img)) query.img = info.img;
   cover.loadFile(path.join(__dirname, 'loading.html'), { query });
@@ -735,7 +737,7 @@ ipcMain.handle('cemu:keysStatus', (_e, exe) => { const t = cemuKeysTargets(exe);
 ipcMain.handle('cemu:keysImport', async (_e, exe) => {
   const t = cemuKeysTargets(exe);
   if (!t.length) return { ok: false, error: 'règle ou installe Cemu d\'abord' };
-  const r = await dialog.showOpenDialog(win, { title: 'Ton keys.txt (clés tirées de ta propre console)', properties: ['openFile'], filters: [{ name: 'keys.txt', extensions: ['txt'] }, { name: 'Tous', extensions: ['*'] }] });
+  const r = await dialog.showOpenDialog(win, { title: L('Ton keys.txt (clés tirées de ta propre console)', 'Your keys.txt (keys dumped from your own console)'), properties: ['openFile'], filters: [{ name: 'keys.txt', extensions: ['txt'] }, { name: L('Tous', 'All'), extensions: ['*'] }] });
   if (r.canceled) return { ok: false, canceled: true };
   let txt; try { txt = fs.readFileSync(r.filePaths[0], 'utf-8'); } catch (e) { return { ok: false, error: e.message }; }
   const n = (txt.match(/^\s*[0-9a-fA-F]{32}\b/gm) || []).length;
@@ -750,10 +752,10 @@ ipcMain.handle('cemu:keysImport', async (_e, exe) => {
 });
 ipcMain.handle('saves:pickfiles', async () => {
   const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1)).concat('dat');   // .dat : seulement à la main (trop de faux positifs pour la recherche auto)
-  const r = await dialog.showOpenDialog(win, { title: 'Fichiers de sauvegarde', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Sauvegardes', extensions: exts }, { name: 'Tous', extensions: ['*'] }] });
+  const r = await dialog.showOpenDialog(win, { title: L('Fichiers de sauvegarde', 'Save files'), properties: ['openFile', 'multiSelections'], filters: [{ name: L('Sauvegardes', 'Saves'), extensions: exts }, { name: L('Tous', 'All'), extensions: ['*'] }] });
   return r.canceled ? [] : r.filePaths;
 });
-ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
+ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: L('Dossier contenant des sauvegardes', 'Folder with saves'), properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
 ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid, title }) => {
   let loc = { dir: null, tid: tid || '' };
   try { loc = cemuSaveDir(exe || '', rom, { tid, title }); } catch { /* Cemu absent */ }
@@ -788,7 +790,7 @@ ipcMain.handle('win:fullscreen', (_e, force) => {
 ipcMain.handle('app:quit', () => app.quit());
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
+const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
 const mem = new Map();
 
 // ---------- résumé Wikipédia pour la fiche de jeu (français, sinon anglais), gardé sur disque pour le mode hors ligne ----------
@@ -814,14 +816,15 @@ async function wikiFind(lang, title, consoleName) {
   if (!sum || !sum.extract || sum.type === 'disambiguation') return null;
   return { lang, title: sum.title, text: sum.extract, url: sum.content_urls && sum.content_urls.desktop && sum.content_urls.desktop.page };
 }
-ipcMain.handle('wiki:summary', async (_e, { title, console: consoleName }) => {
+ipcMain.handle('wiki:summary', async (_e, { title, console: consoleName, lang }) => {
+  const first = lang === 'en' ? 'en' : 'fr', second = first === 'en' ? 'fr' : 'en';
   if (typeof title !== 'string' || !title.trim()) return { ok: false };
-  const file = path.join(raCacheDir(), 'wiki', crypto.createHash('sha1').update(title + '|' + (consoleName || '')).digest('hex') + '.json');
+  const file = path.join(raCacheDir(), 'wiki', crypto.createHash('sha1').update(title + '|' + (consoleName || '') + (first === 'en' ? '|en' : '')).digest('hex') + '.json');
   try { const c = JSON.parse(fs.readFileSync(file, 'utf-8')); if (!net.isOnline() || Date.now() - c.t < 30 * 864e5) return { ok: true, ...c.data }; } catch { /* pas en cache */ }
   if (!net.isOnline()) return { ok: false, offline: true };
   try {
     const clean = title.replace(/\s*[([].*?[)\]]/g, '').trim();
-    const data = (await wikiFind('fr', clean, consoleName)) || (await wikiFind('en', clean, consoleName)) || { none: true };
+    const data = (await wikiFind(first, clean, consoleName)) || (await wikiFind(second, clean, consoleName)) || { none: true };
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify({ t: Date.now(), data }));
     return { ok: true, ...data };
@@ -1048,7 +1051,7 @@ function launchUpdater(src) {
 }
 ipcMain.handle('update:pick', async () => {
   if (!canUpdate()) return { ok: false, error: "disponible seulement dans l'application installée (pas en mode développement)" };
-  const r = await dialog.showOpenDialog(win, { title: 'Choisir le nouvel app.asar', properties: ['openFile'], filters: [{ name: 'app.asar', extensions: ['asar'] }] });
+  const r = await dialog.showOpenDialog(win, { title: L('Choisir le nouvel app.asar', 'Choose the new app.asar'), properties: ['openFile'], filters: [{ name: 'app.asar', extensions: ['asar'] }] });
   if (r.canceled) return { ok: false, canceled: true };
   try {
     const files = asarFiles(r.filePaths[0]);

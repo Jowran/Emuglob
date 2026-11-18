@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Emuglob</title>
+<script src="i18n.js"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https://media.retroachievements.org https://static.retroachievements.org https://retroachievements.org; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
 <style>
   :root { --t:clamp(110px,9vw,150px); --T:clamp(200px,17.3vw,290px); --muted:#b9b4d4; --glass:rgba(24,18,48,.6); --glow:rgba(95,180,255,.75); }
@@ -121,6 +122,21 @@
   .fr img.b { width:48px; height:48px; border-radius:8px; flex:none; background:#2a2350; }
   .fr .tx { flex:1; min-width:0; } .fr small { display:block; color:var(--muted); }
   .fr .pts { color:#ffc83d; font-weight:700; white-space:nowrap; }
+  .subt { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:600; background:color-mix(in srgb, var(--acc) 40%, transparent); color:#fff; vertical-align:1px; }
+  .frh { margin:6px 0 12px; font-size:18px; } .frh small { color:var(--muted); font-weight:400; font-size:13px; margin-left:8px; }
+  .fgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; margin-bottom:26px; }
+  .fcard { padding:14px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .fcard.live { border-color:color-mix(in srgb, #3ddc84 55%, transparent); background:linear-gradient(160deg, rgba(61,220,132,.12), rgba(255,255,255,.05) 60%); }
+  .fhead { display:flex; gap:12px; align-items:center; } .fhead b { display:block; font-size:15px; }
+  .fcard .fa { width:42px; height:42px; border-radius:50%; background:#3a2a6a center/cover; flex:none; position:relative; }
+  .fcard .fa i { position:absolute; right:-1px; bottom:-1px; width:12px; height:12px; border-radius:50%; background:#6b6690; border:2px solid #1a1440; }
+  .fcard.live .fa i { background:#3ddc84; box-shadow:0 0 8px #3ddc84; }
+  .fst { font-size:12px; color:var(--muted); } .fst.on { color:#3ddc84; font-weight:600; }
+  .fgame { display:flex; gap:10px; align-items:center; cursor:pointer; border-radius:8px; margin:-4px; padding:4px; } .fgame:hover { background:rgba(255,255,255,.07); } .fgame img { width:40px; height:40px; border-radius:8px; flex:none; background:#2a2350; }
+  .fgame div { min-width:0; } .fgame b { display:block; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .fgame small, .flast small { color:var(--muted); font-size:12px; }
+  .frp { font-size:12.5px; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,.22); overflow-wrap:anywhere; }
+  .flast { display:flex; gap:8px; align-items:center; } .flast img { width:24px; height:24px; border-radius:5px; flex:none; }
+  body.light .fcard { background:rgba(255,255,255,.7); border-color:#e3e6ee; } body.light .frp { background:rgba(0,0,0,.05); } body.light .fcard .fa i { border-color:#fff; }
   .ach { display:flex; gap:14px; align-items:center; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.07); margin-bottom:8px; }
   .ach.lock { opacity:.45; }
   .ach img { width:56px; height:56px; border-radius:8px; flex:none; background:#2a2350; }
@@ -528,7 +544,7 @@
   <div class="ftabs-wrap" id="f-tabs-wrap"><button class="farr l" id="f-tl" title="Précédent">‹</button><div class="ftabs" id="f-tabs"></div><button class="farr r" id="f-tr" title="Suivant">›</button></div>
   <div class="fstage" id="f-stage"><div class="floor"></div><div id="f-items"></div></div>
   <div class="finfo">
-    <div id="f-title"></div>
+    <div id="f-title" translate="no"></div>
     <div id="f-sub"></div>
     <div id="prog"></div>
     <div class="actions"><button class="btn" id="btn-play">Jouer</button><button class="btn round" id="btn-sheet" title="Fiche du jeu (touche I)"><i data-ic="list"></i></button><button class="btn round" id="btn-rand" title="Jeu au hasard (touche R)"><i data-ic="dice"></i></button><button class="btn round" id="btn-more" title="Options"><i data-ic="more"></i></button><button class="btn round" id="btn-sort" title="Trier / filtrer"><i data-ic="sort"></i></button></div>
@@ -552,7 +568,7 @@
 </div>
 
 <div id="game" hidden>
-  <div id="gbar"><b id="g-title"></b><span id="g-state"></span><span class="sp"></span>
+  <div id="gbar"><b id="g-title" translate="no"></b><span id="g-state"></span><span class="sp"></span>
     <span id="g-volw" hidden><button id="g-mute" title="Couper / remettre le son"><i data-ic="volume"></i></button><input id="g-vol" type="range" min="0" max="100" step="1" value="100" title="Volume de l'émulateur"><b id="g-voln">–</b></span>
     <button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
     <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
@@ -863,6 +879,7 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/>',
   gear: gearPath(),
   plus: '<path d="M12 5v14M5 12h14"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.7 5.7 3.7 9s-1.2 6.3-3.7 9c-2.5-2.7-3.7-5.7-3.7-9S9.5 5.7 12 3z"/>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   gamepad: '<rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="16" cy="11.5" r=".8" fill="currentColor"/><circle cx="18.6" cy="13.8" r=".8" fill="currentColor"/>',
   power: '<path d="M12 3v8"/><path d="M18.4 6.6a8.5 8.5 0 1 1-12.8 0"/>',
@@ -1554,16 +1571,28 @@ function presence(g) {
   const txt = (s) => { s = String(s); return (s.length < 2 ? s + '  ' : s).slice(0, 128); };
   const st = stats(g);
   const a = { type: 0, status_display_type: 2, details: txt(g.title), timestamps: { start: playStart || Date.now() },
-    state: txt(labelOf(g) + (st && st.total ? ` · ${st.got.length}/${st.total} succès` : '')) };
+    state: txt(labelOf(g) + (st && st.total ? ` · ${st.got.length}/${st.total} ${T('succès')}` : '')) };
   const img = g.thumbUrl || (g.raBox ? RAM + g.raBox : g.raIcon ? RAM + g.raIcon : '');
-  const assets = {};
-  if (img) { assets.large_image = img; assets.large_text = txt(g.title); }
+  // jaquette du jeu (lien https) sinon le logo Emuglob (asset « emuglob » de l'application Discord) ; logo en petit si pas de compte RA
+  const assets = { large_image: img || 'emuglob', large_text: txt(g.title) };
   if (profile && profile.UserPic && cfg.ra && cfg.ra.user) { assets.small_image = RAM + profile.UserPic; assets.small_text = txt(cfg.ra.user + (profile.TotalPoints ? ` · ${profile.TotalPoints} pts` : '')); }
-  if (Object.keys(assets).length) a.assets = assets;
-  if (g.raId > 0) a.buttons = [{ label: 'Voir sur RetroAchievements', url: `https://retroachievements.org/game/${g.raId}` }];
+  else if (img) { assets.small_image = 'emuglob'; assets.small_text = 'Emuglob'; }
+  a.assets = assets;
+  if (g.raId > 0) a.buttons = [{ label: T('Voir sur RetroAchievements'), url: `https://retroachievements.org/game/${g.raId}` }];
   return api.discord(on, a, id);
 }
 const dcOn = () => !cfg.discord || cfg.discord.on !== false;
+// langue choisie (ou celle du système) : retenue pour le prochain démarrage ; vrai = la fenêtre doit être rechargée
+const langPick = () => (cfg.lang === 'fr' || cfg.lang === 'en' ? cfg.lang : 'auto');
+async function setLang(v) {
+  if (langPick() === v) return;
+  cfg.lang = v; await save();
+  if (applyLang()) { try { sessionStorage.setItem('emuglob-reopen', 'lang'); } catch { /* rien */ } location.reload(); } else if (mode === 'settings') drawSetPane();
+}
+function applyLang() {
+  const want = cfg.lang === 'fr' || cfg.lang === 'en' ? cfg.lang : sysLang();
+  try { localStorage.setItem('emuglob-lang', want); return want !== LANG && localStorage.getItem('emuglob-lang') === want; } catch { return false; }   // sans stockage : pas de rechargement en boucle
+}
 
 /* ---------- bibliothèque (par console, sections repliables) ---------- */
 function openLibrary(focusSearch) {
@@ -1589,7 +1618,7 @@ function renderLib() {
     const open = q ? true : (k in cfg.open ? cfg.open[k] : idx === 0);
     return `<div class="lhead" tabindex="0" data-k="${esc(k)}" data-open="${open ? 1 : 0}"><span class="ch">${ic(open ? 'down' : 'right')}</span>${esc(k)} <small>${gs.length} jeu(x)</small></div>` +
       (open ? '<div class="lgrid">' + gs.sort((a, b) => a.title.localeCompare(b.title)).map((g) =>
-        `<div class="lcard" tabindex="0" data-id="${g.id}" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}<div class="lt">${esc(g.title)}</div></div>`).join('') + '</div>' : '');
+        `<div class="lcard" tabindex="0" data-id="${g.id}" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}<div class="lt" translate="no">${esc(g.title)}</div></div>`).join('') + '</div>' : '');
   }).join('') : '<p class="muted">Aucun jeu.</p>';
 }
 function setAllOpen(v) {
@@ -1608,20 +1637,29 @@ function closeOv() {
 /* ---------- fiche de jeu : infos RetroAchievements, résumé Wikipédia, durée de vie (temps médians RA) ---------- */
 const sheetX = {};   // données chargées par jeu : { gp: GetGameProgression, wiki }
 const fmtH = (sec) => { const h = sec / 3600; return h < 1 ? Math.max(1, Math.round(sec / 60)) + ' min' : (h < 10 ? Math.round(h * 2) / 2 : Math.round(h)).toString().replace('.', ',') + ' h'; };
-const dayFr = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
-async function openSheet(g = cur()) {
+const dayFr = (t) => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+let sheetFrom = '';
+const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); };
+async function openSheet(g = cur(), from = '') {
   if (!g) return;
   closeOv();
+  sheetFrom = from;
+  if (from === 'friends') setTop('fr');
   mode = 'sheet'; sheetGame = g; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
-  if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
+  if (g.virtual && raOn()) jobs.push((async () => {   // jeu d'un ami, absent de la bibliothèque : tout vient de RetroAchievements
+    await loadProg(g);
+    if (!x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
+    if (g.friend && x.fpUser !== g.friend) { const r = await api.ra('GetGameInfoAndUserProgress', { g: g.raId, u: g.friend }, 60); if (r.ok && r.data) { x.fp = r.data; x.fpUser = g.friend; } }
+  })());
+  else if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
     if (g.raId > 0 && !x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
   }));
   if (!x.wiki || x.wiki.error) jobs.push((async () => {
     const p = g.raId > 0 && prog[g.raId] && prog[g.raId].data;
-    const r = await api.wiki(g.raTitle || (p && p.Title) || g.title, p ? p.ConsoleName : labelOf(g));
+    const r = await api.wiki(g.raTitle || (p && p.Title) || g.title, p ? p.ConsoleName : labelOf(g), LANG);
     x.wiki = r && r.ok ? r : { none: true, error: r && (r.offline ? 'hors ligne' : r.error) };
   })());
   for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) renderSheet(); }).catch(() => {});
@@ -1629,15 +1667,16 @@ async function openSheet(g = cur()) {
 let sheetGame = null;
 function renderSheet() {
   const g = sheetGame; if (!g) return;
-  const x = sheetX[g.id] || {}, p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), gp = x.gp, emu = emuOf(g);
+  const x = sheetX[g.id] || {}, p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), gp = x.gp, emu = g.virtual ? null : emuOf(g);
+  const fp = x.fpUser === g.friend ? x.fp : null, fGot = fp && fp.Achievements ? Object.values(fp.Achievements).filter((a) => a.DateEarned || a.DateEarnedHardcore) : null;
   const year = p && p.Released ? p.Released.slice(0, 4) : '';
   const who = [year, p && p.Publisher, p && p.Developer && p.Developer !== p.Publisher ? p.Developer : ''].filter(Boolean).join(' · ');
   const genres = p && p.Genre ? p.Genre.split(/,\s*/).filter(Boolean) : [];
   const art = artUrl(g);
   const w = x.wiki;
   const sum = !w ? '<span class="sh-load">Recherche du résumé…</span>'
-    : w.text ? `${esc(w.text)} ${w.url ? `<a data-wiki="${esc(w.url)}">Lire la suite</a>` : ''}`
-    : `<span class="sh-load">${w.error === 'hors ligne' ? 'Résumé indisponible hors ligne.' : w.error ? 'Résumé indisponible pour le moment.' : 'Pas de résumé trouvé sur Wikipédia.'}</span>`;
+    : w.text ? `<span translate="no">${esc(w.text)}</span> ${w.url ? `<a data-wiki="${esc(w.url)}">Lire la suite</a>` : ''}`
+    : `<span class="sh-load">${w.error === 'hors ligne' ? 'Résumé indisponible hors ligne.' : w.error ? 'Résumé indisponible pour le moment.' : 'Pas de résumé trouvé.'}</span>`;
   const hl = gp ? [['Histoire principale', gp.MedianTimeToBeatHardcore || gp.MedianTimeToBeat], ['Tous les succès (softcore)', gp.MedianTimeToComplete], ['Maîtrise (hardcore)', gp.MedianTimeToMaster]].filter(([, v]) => v > 0) : [];
   const hmax = Math.max(1, ...hl.map(([, v]) => v));
   const shots = p ? [p.ImageTitle, p.ImageIngame].filter((u) => u && !/000002\.png$/.test(u)) : [];
@@ -1647,7 +1686,7 @@ function renderSheet() {
     const date = (a) => a.DateEarned || a.DateEarnedHardcore;
     const last = [...s.got].sort((a, b) => date(b).localeCompare(date(a)))[0];
     const next = s.all.filter((a) => !date(a)).sort((a, b) => (b.NumAwarded || 0) - (a.NumAwarded || 0)).slice(0, last ? 4 : 5);
-    const rare = (a) => (players ? ` · ${(Math.round((1000 * (a.NumAwarded || 0)) / players) / 10).toString().replace('.', ',')} % des joueurs` : '');
+    const rare = (a) => (players ? ` · ${(Math.round((1000 * (a.NumAwarded || 0)) / players) / 10).toString().replace('.', LANG === 'en' ? '.' : ',')} % des joueurs` : '');
     const row = (a, lock, sub) => `<div class="sh-ach"><img src="${RAM}/Badge/${esc(a.BadgeName)}${lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(a.Title)}</b><small>${esc(sub)}</small></div></div>`;
     ach = (last ? row(last, false, 'Débloqué le ' + dayFr(date(last).replace(' ', 'T'))) : '') + next.map((a) => row(a, true, a.Description + rare(a))).join('');
   }
@@ -1656,34 +1695,37 @@ function renderSheet() {
   $('#sh-body').innerHTML = `<div class="sh">
   <div>
     <div class="sh-cov ${g.cover || g.thumb ? 'ct' : ''}" style="${art ? `background-image:url('${art.replace(/'/g, '%27')}')` : ''}"></div>
-    <div class="sh-btns"><button class="btn p" data-sh="play">▶ Jouer</button><button class="btn" data-sh="fav" title="Favori">${ic('star')}</button><button class="btn" data-sh="menu" title="Options">${ic('more')}</button></div>
+    ${g.virtual ? `<div class="sh-btns"><button class="btn" disabled style="opacity:.6;cursor:default">Pas dans ta bibliothèque</button></div>
+      ${g.friend ? `<div class="sh-card"><h4 translate="no">${esc(g.friend)}</h4>${!fp ? '<div class="sh-load">Chargement…</div>' : `<div class="sh-prog"><b>${fGot.length} / ${fp.NumAchievements || Object.keys(fp.Achievements || {}).length}</b><span class="sh-sub">succès</span></div>
+        <div class="sh-bar"><i style="width:${fp.NumAchievements ? Math.round((100 * fGot.length) / fp.NumAchievements) : 0}%"></i></div>${g.rp ? `<div class="sh-src">${esc(g.rp)}</div>` : ''}`}</div>` : ''}`
+    : `<div class="sh-btns"><button class="btn p" data-sh="play">▶ Jouer</button><button class="btn" data-sh="fav" title="Favori">${ic('star')}</button><button class="btn" data-sh="menu" title="Options">${ic('more')}</button></div>
     <div class="sh-card"><h4>Ma partie</h4><div class="sh-kv">
       <div><b>${g.playSeconds >= 60 ? fmtDur(g.playSeconds) : '–'}</b><span>Temps de jeu</span></div><div><b>${g.playCount || 0}</b><span>Parties</span></div>
-      <div><b>${g.lastPlayed ? ago(g.lastPlayed) : 'Jamais'}</b><span>Dernière fois</span></div><div><b>${g.added ? dayFr(g.added) : '–'}</b><span>Ajouté le</span></div></div></div>
+      <div><b>${g.lastPlayed ? ago(g.lastPlayed) : 'Jamais'}</b><span>Dernière fois</span></div><div><b>${g.added ? dayFr(g.added) : '–'}</b><span>Ajouté le</span></div></div></div>`}
   </div>
   <div>
-    <div class="sh-sub">${esc(labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
-    <h1>${esc(g.title)}</h1>
+    <div class="sh-sub">${esc(g.virtual ? (p && p.ConsoleName) || g.raConsole || '' : labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
+    <h1 translate="no">${esc(g.title)}</h1>
     ${who ? `<div class="sh-sub">${esc(who)}</div>` : ''}
     ${genres.length || g.favorite ? `<div class="sh-tags">${genres.map((t, i) => `<span class="${i ? '' : 'c'}">${esc(t)}</span>`).join('')}${g.favorite ? '<span>★ Favori</span>' : ''}</div>` : '<div style="height:18px"></div>'}
     <p class="sh-sum">${sum}</p>
-    ${w && w.text ? `<div class="sh-src">Résumé : Wikipédia${w.lang === 'en' ? ' (en anglais, pas de page en français)' : ''}, licence CC BY-SA</div>` : ''}
+    ${w && w.text ? `<div class="sh-src">Résumé : Wikipédia${w.lang !== LANG ? (LANG === 'en' ? ' (en français, pas de page en anglais)' : ' (en anglais, pas de page en français)') : ''}, licence CC BY-SA</div>` : ''}
     ${hl.length ? `<div class="sh-hl">${hl.map(([t, v]) => `<div><b>${fmtH(v)}</b><span>${t}</span><div class="sh-bar"><i style="width:${Math.round((100 * v) / hmax)}%"></i></div></div>`).join('')}</div>
       <div class="sh-src">Durée de vie : temps médian des joueurs RetroAchievements</div>` : ''}
     ${shots.length ? `<div class="sh-shots">${shots.map((u) => `<img src="${RAM}${esc(u)}" alt="" onerror="this.remove()">`).join('')}</div><div class="sh-src">Captures : RetroAchievements</div>` : ''}
   </div>
   <div class="sh-side">
     ${!raOn() ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.</div></div>'
-      : !raSys(g) ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Pas de succès RetroAchievements pour cette console.</div></div>'
+      : !g.virtual && !raSys(g) ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Pas de succès RetroAchievements pour cette console.</div></div>'
       : g.raId === -1 ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Jeu non reconnu par RetroAchievements. Renseigne son ID dans Options, Modifier.</div></div>'
       : !s ? '<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-load">Chargement…</div></div>'
-      : `<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
-        <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString('fr-FR')} joueurs sur RetroAchievements</div>` : ''}</div>
+      : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
+        <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString(LOC)} joueurs sur RetroAchievements</div>` : ''}</div>
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
-    <div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>
+    ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
 }
-$('#sh-close').onclick = () => closeOv();
+$('#sh-close').onclick = () => closeSheet();
 $('#sh-body').onclick = (e) => {
   const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
   const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
@@ -1757,7 +1799,7 @@ async function openProfile() {
 function renderPro() {
   const { p, a, games, total, err } = proData;
   if (!p && !a) { $('#pro-body').innerHTML = localStatsHTML() + `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`; return; }
-  const num = (v) => (v === undefined || v === null ? '–' : Number(v).toLocaleString('fr-FR'));
+  const num = (v) => (v === undefined || v === null ? '–' : Number(v).toLocaleString(LOC));
   const kind = (x) => x.HighestAwardKind || x.highestAwardKind || '';
   const finished = games.filter((x) => kind(x)).length;
   const mastered = a ? (a.MasteryAwardsCount || 0) + (a.CompletionAwardsCount || 0) : games.filter((x) => /mastered|completed/.test(kind(x))).length;
@@ -1849,7 +1891,7 @@ async function openBackups() {
   const d = $('#dlg-bak');
   const list = await api.backupsList();
   $('#bk-list').innerHTML = list.length
-    ? list.map((b) => `<div class="mrow"><span>${esc(new Date(b.mtime).toLocaleString('fr-FR'))} · ${b.games === null ? 'illisible' : b.games + ' jeu(x)'}</span><button data-r="${esc(b.name)}" ${b.games === null ? 'disabled' : ''}>Restaurer</button></div>`).join('')
+    ? list.map((b) => `<div class="mrow"><span>${esc(new Date(b.mtime).toLocaleString(LOC))} · ${b.games === null ? 'illisible' : b.games + ' jeu(x)'}</span><button data-r="${esc(b.name)}" ${b.games === null ? 'disabled' : ''}>Restaurer</button></div>`).join('')
     : '<p class="muted">Aucune sauvegarde pour l\'instant.</p>';
   $('#bk-list').onclick = async (e) => {
     const b = e.target.closest('[data-r]');
@@ -1869,7 +1911,7 @@ async function openBackups() {
 async function openUpdate() {
   const d = $('#dlg-upd');
   const info = await api.appInfo();
-  $('#up-ver').textContent = 'Version installée : ' + (info.version || '?') + (info.built ? ' (' + new Date(info.built).toLocaleString('fr-FR') + ')' : '');
+  $('#up-ver').textContent = 'Version installée : ' + (info.version || '?') + (info.built ? ' (' + new Date(info.built).toLocaleString(LOC) + ')' : '');
   const check = async () => {
     $('#up-st').textContent = 'Recherche de mises à jour…'; $('#up-install').hidden = $('#up-web').hidden = $('#up-notes').hidden = true;
     const u = await api.updateCheck();
@@ -1928,11 +1970,11 @@ function localStatsHTML() {
   const dur = (v) => (v >= 60 ? fmtDur(v) : '–');
   const cards = [['Temps de jeu total', dur(total)], ['Cette semaine', ses.length ? dur(since(7 * day)) : '–'], ['Ce mois-ci', ses.length ? dur(since(30 * day)) : '–'],
     ['Parties lancées', launches], ['Jeux lancés', `${played} / ${gs.length}`], ['Durée moyenne', launches && total >= 60 ? fmtDur(total / launches) : '–']];
-  const lastTxt = last ? `${esc(lastG ? lastG.title : 'Jeu retiré')} · ${fmtDur(last.s)} · ${new Date(last.end).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}`
-    : recent ? `${esc(recent.title)} · ${new Date(recent.lastPlayed).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}` : '';
-  return '<h3>Mon temps de jeu</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString('fr-FR') : v}</b><small>${t}</small></div>`).join('') + '</div>' +
+  const lastTxt = last ? `${esc(lastG ? lastG.title : 'Jeu retiré')} · ${fmtDur(last.s)} · ${new Date(last.end).toLocaleString(LOC, { dateStyle: 'medium', timeStyle: 'short' })}`
+    : recent ? `${esc(recent.title)} · ${new Date(recent.lastPlayed).toLocaleString(LOC, { dateStyle: 'medium', timeStyle: 'short' })}` : '';
+  return '<h3>Mon temps de jeu</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString(LOC) : v}</b><small>${t}</small></div>`).join('') + '</div>' +
     (lastTxt ? `<h3>Dernière partie</h3><div class="ach"><div class="tx"><b>${lastTxt.split(' · ')[0]}</b><small>${lastTxt.split(' · ').slice(1).join(' · ')}</small></div></div>` : '') +
-    (top.length ? '<h3>Jeux les plus joués</h3>' + top.map((g, i) => `<div class="ach"><div class="tx"><b>${i === 0 ? '★ ' : ''}${esc(g.title)}</b><small>${esc(labelOf(g))} · ${fmtDur(g.playSeconds)}${g.playCount ? ' · ' + g.playCount + ' partie(s)' : ''}</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * g.playSeconds) / top[0].playSeconds)}%"></i></div></div></div>`).join('') : '') +
+    (top.length ? '<h3>Jeux les plus joués</h3>' + top.map((g, i) => `<div class="ach"><div class="tx"><b translate="no">${i === 0 ? '★ ' : ''}${esc(g.title)}</b><small>${esc(labelOf(g))} · ${fmtDur(g.playSeconds)}${g.playCount ? ' · ' + g.playCount + ' partie(s)' : ''}</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * g.playSeconds) / top[0].playSeconds)}%"></i></div></div></div>`).join('') : '') +
     (cons.length ? '<h3>Temps par console</h3>' + cons.map(([k, v]) => `<div class="ach"><div class="tx"><b>${esc(k)}</b><small>${fmtDur(v)} · ${Math.round((100 * v) / total)} %</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div></div>`).join('') : '') +
     (!ses.length ? '<p class="muted" style="font-size:12px">Les stats « cette semaine » et « ce mois-ci » se remplissent à partir de ta prochaine partie.</p>' : '') +
     '<h3>RetroAchievements</h3>';
@@ -2004,7 +2046,7 @@ function openTabsDlg() {
   refresh(); d.showModal();
 }
 // Paramètres rangés par thème : chaque tuile ouvre une fenêtre courte
-const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', inst:'Installation', ctl:'Contrôles', look:'Apparence', acc:'Comptes', sys:'Système' };
+const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', inst:'Installation', ctl:'Contrôles', look:'Apparence', acc:'Comptes', lang:'Langue', sys:'Système' };
 const SET_ITEMS = [
   { g:'lib', ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { g:'lib', ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
@@ -2024,6 +2066,9 @@ const SET_ITEMS = [
   { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
   { g:'acc', ic:'user', t:'Discord', get s() { return dcOn() ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
   { g:'jeu', ic:'folder', t:'Rechercher des sauvegardes', s:'Retrouver tes anciennes saves de jeux', act:() => openFindSaves() },
+  { g:'lang', ic:'globe', t:'Automatique', get s() { return (langPick() === 'auto' ? '✓ Utilisée · ' : '') + 'Langue de Windows'; }, act:() => setLang('auto'), keep:true },
+  { g:'lang', ic:'globe', t:'Français', get s() { return langPick() === 'fr' ? '✓ Utilisée' : 'Interface en français'; }, act:() => setLang('fr'), keep:true },
+  { g:'lang', ic:'globe', t:'English', get s() { return langPick() === 'en' ? '✓ Utilisée' : 'Interface en anglais'; }, act:() => setLang('en'), keep:true },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
@@ -2040,7 +2085,7 @@ function openSettingsPanel() {
   drawSetPane();
   $('.snav.on').focus();
 }
-const SET_ICON = { lib:'list', jeu:'gamepad', inst:'download', ctl:'gamepad', look:'star', acc:'user', sys:'shield' };
+const SET_ICON = { lib:'list', jeu:'gamepad', inst:'download', ctl:'gamepad', look:'star', acc:'user', lang:'globe', sys:'shield' };
 let setSec = 'lib';
 function drawSetPane() {
   $('#spane').innerHTML = `<h3>${SET_GROUPS[setSec]}</h3><div class="slist">`
@@ -2049,46 +2094,98 @@ function drawSetPane() {
 }
 const navSel = () => (mode === 'settings' ? '.snav, .sset' : '.lcard, .lhead');
 
-/* ---------- amis RetroAchievements ---------- */
-let friends = null, feed = [], frState = '';
+/* ---------- amis RetroAchievements : activité (en jeu, rich presence) + derniers succès ---------- */
+let friends = null, feed = [], frState = '', frTimer = 0, frBusy = false;
+const raDate = (d) => (d ? Date.parse(String(d).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(d) ? '' : 'Z')) : 0);   // dates RA = UTC
+const FR_LIVE = 5 * 60000;   // rich presence de moins de 5 min = en jeu (RALibretro l'envoie toutes les ~2 min)
 async function loadFriends(force) {
-  frState = 'Chargement des amis…'; renderFr();
-  const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 120);
-  if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
-  const res = (r.data && (r.data.Results || r.data.results)) || [];
-  friends = res.map((f) => ({ user: f.User || f.user })).filter((f) => f.user);
-  feed = [];
-  const list = friends.slice(0, 40);
-  let i = 0;
-  const worker = async () => {
-    while (i < list.length) {
-      const f = list[i++];
-      const a = await api.ra('GetUserRecentAchievements', { u: f.user, m: 20160 }, force ? 0 : 120);
-      if (a.ok && Array.isArray(a.data)) a.data.forEach((x) => feed.push({ ...x, friend: f.user }));
-    }
-  };
-  await Promise.all([worker(), worker(), worker(), worker()]);
-  feed.sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
-  feed = feed.slice(0, 100);
-  frState = '';
+  if (frBusy) return;
+  frBusy = true;
+  if (!friends) { frState = 'Chargement des amis…'; renderFr(); }
+  try {
+    const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 300);
+    if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
+    const res = (r.data && (r.data.Results || r.data.results)) || [];
+    const prev = new Map((friends || []).map((f) => [f.user, f]));
+    const list = res.map((f) => f.User || f.user).filter(Boolean).slice(0, 40).map((u) => prev.get(u) || { user: u });
+    let i = 0;
+    const worker = async () => {
+      while (i < list.length) {
+        const f = list[i++];
+        // GetUserSummary ne renvoie les succès que des jeux « récemment joués » : un succès de subset (autre ID de jeu) en était absent.
+        // Les succès viennent donc de GetUserRecentAchievements (14 jours, tous jeux confondus, subsets compris).
+        const [a, ra] = await Promise.all([api.ra('GetUserSummary', { u: f.user, g: 1, a: 0 }, force ? 0 : 50), api.ra('GetUserRecentAchievements', { u: f.user, m: 20160 }, force ? 0 : 110)]);
+        if (!a.ok || !a.data) continue;
+        const d = a.data, last = d.LastGame || (d.RecentlyPlayed || [])[0] || null;
+        const rpAt = raDate(d.RichPresenceMsgDate);
+        const ach = (ra.ok && Array.isArray(ra.data) ? ra.data : []).map((x) => ({ ...x, friend: f.user, at: raDate(x.Date), ...splitSubset(x.GameTitle) }));
+        ach.sort((x, y) => y.at - x.at);
+        Object.assign(f, { pic: d.UserPic, rp: d.RichPresenceMsg || '', rpAt, status: d.Status || '', game: last ? { id: last.ID || last.GameID, title: last.Title, console: last.ConsoleName, icon: last.ImageIcon } : null,
+          playedAt: raDate((d.RecentlyPlayed || [])[0] && d.RecentlyPlayed[0].LastPlayed), ach, stale: !!a.stale });
+        f.live = /online/i.test(f.status) || (rpAt && Date.now() - rpAt < FR_LIVE);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    friends = list;
+    const since = Date.now() - 14 * 864e5;
+    feed = list.flatMap((f) => f.ach || []).filter((x) => x.at > since).sort((x, y) => y.at - x.at).slice(0, 100);
+    frState = '';
+  } finally { frBusy = false; }
+}
+// « Jeu [Subset - Bonus] » → jeu principal + nom du subset (set secondaire RetroAchievements, avec son propre ID de jeu)
+const splitSubset = (t) => { const m = /^(.*?)\s*\[Subset\s*-\s*(.+?)\]\s*$/i.exec(t || ''); return m ? { base: m[1], subset: m[2] } : { base: t || '', subset: '' }; };
+const subTag = (x) => (x.subset ? `<span class="subt" title="Set secondaire RetroAchievements">Subset · ${esc(x.subset)}</span>` : '');
+const agoMs = (t) => {
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`;
+};
+const friendCard = (f) => {
+  const seen = Math.max(f.rpAt || 0, f.playedAt || 0);
+  const st = f.live ? '<span class="fst on">En jeu</span>' : `<span class="fst">${seen ? 'Vu ' + agoMs(seen) : 'Hors ligne'}</span>`;
+  const g = f.game;
+  const lastA = (f.ach || [])[0];
+  return `<div class="fcard ${f.live ? 'live' : ''}">
+    <div class="fhead"><div class="fa" style="background-image:url('${RAM}${esc(f.pic || '/UserPic/' + encodeURIComponent(f.user) + '.png')}')"><i></i></div><div><b translate="no">${esc(f.user)}</b>${st}</div></div>
+    ${g ? `<div class="fgame" data-fg="${esc(f.user)}" title="Voir la fiche du jeu"><img src="${RAM}${esc(g.icon || '')}" alt="" onerror="this.style.visibility='hidden'"><div><b translate="no">${esc(g.title || '')}</b><small>${esc(g.console || '')}${f.live ? '' : ' · dernier jeu'}</small></div></div>` : ''}
+    ${f.rp && (f.live || (f.rpAt && Date.now() - f.rpAt < 864e5)) ? `<div class="frp">${esc(f.rp)}</div>` : ''}
+    ${lastA ? `<div class="flast"><img src="${RAM}/Badge/${esc(lastA.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'"><small><b>${esc(lastA.Title)}</b> ${subTag(lastA)} · ${esc(agoMs(lastA.at))}</small></div>` : ''}
+  </div>`;
+};
+function openFriendGame(user) {
+  const f = (friends || []).find((x) => x.user === user); if (!f || !f.game || !f.game.id) return;
+  const mine = cfg.games.find((g) => g.raId === +f.game.id);
+  if (mine) return openSheet(mine, 'friends');
+  openSheet({ id: 'ra-' + f.game.id, title: f.game.title || 'Jeu', raId: +f.game.id, raConsole: f.game.console, virtual: true, friend: f.user, rp: f.live ? f.rp : '', path: '' }, 'friends');
 }
 const friendRow = (a) => `<div class="fr"><div class="fa" style="background-image:url('${RAM}/UserPic/${encodeURIComponent(a.friend)}.png')"></div>
   <img class="b" src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
-  <div class="tx"><b>${esc(a.friend)}</b> a débloqué <b>${esc(a.Title)}</b><small>${esc(a.GameTitle || '')} · ${esc(a.ConsoleName || '')} · ${esc((a.Date || '').slice(0, 16))}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
+  <div class="tx"><b translate="no">${esc(a.friend)}</b> a débloqué <b translate="no">${esc(a.Title)}</b><small>${esc(a.base || a.GameTitle || '')} ${subTag(a)} · ${esc(a.ConsoleName || '')} · ${esc(agoMs(a.at))}${a.HardcoreMode ? '' : ' · softcore'}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
 function renderFr() {
   let body;
   if (frState) body = `<p class="muted">${esc(frState)}</p>`;
-  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leurs succès apparaîtront ici.</p>';
-  else if (!feed.length) body = '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>';
-  else body = `<p class="muted">${friends.length} ami(s) suivi(s) · derniers succès débloqués (14 jours)${friends.length > 40 ? ' · 40 premiers amis' : ''}</p>` + feed.map(friendRow).join('');
+  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.</p>';
+  else if (!friends) body = '';
+  else {
+    const sorted = [...friends].sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || Math.max(b.rpAt || 0, b.playedAt || 0) - Math.max(a.rpAt || 0, a.playedAt || 0));
+    const nLive = friends.filter((f) => f.live).length;
+    const off = friends.some((f) => f.stale);
+    body = `<h3 class="frh">Activité <small>${nLive ? `${nLive} en jeu` : 'personne en jeu'} · ${friends.length} ami(s)${off ? ' · hors ligne, dernières infos connues' : ''}</small></h3>
+      <div class="fgrid">${sorted.map(friendCard).join('')}</div>
+      <h3 class="frh">Derniers succès <small>14 jours</small></h3>` + (feed.length ? feed.map(friendRow).join('') : '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>');
+  }
+  const y = $('#fr-body').scrollTop;
   $('#fr-body').innerHTML = body;
+  $('#fr-body').scrollTop = y;
 }
 async function openFriends() {
   closeOv();
   if (!raOn()) { toast('Renseigne ton pseudo et ta clé API RetroAchievements.'); return openSettings(); }
   mode = 'friends'; setTop('fr'); $('#ov-fr').hidden = false;
+  if (friends) renderFr();
   await loadFriends(false);
   renderFr();
+  clearInterval(frTimer);   // rafraîchissement léger tant que l'onglet est ouvert
+  frTimer = setInterval(async () => { if (mode !== 'friends' || document.hidden) { if (mode !== 'friends') clearInterval(frTimer); return; } await loadFriends(false); if (mode === 'friends') renderFr(); }, 60000);
 }
 
 /* ---------- identification des disques (Wii, GameCube, PS1, PS2, PSP, DS) ---------- */
@@ -2567,7 +2664,7 @@ function renderSearch() {
   box.innerHTML = qList.length ? qList.map((g, i) => {
     const u = artUrl(g);
     const bg = u ? `background-image:url('${esc(u)}')` : `background:hsl(${hue(g.title)},50%,32%)`;
-    return `<div class="qr ${i === 0 ? 'on' : ''}" data-id="${g.id}"><span class="qt" style="${bg}"></span><span class="qx"><b>${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
+    return `<div class="qr ${i === 0 ? 'on' : ''}" data-id="${g.id}"><span class="qt" style="${bg}"></span><span class="qx"><b translate="no">${esc(g.title)}</b><small>${esc(labelOf(g))}</small></span></div>`;
   }).join('') : '<div class="qr none">Aucun jeu trouvé</div>';
   box.hidden = false;
 }
@@ -2664,6 +2761,7 @@ $('#f-stage').addEventListener('wheel', (e) => {
 window.addEventListener('resize', () => { if (mode === 'home') placeFlow(); });
 $('#tab-fr').onclick = openFriends;
 $('#fr-close').onclick = closeOv;
+$('#fr-body').onclick = (e) => { const c = e.target.closest('[data-fg]'); if (c) openFriendGame(c.dataset.fg); };
 $('#fr-refresh').onclick = async () => { await loadFriends(true); renderFr(); };
 $('#lib-less').onclick = () => setAllOpen(false);
 $('#lib-more').onclick = () => setAllOpen(true);
@@ -2717,8 +2815,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'F11') { e.preventDefault(); return setFullscreen(); }
   if (mode === 'game') return;
   if (document.querySelector('dialog[open]')) return;
+  if (e.key === 'Escape' && mode === 'sheet') return closeSheet();
   if (e.key === 'Escape' && mode !== 'home') return closeOv();
-  if (mode === 'sheet' && e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); const g = sheetGame; closeOv(); return launch(g); }
+  if (mode === 'sheet' && e.key === 'Enter' && e.target.tagName !== 'BUTTON' && !sheetGame.virtual) { e.preventDefault(); const g = sheetGame; closeOv(); return launch(g); }
   if (e.target.tagName === 'INPUT') return;
   if (mode === 'home') {
     const k = e.key, kl = k.toLowerCase();
@@ -2768,9 +2867,9 @@ function pad() {
       if (b) closeOv();
     } else if (mode === 'sheet') {
       if (dy) $('#sh-body').scrollBy(0, dy * 40);
-      if (a) { const g = sheetGame; closeOv(); launch(g); }
-      if (y && sheetGame) { toggleFav(sheetGame); renderSheet(); }
-      if (b) closeOv();
+      if (a && !sheetGame.virtual) { const g = sheetGame; closeOv(); launch(g); }
+      if (y && sheetGame && !sheetGame.virtual) { toggleFav(sheetGame); renderSheet(); }
+      if (b) closeSheet();
     } else if (mode === 'trophies' || mode === 'friends' || mode === 'profile') {
       if (dy) $(mode === 'friends' ? '#fr-body' : mode === 'profile' ? '#pro-body' : '#tro-body').scrollBy(0, dy * 40);
       if (b) closeOv();
@@ -2817,7 +2916,7 @@ async function openInstall(id) {
     const st = await api.instStatus(id, emu.exe);
     $('#i-cur').textContent = st.installed ? `${st.version ? 'Version ' + st.version : 'Version inconnue'} · ${st.exe}` : `Non installé (sera placé dans ${st.defaultDir})`;
     if (!st.ok) { $('#i-state').textContent = 'Dernière version introuvable. ' + st.error; return; }
-    $('#i-new').textContent = [`Version ${st.latest}`, st.date && new Date(st.date).toLocaleDateString('fr-FR'), st.asset + (st.size ? ` (${(st.size / 1048576).toFixed(1)} Mo)` : '')].filter(Boolean).join(' · ');
+    $('#i-new').textContent = [`Version ${st.latest}`, st.date && new Date(st.date).toLocaleDateString(LOC), st.asset + (st.size ? ` (${(st.size / 1048576).toFixed(1)} Mo)` : '')].filter(Boolean).join(' · ');
     $('#i-state').textContent = st.upToDate ? `${st.name} est à jour.` : '';
     $('#i-go').textContent = !st.installed ? `Installer ${st.name}` : st.upToDate ? 'Réinstaller' : `Mettre à jour vers ${st.latest}`;
     $('#i-go').disabled = false;
@@ -2865,7 +2964,7 @@ async function findSaves(dirs, files) {
 async function openFindSaves(pre) {
   const d = $('#dlg-fsav');
   let items = [], files = [];
-  const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  const fmt = (t) => new Date(t).toLocaleString(LOC, { dateStyle: 'short', timeStyle: 'short' });
   const kb = (n) => (n < 1024 ? n + ' o' : (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' Ko');
   const draw = () => {
     const by = new Map();
@@ -2933,7 +3032,7 @@ async function findWiiuSaves() {
 }
 function openWiiuSaves(g) {   // copies du dossier de sauvegarde Cemu gardées par Emuglob, avec restauration
   const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });
-  const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+  const fmt = (t) => new Date(t).toLocaleString(LOC, { dateStyle: 'medium', timeStyle: 'short' });
   const draw = async () => {
     const r = await api.wiiuSaveList(q());
     if (r.tid && g.wiiuTid !== r.tid) { g.wiiuTid = r.tid; save(); }
@@ -2994,7 +3093,7 @@ function openCoreDlg(g, emu) {   // jeu lancé sans core installé pour sa conso
 function openCores() {   // section Paramètres : cores par console, installés ou non
   const d = $('#dlg-cores'), emu = cfg.emulators.find((e) => e.id === 'ralibretro');
   let busy = false;
-  const fmt = (t) => new Date(t).toLocaleDateString('fr-FR');
+  const fmt = (t) => new Date(t).toLocaleDateString(LOC);
   const draw = async () => {
     if (!emu.exe || !(await api.filesExist([emu.exe]))[0]) {
       $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
@@ -3067,15 +3166,59 @@ const TUTO = [
     <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
   { ic:'music', t:'Apparence et mises à jour', go:() => openAmbDlg(), h:`<ul><li><b>Thèmes et sons</b> : couleurs selon la console, sons de navigation.</li>
     <li><b>Barre des consoles</b> : horizontale, verticale ou en icônes, ordre et consoles cachées.</li>
-    <li><b>Fond et démarrage</b> : fond d'écran, plein écran (F11), lancement avec Windows.</li>
+    <li><b>Fond et démarrage</b> : fond d'écran, plein écran (F11), lancement avec Windows. <b>Langue</b> : français ou anglais.</li>
     <li><b>Mettre à jour</b> : Emuglob vérifie la dernière version en ligne et se met à jour en un clic. L'ancienne version est gardée.</li></ul>
     <div class="tip">C'est tout ! Bon jeu.</div>` },
+];
+// tutoriel en anglais (mêmes pages, même ordre que TUTO)
+const TUTO_EN = [
+  { t:'Welcome to Emuglob', h:`Emuglob sorts your retro games by console and launches them in the right emulator, with your RetroAchievements, your saves and your play time.
+    <ul><li>Everything works with the <b>keyboard</b>, <b>mouse</b> or <b>controller</b>: arrows or stick to move, A / Enter to confirm, B / Esc to go back.</li>
+    <li>At the top: <b>Games</b>, <b>Friends</b>, <b>Settings</b>, <b>Achievements</b>, and your <b>profile</b> (the circle on the right).</li></ul>
+    <div class="tip">Reopen this tutorial anytime: Settings, System, "Help and tutorial".</div>` },
+  { t:'Add games', h:`<ol><li>Settings, Library: <b>Add games</b> (a few files) or <b>Scan a folder</b> (a whole ROM folder).</li>
+    <li>The console is recognized automatically from the extension (.gba, .sfc, .cue, .iso, .wua, .rpx…), and <b>covers</b> download by themselves.</li>
+    <li>In <b>Maintenance</b>, watched folders add your new games at each startup. You can also remove missing games and duplicates there.</li></ol>
+    <div class="tip">Game recognized wrong: the game's "…" menu, Edit, to change its console or title.</div>` },
+  { t:'Install emulators', h:`<ul><li><b>RALibretro</b> runs most retro consoles (NES, SNES, GBA, Mega Drive, PS1, N64…). Settings, Installation: one click to install or update it.</li>
+    <li><b>PCSX2</b> (PS2) and <b>Cemu</b> (Wii U) install the same way. PCSX2 needs the <b>BIOS from your own PS2</b>, Cemu needs <b>your console's keys</b> for .wud/.wux: none of this is provided.</li>
+    <li>For the others (Dolphin, Azahar…): put them in the <b>emulators</b> folder next to Emuglob.exe (detected automatically), or set their path in Settings, Emulators.</li></ul>` },
+  { t:'Cores', h:`RALibretro needs one <b>core</b> per console: it's the engine that emulates the machine (mGBA for GBA, Snes9x for SNES…).
+    <ul><li>Settings, Installation, <b>RALibretro cores</b>: install, update or delete each core, or "Install basic cores" (one per console).</li>
+    <li>If you launch a game without its core, Emuglob offers to <b>download it and play</b>.</li></ul>` },
+  { t:'Play', h:`<ol><li>Pick a game then <b>Play</b>: the emulator opens with the game.</li>
+    <li>In game, the top bar sets the emulator's <b>volume</b> and its <b>quick settings</b> (resolution, VSync… for Dolphin and PCSX2).</li>
+    <li>Quit the emulator to get back to Emuglob. If the Emuglob window stays hidden: <b>Ctrl + Shift + E</b>.</li>
+    <li>Your <b>play time</b> is counted automatically: click your profile to see it (total, week, per console).</li></ol>
+    <div class="tip">"Launching games" (Settings) sets how the emulator is embedded in Emuglob and how saves are shared.</div>` },
+  { t:'Controls', h:`Settings, <b>Controls</b>: pick the emulator at the top, click an action, then press the key or controller button you want.
+    <ul><li>The <b>drawn controller</b> lights up when you press: you see right away what is assigned.</li>
+    <li>The sticks' <b>dead zone</b> can be set for PCSX2, Dolphin and, in RALibretro, the N64 and DS cores.</li>
+    <li>A .bak copy of the emulator's config is kept. Close the emulator before editing.</li></ul>` },
+  { t:'Saves', h:`<ul><li>"Cartridge" saves (.srm, .sav…) are <b>shared between emulators</b>: Emuglob always gives the newest one to the emulator you launch.</li>
+    <li>Each game has its <b>history</b> (last 20 versions): nothing is ever lost.</li>
+    <li><b>Wii U (Cemu)</b>: the game's save folder is copied into Emuglob after each session. The game's "…" menu, Saves, to see them or restore one.</li>
+    <li><b>Find saves</b> finds the ones you already had elsewhere on the PC and copies them into Emuglob, without touching the originals.</li>
+    <li>Settings, System, <b>Saves</b>: export or restore your library and settings.</li></ul>` },
+  { t:'RetroAchievements', h:`<ol><li>Create a free account on <b>retroachievements.org</b>.</li>
+    <li>In Emuglob, Settings, Accounts, <b>RetroAchievements</b>: your username and your <b>Web API key</b> (on the site: Settings, Keys). Emuglob then shows your points, your achievements and each game's.</li>
+    <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li></ol>
+    <ul><li><b>Hardcore</b>: no save states, rewind or slow motion, but points count fully. <b>Softcore</b>: anything goes, achievements are marked separately.</li>
+    <li>Only ROMs <b>recognized</b> by RetroAchievements (right version, unmodified) have achievements.</li></ul>` },
+  { t:'Profile, friends and Discord', h:`<ul><li><b>Profile</b> (the circle at the top right): play time, most played games, then your RetroAchievements stats.</li>
+    <li><b>Friends</b>: what the people you follow on RetroAchievements are playing.</li>
+    <li><b>Discord</b>: shows the current game on your Discord profile. A simple switch in Settings, Accounts.</li></ul>` },
+  { t:'Appearance and updates', h:`<ul><li><b>Themes and sounds</b>: colors based on the console, navigation sounds.</li>
+    <li><b>Console bar</b>: horizontal, vertical or icons, order and hidden consoles.</li>
+    <li><b>Wallpaper and startup</b>: wallpaper, full screen (F11), launch with Windows. <b>Language</b>: French or English.</li>
+    <li><b>Update</b>: Emuglob checks for the latest version online and updates in one click. The old version is kept.</li></ul>
+    <div class="tip">That's all! Have fun.</div>` },
 ];
 function openTuto(first) {
   const d = $('#dlg-tuto');
   let i = 0;
   const show = () => {
-    const p = TUTO[i];
+    const p = LANG === 'en' ? { ...TUTO[i], ...TUTO_EN[i] } : TUTO[i];
     $('#tu-dots').innerHTML = TUTO.map((_, k) => `<i class="${k <= i ? 'on' : ''}" data-k="${k}"></i>`).join('');
     $('#tu-body').innerHTML = `<div class="tuh">${ic(p.ic)}<div><div class="tun">${i + 1} / ${TUTO.length}</div><h2>${p.t}</h2></div></div>${p.h}`;
     $('#tu-prev').disabled = i === 0;
@@ -3102,6 +3245,8 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
 (async function init() {
   hydrateIcons();
   cfg = await api.loadConfig();
+  if (applyLang()) { location.reload(); return; }
+  try { if (sessionStorage.getItem('emuglob-reopen') === 'lang') { sessionStorage.removeItem('emuglob-reopen'); setTimeout(() => { setSec = 'lang'; openSettingsPanel(); }, 300); } } catch { /* rien */ }
   cfg.games = cfg.games || [];
   cfg.ra = cfg.ra || { user: '', key: '' };
   cfg.emulators = cfg.emulators || [];
@@ -3139,7 +3284,7 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   net();
   window.addEventListener('offline', net);
   window.addEventListener('online', () => { net(); refreshRA(); findThumbs(); loadConsoleIcons(); });   // retour du réseau : on complète ce qui manque
-  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); };
+  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' }); };
   tick(); setInterval(tick, 15000);
   pad();
 })();
