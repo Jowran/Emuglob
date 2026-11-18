@@ -548,7 +548,7 @@ ipcMain.handle('saves:find', (_e, { games, emus, dirs, files }) => {
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
 ipcMain.handle('saves:pickfiles', async () => {
-  const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1));
+  const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1)).concat('dat');   // .dat : seulement à la main (trop de faux positifs pour la recherche auto)
   const r = await dialog.showOpenDialog(win, { title: 'Fichiers de sauvegarde', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Sauvegardes', extensions: exts }, { name: 'Tous', extensions: ['*'] }] });
   return r.canceled ? [] : r.filePaths;
 });

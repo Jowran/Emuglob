@@ -1,11 +1,11 @@
 {
- "built": "2026-11-18T04:02:52Z",
+ "built": "2026-11-18T04:04:57Z",
  "sha256": {
   "discid.js": "c1b71f187f4624d9c97c878ae19f93f3445eae40e1c19bf35d4d4e72e01b729d",
   "discord.js": "2f4c2026480238e527b72fffbfe07f3cb8abc7a3e7acc299944e478f24505d5a",
   "emucfg.js": "1ddcea83f44a2597d5e66acc01e6cb8c58cb4681cfe8bdc3c7bece21b3c6c16d",
   "index.html": "44df56110c67e94b7e2e44b2796fff7d1ec68283647fb5b65fd518be0d52dd3f",
-  "main.js": "438f08d2ddd2d705a935c9fea185b8139e63b8e97a945b3ae07d7643d2d10bb5",
+  "main.js": "b26a9a30feed86f2d1844bbb89f06945aff6fa4fe4d0089dc41457f3a28b0e0d",
   "package.json": "ba5a39a53bff268cce2c314d2d73ef5193168cf7a91b4c4e91b78601a1e0d9d4",
   "preload.js": "7fc9819f57f76e9e6c7f9cab29f093cddb56821c4267985d9f85cf841739fb0c",
   "romhash.js": "af402044c0425a8abe68d8e6451c63edfd30754c63d96d00af9d37bc319a6ed2",
