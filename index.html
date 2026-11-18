@@ -235,6 +235,16 @@
   .corow .ci { color:var(--muted); min-width:170px; text-align:right; } .corow .ci.ok { color:#7fe0a0; }
   .corow button { padding:4px 10px; font-size:12px; }
   #dlg-tuto { width:min(760px, 94vw); }
+  #dlg-cons { width:min(820px, 94vw); }
+  .cs-h { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; } .cs-h h2 { margin:0 0 10px; } #cs-n { font-size:13px; }
+  #cs-q { width:100%; box-sizing:border-box; margin-bottom:10px; }
+  #cs-list { height:min(62vh, 640px); overflow:auto; display:flex; flex-direction:column; gap:4px; scrollbar-width:none; }
+  #cs-list::-webkit-scrollbar { display:none; }
+  .cs-r { display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:10px; cursor:pointer; flex:none; }
+  .cs-r:hover, .cs-r:focus { background:#5b46d6; outline:none; } .cs-r:hover small, .cs-r:focus small, .cs-r:hover .sh-own, .cs-r:focus .sh-own { color:#fff; }
+  .cs-r img { width:40px; height:40px; border-radius:6px; flex:none; }
+  .cs-r > div { flex:1; min-width:0; } .cs-r b { display:block; font-weight:600; } .cs-r small { color:var(--muted); font-size:12px; }
+  .qt.qc { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.1); } .qt.qc svg { width:18px; height:18px; }
   #tu-dots { display:flex; gap:6px; margin-bottom:14px; }
   #tu-dots i { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,.12); cursor:pointer; }
   #tu-dots i.on { background:#ffc83d; }
@@ -709,6 +719,12 @@
   <div class="row"><button id="co-ok" style="margin-right:auto">Fermer</button><button id="co-base" style="background:#5b46d6">Installer les cores de base</button></div>
 </dialog>
 
+<dialog id="dlg-cons">
+  <div class="cs-h"><h2 id="cs-title"></h2><span id="cs-n" class="muted"></span></div>
+  <input id="cs-q" placeholder="Filtrer les jeux…" autocomplete="off" spellcheck="false">
+  <div id="cs-list"></div>
+  <div class="row"><button id="cs-close">Fermer</button></div>
+</dialog>
 <dialog id="dlg-tuto">
   <div id="tu-dots"></div>
   <div id="tu-body"></div>
@@ -1705,7 +1721,7 @@ const sheetX = {};   // données chargées par jeu : { gp: GetGameProgression, w
 const fmtH = (sec) => { const h = sec / 3600; return h < 1 ? Math.max(1, Math.round(sec / 60)) + ' min' : (h < 10 ? Math.round(h * 2) / 2 : Math.round(h)).toString().replace('.', ',') + ' h'; };
 const dayFr = (t) => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 let sheetFrom = '';
-const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); else if (back === 'profile') openProfile(); };
+const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); else if (back === 'profile') openProfile(); else if (back === 'cons' && consName) openConsGames(consName); };
 async function openSheet(g = cur(), from = '') {
   if (!g) return;
   closeOv();
@@ -2894,7 +2910,7 @@ const qNorm = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g
 function loadCatalog() {
   if (raCat || raCatLoad || !raOn()) return;
   raCatLoad = api.raCatalog().then((r) => {
-    if (r && r.ok) raCat = r.games.map(([id, title, cons, icon]) => ({ id, title, cons, icon, n: ' ' + qNorm(title) + ' ', hack: /^~|\[subset/i.test(title) }));
+    if (r && r.ok) raCat = r.games.map(([id, title, cons, icon, ach, pts]) => ({ id, title, cons, icon, ach, pts, n: ' ' + qNorm(title) + ' ', hack: /^~|\[subset/i.test(title) }));
     else raCatLoad = null;   // réessaie au prochain focus
     if (raCat || !r || !r.ok) { if (document.activeElement === $('#q')) renderSearch(); }
   }).catch(() => { raCatLoad = null; });
@@ -2912,6 +2928,18 @@ function raMatches(q) {
   }
   return out.sort((a, b) => a[0] - b[0] || a[1].title.length - b[1].title.length || a[1].title.localeCompare(b[1].title)).map((x) => x[1]);
 }
+// consoles : nom RA ou abréviation courante
+const CONS_ALIAS = { nes: 'NES/Famicom', famicom: 'NES/Famicom', snes: 'SNES/Super Famicom', sfc: 'SNES/Super Famicom', n64: 'Nintendo 64', gb: 'Game Boy', gbc: 'Game Boy Color', gba: 'Game Boy Advance',
+  ds: 'Nintendo DS', nds: 'Nintendo DS', dsi: 'Nintendo DSi', gc: 'GameCube', ngc: 'GameCube', ps1: 'PlayStation', psx: 'PlayStation', ps2: 'PlayStation 2', psp: 'PlayStation Portable', md: 'Genesis/Mega Drive',
+  megadrive: 'Genesis/Mega Drive', sms: 'Master System', gg: 'Game Gear', pce: 'PC Engine/TurboGrafx-16', dc: 'Dreamcast', sat: 'Saturn', vb: 'Virtual Boy', ngp: 'Neo Geo Pocket', ws: 'WonderSwan', a2600: 'Atari 2600', lynx: 'Atari Lynx' };
+let raConsList = null;
+function consMatches(q) {
+  if (!raCat) return [];
+  if (!raConsList) { const m = new Map(); for (const r of raCat) m.set(r.cons, (m.get(r.cons) || 0) + 1); raConsList = [...m].map(([name, n]) => ({ name, n, k: qNorm(name) })); }
+  const k = qNorm(q), flat = k.replace(/ /g, ''), al = CONS_ALIAS[flat];
+  if (k.length < 2) return [];
+  return raConsList.filter((c) => c.name === al || c.k.includes(k) || c.k.replace(/ /g, '').includes(flat)).sort((a, b) => (b.name === al) - (a.name === al) || a.name.localeCompare(b.name)).slice(0, 4);
+}
 function renderSearch() {
   const q = $('#q').value.trim().toLowerCase(), box = $('#q-res');
   if (!q) { box.hidden = true; return; }
@@ -2919,7 +2947,8 @@ function renderSearch() {
   const mine = cfg.games.filter((g) => g.title.toLowerCase().includes(q) || labelOf(g).toLowerCase().includes(q)).sort(alpha).slice(0, 30);
   const seen = new Set(mine.map((g) => g.raId).filter((x) => x > 0));
   const ra = raMatches(q).filter((r) => !seen.has(r.id)).slice(0, 25);
-  qList = [...mine.map((g) => ({ g })), ...ra.map((r) => ({ ra: r }))];
+  const cons = consMatches(q);
+  qList = [...mine.map((g) => ({ g })), ...cons.map((c) => ({ cons: c })), ...ra.map((r) => ({ ra: r }))];
   qSel = 0;
   const rowG = (g, i) => {
     const u = artUrl(g);
@@ -2933,14 +2962,17 @@ function renderSearch() {
   };
   const head = !raOn() ? '' : raCat ? (ra.length ? '<div class="qh">RetroAchievements</div>' : '')
     : raCatLoad ? '<div class="qh">RetroAchievements</div><div class="qr none">Chargement du catalogue RetroAchievements…</div>' : '';
-  box.innerHTML = (mine.length ? mine.map(rowG).join('') : !ra.length && !raCatLoad ? '<div class="qr none">Aucun jeu trouvé</div>' : '')
-    + head + ra.map((r, k) => rowR(r, mine.length + k)).join('');
+  const rowC = (c, i) => `<div class="qr ${i === 0 ? 'on' : ''}" data-i="${i}"><span class="qt sq qc">${ic('list')}</span><span class="qx"><b translate="no">${esc(c.name)}</b><small>${c.n} ${c.n > 1 ? 'jeux' : 'jeu'} RetroAchievements</small></span></div>`;
+  box.innerHTML = (mine.length ? mine.map(rowG).join('') : !ra.length && !cons.length && !raCatLoad ? '<div class="qr none">Aucun jeu trouvé</div>' : '')
+    + (cons.length ? '<div class="qh">Consoles</div>' + cons.map((c, k) => rowC(c, mine.length + k)).join('') : '')
+    + head + ra.map((r, k) => rowR(r, mine.length + cons.length + k)).join('');
   box.hidden = false;
 }
 function pickSearch(it) {
   $('#q').value = ''; $('#q-res').hidden = true; $('#q').blur();
   if (!it) return;
   if (it.g) return focusGame(it.g);
+  if (it.cons) return openConsGames(it.cons.name);
   const r = it.ra, own = cfg.games.find((g) => g.raId === r.id);
   openSheet(own || { id: 'ra-' + r.id, title: r.title, raId: r.id, raConsole: r.cons, raIcon: r.icon || undefined, virtual: true, path: '' }, 'search');
 }
@@ -2959,6 +2991,44 @@ $('#q').onkeydown = (e) => {
 };
 $('#q-res').onmousedown = (e) => e.preventDefault();   // garde le focus dans le champ pendant le clic
 $('#q-res').onclick = (e) => { const r = e.target.closest('.qr'); if (r && r.dataset.i) pickSearch(qList[+r.dataset.i]); };
+
+/* ---------- tous les jeux RetroAchievements d'une console (depuis la recherche) ---------- */
+let consName = '', consRows = [];
+function openConsGames(name) {
+  if (!raCat) return;
+  consName = name;
+  consRows = raCat.filter((r) => r.cons === name).sort((a, b) => a.hack - b.hack || a.title.localeCompare(b.title));
+  $('#cs-title').textContent = name; $('#cs-q').value = '';
+  drawConsGames();
+  const d = $('#dlg-cons'); if (!d.open) d.showModal();
+  $('#cs-q').focus();
+}
+function drawConsGames() {
+  const words = qNorm($('#cs-q').value).split(' ').filter(Boolean);
+  const own = new Set(cfg.games.map((g) => g.raId).filter((x) => x > 0));
+  const list = consRows.filter((r) => words.every((w) => r.n.includes(w)));
+  const nOwn = consRows.filter((r) => own.has(r.id)).length;
+  $('#cs-n').textContent = `${consRows.length} jeux · ${nOwn} dans ta bibliothèque`;
+  $('#cs-list').innerHTML = list.length ? list.map((r) => `<div class="cs-r" tabindex="0" data-cid="${r.id}">
+    <img src="${RAM}${esc(r.icon)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div><b translate="no">${esc(r.title)}</b>${r.ach ? `<small><span>${r.ach} succès</span> · ${r.pts} pts</small>` : ''}</div>
+    ${own.has(r.id) ? '<span class="sh-own on">Dans ta bibliothèque</span>' : ''}</div>`).join('') : '<div class="sh-load" style="padding:12px">Aucun jeu trouvé</div>';
+}
+$('#cs-q').oninput = drawConsGames;
+$('#cs-close').onclick = () => $('#dlg-cons').close();
+$('#cs-list').onclick = (e) => {
+  const row = e.target.closest('[data-cid]'); if (!row) return;
+  const r = consRows.find((x) => x.id === +row.dataset.cid); if (!r) return;
+  $('#dlg-cons').close();
+  const own = cfg.games.find((g) => g.raId === r.id);
+  openSheet(own || { id: 'ra-' + r.id, title: r.title, raId: r.id, raConsole: r.cons, raIcon: r.icon || undefined, virtual: true, path: '' }, 'cons');
+};
+$('#cs-list').onkeydown = (e) => {
+  const row = e.target.closest('[data-cid]'); if (!row) return;
+  if (e.key === 'Enter') { e.preventDefault(); row.click(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling; if (n) n.focus(); else if (e.key === 'ArrowUp') $('#cs-q').focus(); }
+};
+$('#cs-q').onkeydown = (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); const f = $('#cs-list [data-cid]'); if (f) f.focus(); } else if (e.key === 'Enter') { const f = $('#cs-list [data-cid]'); if (f) f.click(); } };
 
 /* ---------- événements ---------- */
 $('#bottom').onclick = (e) => { if (e.target.closest('.btile')) openTrophies(); };
@@ -3446,7 +3516,7 @@ const TUTO = [
     <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li></ol>
     <ul><li><b>Hardcore</b> : pas de sauvegarde d'état, de retour arrière ni de ralenti, mais les points comptent pleinement. <b>Softcore</b> : tout est permis, les succès sont marqués à part.</li>
     <li>Seules les ROMs <b>reconnues</b> par RetroAchievements (bonne version, non modifiée) ont des succès.</li></ul>` },
-  { ic:'search', t:'Rechercher et fiche de jeu', go:() => $('#q').focus(), h:`<ul><li>La <b>barre de recherche</b> (en haut) trouve tes jeux, puis <b>tous les jeux RetroAchievements</b>, même ceux que tu n'as pas. Flèches et Entrée pour choisir.</li>
+  { ic:'search', t:'Rechercher et fiche de jeu', go:() => $('#q').focus(), h:`<ul><li>La <b>barre de recherche</b> (en haut) trouve tes jeux, puis <b>tous les jeux RetroAchievements</b>, même ceux que tu n'as pas. Tape un nom de <b>console</b> (ex. « snes ») pour voir tous ses jeux RetroAchievements. Flèches et Entrée pour choisir.</li>
     <li>La <b>fiche du jeu</b> (touche <b>I</b> ou le bouton à droite de Jouer) : résumé, durée de vie, captures et succès.</li>
     <li>Pour un jeu que tu n'as pas, la fiche liste les <b>hash supportés</b> : les versions de ROM exactes qui débloquent les succès (clic sur un MD5 pour le copier).</li>
     <li>L'onglet <b>Subsets</b> de la fiche montre les sets de succès en plus du jeu (défis, bonus…). Une ROM patchée « [Subset - Nom] » est rangée sous son jeu de base : Jouer te demande lequel lancer.</li></ul>
@@ -3495,7 +3565,7 @@ const TUTO_EN = [
     <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li></ol>
     <ul><li><b>Hardcore</b>: no save states, rewind or slow motion, but points count fully. <b>Softcore</b>: anything goes, achievements are marked separately.</li>
     <li>Only ROMs <b>recognized</b> by RetroAchievements (right version, unmodified) have achievements.</li></ul>` },
-  { t:'Search and game sheet', h:`<ul><li>The <b>search bar</b> (at the top) finds your games, then <b>every RetroAchievements game</b>, even the ones you don't have. Arrows and Enter to pick.</li>
+  { t:'Search and game sheet', h:`<ul><li>The <b>search bar</b> (at the top) finds your games, then <b>every RetroAchievements game</b>, even the ones you don't have. Type a <b>console</b> name (e.g. "snes") to see all its RetroAchievements games. Arrows and Enter to pick.</li>
     <li>The <b>game sheet</b> (<b>I</b> key or the button right of Play): summary, length, screenshots and achievements.</li>
     <li>For a game you don't have, the sheet lists the <b>supported hashes</b>: the exact ROM versions that unlock achievements (click an MD5 to copy it).</li>
     <li>The sheet's <b>Subsets</b> tab shows the game's extra achievement sets (challenges, bonus…). A patched "[Subset - Name]" ROM is filed under its base game: Play asks which one to launch.</li></ul>

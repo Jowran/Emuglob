@@ -892,11 +892,11 @@ async function raCall({ endpoint, params = {}, ttl = 60 }) {
   }
 }
 
-// catalogue complet RetroAchievements (tous les jeux avec succès, toutes consoles) pour la barre de recherche.
+// catalogue complet RetroAchievements ([id, titre, console, icône, succès, points]) (tous les jeux avec succès, toutes consoles) pour la barre de recherche.
 // Construit une fois depuis GetGameList (sans les hash, plus léger) puis gardé 7 jours dans ra-cache/catalog.json.
 let catalogJob = null;
 ipcMain.handle('ra:catalog', (_e, force) => {
-  const file = path.join(raCacheDir(), 'catalog.json');
+  const file = path.join(raCacheDir(), 'catalog-v2.json');
   let old = null;
   try { old = JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { /* pas encore construit */ }
   if (old && !force && (!net.isOnline() || Date.now() - old.t < 7 * 864e5)) return { ok: true, games: old.games };
@@ -921,7 +921,7 @@ ipcMain.handle('ra:catalog', (_e, force) => {
         if (!rows) { fails++; continue; }
         for (const x of rows) {
           const title = x.Title || x.title;
-          if (title) games.push([x.ID || x.id, title, c.Name, x.ImageIcon || x.imageIcon || '']);
+          if (title) games.push([x.ID || x.id, title, c.Name, x.ImageIcon || x.imageIcon || '', x.NumAchievements || 0, x.Points || 0]);
         }
       }
     };
