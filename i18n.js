@@ -189,6 +189,8 @@
     'Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.': "You don't follow anyone on RetroAchievements yet. Follow players on the site: their activity will show here.",
     'Aucun succès débloqué par toi ou tes amis ces 14 derniers jours.': 'No achievements unlocked by you or your friends in the last 14 days.',
     'Tu': 'You', 'as débloqué': 'unlocked',
+    'Détail du succès': 'Achievement details', 'points réels': 'true points', 'Hardcore': 'Hardcore', 'Softcore': 'Softcore', 'Condition de victoire': 'Win condition', 'Ratable': 'Missable',
+    'Joueur': 'Player', 'Obtenu': 'Unlocked', 'Rareté': 'Rarity', '(hardcore)': '(hardcore)', '(tous modes)': '(all modes)', 'inconnue': 'unknown',
     // bibliothèque, entretien
     'Aucun jeu.': 'No games.', 'hors ligne': 'offline', 'Aucun nouveau jeu.': 'No new games.', 'Aucun dossier surveillé : utilise « Scanner un dossier ».': 'No watched folder: use "Scan a folder".',
     'Retirer': 'Remove', 'Aucun dossier surveillé. « Scanner un dossier » en ajoute un.': 'No watched folders. "Scan a folder" adds one.', 'Tous les fichiers sont présents.': 'All files are present.',
