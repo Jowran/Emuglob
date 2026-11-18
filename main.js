@@ -99,6 +99,9 @@ function createWindow() {
   let t;
   const later = () => { clearTimeout(t); t = setTimeout(saveWinState, 500); };
   win.on('resize', later); win.on('move', later); win.on('close', saveWinState);
+  // l'écran de chargement (fenêtre séparée) suit la fenêtre quand on la déplace ou la redimensionne
+  const follow = () => { if (cover && coverRect) moveCover(coverRect); };
+  for (const ev of ['move', 'moved', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
   win.loadFile('index.html');
 }
 
