@@ -272,6 +272,13 @@
   .cs-r img { width:40px; height:40px; border-radius:6px; flex:none; }
   .cs-r > div { flex:1; min-width:0; } .cs-r b { display:block; font-weight:600; } .cs-r small { color:var(--muted); font-size:12px; }
   .qt.qc { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.1); } .qt.qc svg { width:18px; height:18px; }
+  #dlg-ach { width:min(560px, 94vw); }
+  .fr[data-ach] { cursor:pointer; } .fr[data-ach]:hover { background:rgba(255,255,255,.11); }
+  .ach-top { display:flex; gap:16px; align-items:flex-start; } .ach-top img { width:72px; height:72px; border-radius:10px; flex:none; background:#2a2350; }
+  .ach-desc { color:#e8e5ff; line-height:1.45; }
+  .ach-tags { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0; } .ach-tags > span { padding:3px 10px; border-radius:99px; background:rgba(255,255,255,.08); font-size:12px; }
+  .ach-tags .pts { color:#ffc83d; font-weight:700; } .ach-tags .hc { color:#ffc83d; }
+  .ach-meta { display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; margin-bottom:14px; } .ach-meta small { display:block; color:var(--muted); font-size:12px; } .ach-meta .muted { display:block; font-size:12px; } .ach-sub { font-style:normal; font-weight:400; color:var(--muted); font-size:12px; } .ach-sub2 { display:block; font-weight:400; font-size:13px; color:var(--muted); }
   #tu-dots { display:flex; gap:6px; margin-bottom:14px; }
   #tu-dots i { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,.12); cursor:pointer; }
   #tu-dots i.on { background:#ffc83d; }
@@ -772,6 +779,11 @@
   <div id="cs-list"></div>
   <div class="row"><button id="cs-close">Fermer</button></div>
 </dialog>
+<dialog id="dlg-ach">
+  <div id="ach-body"></div>
+  <div class="row"><button id="ach-game" style="margin-right:auto">Fiche du jeu</button><button id="ach-ok" style="background:#5b46d6">Fermer</button></div>
+</dialog>
+
 <dialog id="dlg-tuto">
   <div id="tu-dots"></div>
   <div id="tu-body"></div>
@@ -2630,7 +2642,8 @@ function openFriendGame(user) {
   if (mine) return openSheet(mine, 'friends');
   openSheet({ id: 'ra-' + f.game.id, title: f.game.title || 'Jeu', raId: +f.game.id, raConsole: f.game.console, virtual: true, friend: f.user, rp: f.live ? f.rp : '', path: '' }, 'friends');
 }
-const friendRow = (a) => `<div class="fr${a.me ? ' me' : ''}"><div class="fa" style="background-image:url('${a.me && profile && profile.UserPic ? RAM + esc(profile.UserPic) : `${RAM}/UserPic/${encodeURIComponent(a.friend)}.png`}')"></div>
+const achKey = (a) => a.friend + '|' + a.AchievementID;
+const friendRow = (a) => `<div class="fr${a.me ? ' me' : ''}" data-ach="${esc(achKey(a))}" title="Détail du succès"><div class="fa" style="background-image:url('${a.me && profile && profile.UserPic ? RAM + esc(profile.UserPic) : `${RAM}/UserPic/${encodeURIComponent(a.friend)}.png`}')"></div>
   <img class="b" src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
   <div class="tx">${a.me ? '<b class="moi">Tu</b> <span>as débloqué</span>' : `<b translate="no">${esc(a.friend)}</b> <span>a débloqué</span>`} <b translate="no">${esc(a.Title)}</b><small>${esc(a.base || a.GameTitle || '')} ${subTag(a)} · ${esc(a.ConsoleName || '')} · ${esc(agoMs(a.at))}${a.HardcoreMode ? '' : ' · softcore'}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
 function renderFr() {
@@ -3339,7 +3352,39 @@ $('#tab-fr').onclick = openFriends;
 $('#fr-close').onclick = closeOv;
 $('#fr-body').onclick = (e) => {
   const fu = e.target.closest('[data-fu]'); if (fu) { proUser = fu.dataset.fu; proView = 'main'; return openProfile(); }
-  const c = e.target.closest('[data-fg]'); if (c) openFriendGame(c.dataset.fg);
+  const c = e.target.closest('[data-fg]'); if (c) return openFriendGame(c.dataset.fg);
+  const r = e.target.closest('[data-ach]'); if (r) openAch(feed.find((a) => achKey(a) === r.dataset.ach));
+};
+/* détail d'un succès (Amis > Derniers succès) : description, points, rareté, date, mode */
+let achCur = null;
+async function openAch(a) {
+  if (!a) return;
+  achCur = a;
+  const d = $('#dlg-ach'), when = a.at ? new Date(a.at) : null;
+  const typ = { progression: 'Progression', win_condition: 'Condition de victoire', missable: 'Ratable' }[a.Type] || '';
+  $('#ach-body').innerHTML = `<div class="ach-top"><img src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
+    <div><h2 translate="no">${esc(a.Title)}</h2><p class="ach-desc" translate="no">${esc(a.Description || '')}</p></div></div>
+    <div class="ach-tags"><span class="pts">${a.Points || 0} pts</span>${a.TrueRatio ? `<span><span>${a.TrueRatio}</span> <span>points réels</span></span>` : ''}
+      <span class="${a.HardcoreMode ? 'hc' : ''}">${a.HardcoreMode ? 'Hardcore' : 'Softcore'}</span>${typ ? `<span>${typ}</span>` : ''}${subTag(a)}</div>
+    <div class="ach-meta">
+      <div><small>Joueur</small><b translate="no">${a.me ? esc(cfg.ra.user) : esc(a.friend)}</b></div>
+      <div><small>Obtenu</small><b>${when ? esc(when.toLocaleString(LOC, { dateStyle: 'long', timeStyle: 'short' })) : '?'}</b></div>
+      <div><small>Jeu</small><b translate="no">${esc(a.base || a.GameTitle || '')}</b><span class="muted">${esc(a.ConsoleName || '')}</span></div>
+      <div><small>Rareté</small><div id="ach-rare"><b>…</b></div></div>
+    </div>`;
+  if (!d.open) d.showModal();
+  const r = await api.ra('GetGameInfoAndUserProgress', { g: a.GameID }, 60);
+  if (achCur !== a) return;
+  const g = r.ok && r.data, x = g && g.Achievements && g.Achievements[a.AchievementID], n = g && g.NumDistinctPlayers;
+  const pc = (k) => (Math.round((1000 * k) / n) / 10).toString().replace('.', LANG === 'en' ? '.' : ',');
+  $('#ach-rare').innerHTML = x && n ? `<b><span>${pc(x.NumAwardedHardcore || 0)} % des joueurs</span> <i class="ach-sub">(hardcore)</i></b><b class="ach-sub2"><span>${pc(x.NumAwarded || 0)} % des joueurs</span> <i class="ach-sub">(tous modes)</i></b>` : '<b class="ach-sub2">inconnue</b>';
+}
+$('#ach-ok').onclick = () => $('#dlg-ach').close();
+$('#ach-game').onclick = () => {
+  const a = achCur; if (!a) return; $('#dlg-ach').close();
+  const mine = cfg.games.find((g) => g.raId === +a.GameID);
+  if (mine) return openSheet(mine, 'friends');
+  openSheet({ id: 'ra-' + a.GameID, title: a.GameTitle || 'Jeu', raId: +a.GameID, raConsole: a.ConsoleName, virtual: true, friend: a.me ? undefined : a.friend, path: '' }, 'friends');
 };
 $('#fr-refresh').onclick = async () => { await loadFriends(true); renderFr(); };
 $('#lib-less').onclick = () => setAllOpen(false);
