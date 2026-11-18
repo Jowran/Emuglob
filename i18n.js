@@ -15,8 +15,8 @@
     // choisir une version
     'Choisir une version': 'Choose a version', 'Installer une version publiée, même plus ancienne': 'Install any published version, even an older one',
     'préversion': 'pre-release', 'installée': 'installed', 'sans app.asar': 'no app.asar', 'Aucune version publiée.': 'No published version.',
-    "Installe n'importe quelle version publiée, même plus ancienne. Emuglob se ferme, la remplace et se relance ; la version actuelle est gardée pour revenir en arrière. Une version antérieure à 1.2.3 n'a pas ce choix : pour revenir, accepte la mise à jour proposée au lancement.":
-      'Install any published version, even an older one. Emuglob closes, replaces it and restarts; the current version is kept so you can go back. Versions before 1.2.3 do not have this choice: to come back, accept the update offered at startup.',
+    "Installe n'importe quelle version publiée, même plus ancienne. Emuglob se ferme, la remplace et se relance ; la version actuelle est gardée pour revenir en arrière. Une version antérieure à 1.3.0 n'a pas ce choix : pour revenir, accepte la mise à jour proposée au lancement.":
+      'Install any published version, even an older one. Emuglob closes, replaces it and restarts; the current version is kept so you can go back. Versions before 1.3.0 do not have this choice: to come back, accept the update offered at startup.',
     "Cette version n'a pas le choix de version : pour revenir, accepte la mise à jour proposée au lancement.": 'This version has no version picker: to come back, accept the update offered at startup.',
     // barre du haut, accueil
     'Jeux': 'Games', 'Amis': 'Friends', 'Paramètres': 'Settings', 'Succès': 'Achievements', 'Hors ligne': 'Offline', 'Jouer': 'Play', '▶ Jouer': '▶ Play',
