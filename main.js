@@ -166,7 +166,8 @@ ipcMain.handle('dialog:wallpaper', () => pickImage("Choisir un fond d'écran", '
 
 function scanDir(dir, wanted) {
   const files = [];
-  const skipped = {};   // gros fichiers (50 Mo et +) dont l'extension n'est pas reconnue : peut-être des jeux
+  const skipped = {};
+  const rpxDirs = new Set();   // Wii U extrait : un seul .rpx par jeu (celui du dossier code\)   // gros fichiers (50 Mo et +) dont l'extension n'est pas reconnue : peut-être des jeux
   const walk = (d) => {
     let entries = [];
     try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
@@ -174,6 +175,7 @@ function scanDir(dir, wanted) {
       const p = path.join(d, e.name);
       if (e.isDirectory()) { walk(p); continue; }
       const ext = path.extname(e.name).toLowerCase();
+      if (ext === '.rpx') { if (wanted.has(ext) && path.basename(d).toLowerCase() === 'code' && !rpxDirs.has(d)) { rpxDirs.add(d); files.push(p); } continue; }
       if (wanted.has(ext)) files.push(p);
       else { try { if (fs.statSync(p).size >= 50 * 1024 * 1024) skipped[ext || '(sans extension)'] = (skipped[ext || '(sans extension)'] || 0) + 1; } catch { /* ignoré */ } }
     }
@@ -187,6 +189,14 @@ ipcMain.handle('scan:folder', async (_e, extensions) => {
   return { ...scanDir(r.filePaths[0], new Set(extensions)), dir: r.filePaths[0] };
 });
 ipcMain.handle('scan:path', (_e, { dir, extensions }) => (fs.existsSync(dir) ? scanDir(dir, new Set(extensions)) : { files: [], skipped: {}, missing: true }));
+// titre d'un jeu Wii U extrait : <jeu>\meta\meta.xml (longname_fr, sinon longname_en) à côté du dossier code\
+ipcMain.handle('wiiu:title', (_e, rpx) => {
+  try {
+    const xml = fs.readFileSync(path.join(path.dirname(path.dirname(rpx)), 'meta', 'meta.xml'), 'utf-8');
+    const tag = (n) => { const m = new RegExp(`<${n}[^>]*>([^<]*)</${n}>`).exec(xml); return m ? m[1].replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/\s+/g, ' ').trim() : ''; };
+    return tag('longname_fr') || tag('longname_en') || tag('shortname_fr') || tag('shortname_en') || '';
+  } catch { return ''; }
+});
 ipcMain.handle('files:exist', (_e, paths) => Promise.all(paths.map((p) => fs.promises.access(p).then(() => true, () => false))));
 ipcMain.handle('shell:reveal', (_e, p) => { shell.showItemInFolder(p); });
 
@@ -390,9 +400,17 @@ async function latestPcsx2() {
   if (!asset) throw new Error(`pas d'archive Windows x64 dans la version ${rel.tag_name} (fichiers : ${(rel.assets || []).map((x) => x.name).join(', ') || 'aucun'})`);
   return fromGithubRelease(rel, asset);
 }
+async function latestCemu() {
+  const rel = await (await ghFetch(process.env.EMUGLOB_CEMU_API || 'https://api.github.com/repos/cemu-project/Cemu/releases/latest')).json();
+  const ok = (rel.assets || []).filter((a) => /windows/i.test(a.name) && /x64/i.test(a.name) && /\.(zip|7z)$/i.test(a.name) && !/symbol|debug|pdb|installer|setup/i.test(a.name));
+  const asset = ok.find((a) => /\.zip$/i.test(a.name)) || ok[0];
+  if (!asset) throw new Error(`pas d'archive Windows x64 dans la version ${rel.tag_name} (fichiers : ${(rel.assets || []).map((x) => x.name).join(', ') || 'aucun'})`);
+  return fromGithubRelease(rel, asset);
+}
 const INSTALLERS = {
   ralibretro: { name: 'RALibretro', dir: 'RALibretro', exes: ['ralibretro.exe'], latest: latestRalib },
   pcsx2: { name: 'PCSX2', dir: 'PCSX2', exes: ['pcsx2-qt.exe', 'pcsx2.exe'], latest: latestPcsx2 },
+  cemu: { name: 'Cemu', dir: 'Cemu', exes: ['cemu.exe'], latest: latestCemu },
 };
 const releases = {};
 const instDefaultDir = (id) => path.join(emuBase(), 'emulators', INSTALLERS[id].dir);

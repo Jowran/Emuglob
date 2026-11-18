@@ -100,7 +100,7 @@ function checkUserData() {
 }
 
 // émulateurs configurés mais introuvables : la cause dit quoi faire (disque débranché, dossier supprimé, exe renommé)
-const INSTALLABLE = { ralibretro: 'RALibretro', pcsx2: 'PCSX2' };
+const INSTALLABLE = { ralibretro: 'RALibretro', pcsx2: 'PCSX2', cemu: 'Cemu' };
 let emuMissing = [];   // [{ id, name }] pour les boutons du message
 function whyMissing(exe) {
   const root = path.parse(exe).root, dir = path.dirname(exe);

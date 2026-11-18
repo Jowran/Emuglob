@@ -9,7 +9,7 @@ Lanceur Windows (Electron) pour gérer une bibliothèque de ROMs et d'émulateur
 - Rich Presence Discord (automatique, simple on/off)
 - Vérification au démarrage : message clair si un fichier manque, est mal nommé ou abîmé (app.asar, fichiers Electron, config.json, émulateurs)
 - Contrôles et raccourcis des émulateurs modifiables dans Emuglob (RALibretro, PCSX2, Dolphin, Azahar), capture clavier ou manette, copie .bak avant écriture
-- Installation et mise à jour de RALibretro et PCSX2 en un clic depuis Emuglob (Paramètres, Installation), et détection des émulateurs posés dans le dossier `emulators\` à côté d'Emuglob.exe
+- Installation et mise à jour de RALibretro, PCSX2 et Cemu (Wii U) en un clic depuis Emuglob (Paramètres, Installation), et détection des émulateurs posés dans le dossier `emulators\` à côté d'Emuglob.exe
 - Recherche des sauvegardes déjà présentes sur le PC (dossiers des émulateurs, à côté des ROMs) et import par copie, sans toucher aux originaux
 
 ## Lancer
@@ -34,6 +34,6 @@ npm run build-info
 Écrit `build-info.json` (date + empreintes SHA-256). Au lancement, `boot.js` s'en sert pour signaler un fichier abîmé.
 
 ## Crédits
-Emuglob ne contient aucun émulateur. [RALibretro](https://github.com/RetroAchievements/RALibretro) (GPL-3.0, RetroAchievements) et [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0) peuvent être installés depuis Emuglob : ils sont alors téléchargés directement depuis leur source officielle (site de RetroAchievements, Releases GitHub de PCSX2) et lancés comme des programmes séparés. Les cores de RALibretro sont téléchargés à la demande depuis le buildbot officiel de libretro (buildbot.libretro.com). Aucun BIOS n'est fourni.
+Emuglob ne contient aucun émulateur. [RALibretro](https://github.com/RetroAchievements/RALibretro) (GPL-3.0, RetroAchievements) , [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0) et [Cemu](https://github.com/cemu-project/Cemu) (MPL-2.0) peuvent être installés depuis Emuglob : ils sont alors téléchargés directement depuis leur source officielle (site de RetroAchievements, Releases GitHub de PCSX2 et de Cemu) et lancés comme des programmes séparés. Les cores de RALibretro sont téléchargés à la demande depuis le buildbot officiel de libretro (buildbot.libretro.com). Aucun BIOS ni aucune clé de console n'est fourni.
 
 Logiciels tiers inclus : [7-Zip](https://www.7-zip.org) (`tools/7za.exe`, Igor Pavlov, GNU LGPL), utilisé seulement pour décompresser les émulateurs téléchargés. Voir `tools/7za-LICENSE.txt`.

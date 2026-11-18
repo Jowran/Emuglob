@@ -586,7 +586,7 @@ function pickCore(g, inst) {
 }
 const EXT = {'.md':1,'.gen':1,'.smd':1,'.z64':2,'.n64':2,'.v64':2,'.sfc':3,'.smc':3,'.gb':4,'.gba':5,'.gbc':6,'.nes':7,'.pce':8,'.sms':11,
   '.cue':12,'.chd':12,'.pbp':12,'.gg':15,'.lnx':13,'.ngp':14,'.ngc':14,'.nds':18,'.a26':25};
-const EXT_EMU = { '.nsp':'switch', '.xci':'switch', '.nsz':'switch', '.xcz':'switch', '.wbfs':'dolphin', '.rvz':'dolphin', '.wia':'dolphin', '.gcz':'dolphin', '.gcm':'dolphin', '.iso':'dolphin', '.cso':'ppsspp', '.3ds':'azahar', '.cci':'azahar', '.cxi':'azahar', '.3dsx':'azahar', '.cia':'azahar' };
+const EXT_EMU = { '.nsp':'switch', '.xci':'switch', '.nsz':'switch', '.xcz':'switch', '.wbfs':'dolphin', '.rvz':'dolphin', '.wia':'dolphin', '.gcz':'dolphin', '.gcm':'dolphin', '.iso':'dolphin', '.cso':'ppsspp', '.3ds':'azahar', '.cci':'azahar', '.cxi':'azahar', '.3dsx':'azahar', '.cia':'azahar', '.wux':'cemu', '.wud':'cemu', '.wua':'cemu', '.wuhb':'cemu', '.rpx':'cemu' };
 const DEFAULT_EMUS = [
   { id:'ralibretro', name:'RALibretro', kind:'libretro', exe:'', args:'', builtin:true },
   { id:'lichii', name:'Lichii (Switch 2)', lab:'Nintendo Switch 2', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
@@ -595,6 +595,7 @@ const DEFAULT_EMUS = [
   { id:'pcsx2', name:'PCSX2', lab:'PlayStation 2', kind:'standalone', exe:'', args:'-batch -fullscreen -- "{game}"', builtin:true },
   { id:'ppsspp', name:'PPSSPP', lab:'PSP', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
   { id:'azahar', name:'Azahar', lab:'Nintendo 3DS', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
+  { id:'cemu', name:'Cemu', lab:'Wii U', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
 ];
 const RAM = 'https://media.retroachievements.org';
 // plateformes détectées dans les images disque : libellé d'onglet et id de console RetroAchievements
@@ -629,7 +630,7 @@ function styleOf(g) {
     return c ? { k:'box', t:'#fff', ...c } : { n:sysName(g.system).toUpperCase(), c:'#444', t:'#fff', ar:.72, k:'box' };
   }
   if (e.id === 'lichii') return { n:'SWITCH 2', c:'#d4202b', t:'#fff', ar:.72, k:'box' };
-  return { n:e.name.toUpperCase().slice(0, 18), c:`hsl(${hue(e.name)},60%,38%)`, t:'#fff', ar:({ dolphin:.71, pcsx2:.71, ppsspp:.6, azahar:.88, eden:.72 })[e.id] || .75, k:'box' };
+  return { n:e.name.toUpperCase().slice(0, 18), c:`hsl(${hue(e.name)},60%,38%)`, t:'#fff', ar:({ dolphin:.71, pcsx2:.71, ppsspp:.6, azahar:.88, eden:.72, cemu:.72 })[e.id] || .75, k:'box' };
 }
 
 // icônes vectorielles (traits, couleur = texte)
@@ -807,6 +808,7 @@ function thumbFolders(g) {
   const P = { wii:['Nintendo - Wii'], gc:['Nintendo - GameCube'], ps2:['Sony - PlayStation 2'], psp:['Sony - PlayStation Portable'] };
   if (P[g.platform]) return P[g.platform];
   if (e.id === 'azahar') return ['Nintendo - Nintendo 3DS'];
+  if (e.id === 'cemu') return ['Nintendo - Wii U'];
   return e.id === 'dolphin' ? ['Nintendo - Wii', 'Nintendo - GameCube'] : [];
 }
 // jaquettes de secours trouvées grâce au numéro de série / à l'identifiant du jeu
@@ -949,7 +951,7 @@ function flowColor(g) {
   if (e.id === 'lichii') return '#a855f7';
   if (e.id === 'eden') return '#e60012';
   const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
-  return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
+  return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : e.id === 'cemu' ? '#009ac7' : `hsl(${hue(e.name)},60%,40%)`);
 }
 // mode d'affichage effectif : « auto » passe en vertical au-delà de 10 consoles
 const tabsModeNow = () => {
@@ -1635,6 +1637,7 @@ const SET_ITEMS = [
   { g:'jeu', ic:'expand', t:'Lancement des jeux', s:'Intégration, sauvegardes partagées', act:() => openSettings('jeu') },
   { g:'inst', ic:'download', t:'RALibretro', s:'Installer ou mettre à jour', act:() => openInstall('ralibretro') },
   { g:'inst', ic:'download', t:'PCSX2', s:'PlayStation 2 · installer ou mettre à jour', act:() => openInstall('pcsx2') },
+  { g:'inst', ic:'download', t:'Cemu', s:'Wii U · installer ou mettre à jour', act:() => openInstall('cemu') },
   { g:'inst', ic:'download', t:'Cores RALibretro', s:'Un core par console · installer, mettre à jour', act:() => openCores() },
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
@@ -1715,6 +1718,12 @@ function applyDisc(g, r) {
   }
 }
 async function identifyDiscs() {
+  // Wii U extrait (.rpx dans code\) : titre lu dans meta\meta.xml, sinon nom du dossier du jeu
+  for (const g of cfg.games.filter((x) => extOf(x.path) === '.rpx' && !x.wiiuNamed)) {
+    const t = await api.wiiuTitle(g.path);
+    if (!g.titleManual) g.title = t || g.path.split(/[\\/]/).slice(-3, -2)[0] || g.title;
+    g.wiiuNamed = true;
+  }
   const todo = cfg.games.filter((g) => g.disc === undefined && (DISC_EXT.has(extOf(g.path)) || g.emulator === 'dolphin'));
   for (const g of todo) applyDisc(g, (await api.identify(g.path)) || { platform: 'unknown', id: '' });
   if (todo.length) save();
@@ -2274,6 +2283,7 @@ async function adoptDetectedEmus() {
 /* ---------- Installation : émulateurs depuis leurs sources officielles ---------- */
 const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
+  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
 api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte
@@ -2458,11 +2468,11 @@ const TUTO = [
     <li>En haut : <b>Jeux</b>, <b>Amis</b>, <b>Paramètres</b>, <b>Succès</b>, et ton <b>profil</b> (le rond à droite).</li></ul>
     <div class="tip">Ce tuto se rouvre quand tu veux : Paramètres, Système, « Aide et tuto ».</div>` },
   { ic:'plus', t:'Ajouter des jeux', go:() => openSettingsPanel(), h:`<ol><li>Paramètres, Bibliothèque : <b>Ajouter des jeux</b> (quelques fichiers) ou <b>Scanner un dossier</b> (tout un dossier de ROMs).</li>
-    <li>La console est reconnue toute seule grâce à l'extension (.gba, .sfc, .cue, .iso…), et les <b>jaquettes</b> se téléchargent seules.</li>
+    <li>La console est reconnue toute seule grâce à l'extension (.gba, .sfc, .cue, .iso, .wua, .rpx…), et les <b>jaquettes</b> se téléchargent seules.</li>
     <li>Dans <b>Entretien</b>, les dossiers surveillés ajoutent tes nouveaux jeux à chaque démarrage. Tu peux aussi y retirer les jeux introuvables et les doublons.</li></ol>
     <div class="tip">Un jeu mal reconnu : menu « … » du jeu, Modifier, pour changer sa console ou son titre.</div>` },
   { ic:'download', t:'Installer les émulateurs', go:() => openInstall('ralibretro'), h:`<ul><li><b>RALibretro</b> lance la plupart des consoles rétro (NES, SNES, GBA, Mega Drive, PS1, N64…). Paramètres, Installation : un clic pour l'installer ou le mettre à jour.</li>
-    <li><b>PCSX2</b> (PS2) s'installe pareil. Il lui faut le <b>BIOS de ta propre PS2</b>, qui n'est pas fourni.</li>
+    <li><b>PCSX2</b> (PS2) et <b>Cemu</b> (Wii U) s'installent pareil. PCSX2 a besoin du <b>BIOS de ta propre PS2</b>, Cemu des <b>clés de ta console</b> pour les .wud/.wux : rien de tout ça n'est fourni.</li>
     <li>Pour les autres (Dolphin, Azahar…) : pose-les dans le dossier <b>emulators</b> à côté d'Emuglob.exe (détectés seuls), ou règle leur chemin dans Paramètres, Émulateurs.</li></ul>` },
   { ic:'list', t:'Les cores', go:() => openCores(), h:`RALibretro a besoin d'un <b>core</b> par console : c'est le moteur qui émule la machine (mGBA pour la GBA, Snes9x pour la SNES…).
     <ul><li>Paramètres, Installation, <b>Cores RALibretro</b> : installer, mettre à jour ou supprimer chaque core, ou « Installer les cores de base » (un par console).</li>

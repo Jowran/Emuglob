@@ -521,7 +521,7 @@ function save(exe, changes) {
 
 // ---------- détection des émulateurs déposés dans le dossier « emulators » à côté d'Emuglob.exe ----------
 const KNOWN_EXE = { 'ralibretro.exe': 'ralibretro', 'dolphin.exe': 'dolphin', 'pcsx2-qt.exe': 'pcsx2', 'pcsx2.exe': 'pcsx2', 'ppssppwindows64.exe': 'ppsspp', 'ppssppwindows.exe': 'ppsspp',
-  'azahar.exe': 'azahar', 'eden.exe': 'eden', 'lichii.exe': 'lichii' };
+  'azahar.exe': 'azahar', 'cemu.exe': 'cemu', 'eden.exe': 'eden', 'lichii.exe': 'lichii' };
 function emuRoots(base) { return ['emulators', 'Emulators', 'emulateurs', 'Emulateurs'].map((d) => path.join(base, d)).filter((d, i, a) => a.findIndex((x) => x.toLowerCase() === d.toLowerCase()) === i && fs.existsSync(d)); }
 function detect(base) {
   const found = {};
