@@ -720,8 +720,6 @@
   <label>Manette : A jouer · X options · Y favori · B retour · Start plein écran · LB/RB rien</label>
   </div>
   <div data-sec="app">
-  <label>Langue</label>
-  <select id="s-lang" style="max-width:340px"><option value="auto">Automatique (langue du système)</option><option value="fr" translate="no">Français</option><option value="en" translate="no">English</option></select>
   <label>Fond d'écran</label>
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-wall">Choisir une image…</button><button id="s-wall-reset">Par défaut</button></div>
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:10px"><input type="checkbox" id="s-fs" style="width:auto"> Démarrer Emuglob en plein écran</label>
@@ -881,6 +879,7 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/>',
   gear: gearPath(),
   plus: '<path d="M12 5v14M5 12h14"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.7 5.7 3.7 9s-1.2 6.3-3.7 9c-2.5-2.7-3.7-5.7-3.7-9S9.5 5.7 12 3z"/>',
   folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   gamepad: '<rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="16" cy="11.5" r=".8" fill="currentColor"/><circle cx="18.6" cy="13.8" r=".8" fill="currentColor"/>',
   power: '<path d="M12 3v8"/><path d="M18.4 6.6a8.5 8.5 0 1 1-12.8 0"/>',
@@ -1583,6 +1582,12 @@ function presence(g) {
 }
 const dcOn = () => !cfg.discord || cfg.discord.on !== false;
 // langue choisie (ou celle du système) : retenue pour le prochain démarrage ; vrai = la fenêtre doit être rechargée
+const langPick = () => (cfg.lang === 'fr' || cfg.lang === 'en' ? cfg.lang : 'auto');
+async function setLang(v) {
+  if (langPick() === v) return;
+  cfg.lang = v; await save();
+  if (applyLang()) { try { sessionStorage.setItem('emuglob-reopen', 'lang'); } catch { /* rien */ } location.reload(); } else if (mode === 'settings') drawSetPane();
+}
 function applyLang() {
   const want = cfg.lang === 'fr' || cfg.lang === 'en' ? cfg.lang : sysLang();
   try { localStorage.setItem('emuglob-lang', want); return want !== LANG && localStorage.getItem('emuglob-lang') === want; } catch { return false; }   // sans stockage : pas de rechargement en boucle
@@ -2040,7 +2045,7 @@ function openTabsDlg() {
   refresh(); d.showModal();
 }
 // Paramètres rangés par thème : chaque tuile ouvre une fenêtre courte
-const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', inst:'Installation', ctl:'Contrôles', look:'Apparence', acc:'Comptes', sys:'Système' };
+const SET_GROUPS = { lib:'Bibliothèque', jeu:'Jeux et émulateurs', inst:'Installation', ctl:'Contrôles', look:'Apparence', acc:'Comptes', lang:'Langue', sys:'Système' };
 const SET_ITEMS = [
   { g:'lib', ic:'list', t:'Bibliothèque en liste', s:'Tous les jeux par console', act:() => openLibrary() },
   { g:'lib', ic:'plus', t:'Ajouter des jeux', s:'Choisir des fichiers', act:() => addFiles() },
@@ -2056,10 +2061,13 @@ const SET_ITEMS = [
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
   { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
-  { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, langue, plein écran, Windows', act:() => openSettings('app') },
+  { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, plein écran, Windows', act:() => openSettings('app') },
   { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
   { g:'acc', ic:'user', t:'Discord', get s() { return dcOn() ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
   { g:'jeu', ic:'folder', t:'Rechercher des sauvegardes', s:'Retrouver tes anciennes saves de jeux', act:() => openFindSaves() },
+  { g:'lang', ic:'globe', t:'Automatique', get s() { return (langPick() === 'auto' ? '✓ Utilisée · ' : '') + 'Langue de Windows'; }, act:() => setLang('auto'), keep:true },
+  { g:'lang', ic:'globe', t:'Français', get s() { return langPick() === 'fr' ? '✓ Utilisée' : 'Interface en français'; }, act:() => setLang('fr'), keep:true },
+  { g:'lang', ic:'globe', t:'English', get s() { return langPick() === 'en' ? '✓ Utilisée' : 'Interface en anglais'; }, act:() => setLang('en'), keep:true },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
@@ -2076,7 +2084,7 @@ function openSettingsPanel() {
   drawSetPane();
   $('.snav.on').focus();
 }
-const SET_ICON = { lib:'list', jeu:'gamepad', inst:'download', ctl:'gamepad', look:'star', acc:'user', sys:'shield' };
+const SET_ICON = { lib:'list', jeu:'gamepad', inst:'download', ctl:'gamepad', look:'star', acc:'user', lang:'globe', sys:'shield' };
 let setSec = 'lib';
 function drawSetPane() {
   $('#spane').innerHTML = `<h3>${SET_GROUPS[setSec]}</h3><div class="slist">`
@@ -2310,11 +2318,6 @@ function openSettings(sec) {
   $('#s-mode').value = cfg.embedMode || 'overlay';
   $('#s-stream').checked = !!cfg.streamMirror;
   $('#s-log').onclick = () => api.openEmbedLog();
-  $('#s-lang').value = cfg.lang === 'fr' || cfg.lang === 'en' ? cfg.lang : 'auto';
-  $('#s-lang').onchange = async () => {
-    cfg.lang = $('#s-lang').value; await save();
-    if (applyLang()) location.reload();
-  };
   api.portableStatus().then((p) => {
     $('#s-port').hidden = p.portable;
     $('#s-portst').textContent = p.portable ? `Actif : tes réglages, jaquettes et sauvegardes sont dans ${p.dir}. Les chemins du même disque sont enregistrés en relatif (clé USB, changement de lettre). Supprime portable.txt à côté d'Emuglob.exe pour revenir à l'installation normale.`
@@ -3162,7 +3165,7 @@ const TUTO = [
     <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
   { ic:'music', t:'Apparence et mises à jour', go:() => openAmbDlg(), h:`<ul><li><b>Thèmes et sons</b> : couleurs selon la console, sons de navigation.</li>
     <li><b>Barre des consoles</b> : horizontale, verticale ou en icônes, ordre et consoles cachées.</li>
-    <li><b>Fond et démarrage</b> : fond d'écran, langue, plein écran (F11), lancement avec Windows.</li>
+    <li><b>Fond et démarrage</b> : fond d'écran, plein écran (F11), lancement avec Windows. <b>Langue</b> : français ou anglais.</li>
     <li><b>Mettre à jour</b> : Emuglob vérifie la dernière version en ligne et se met à jour en un clic. L'ancienne version est gardée.</li></ul>
     <div class="tip">C'est tout ! Bon jeu.</div>` },
 ];
@@ -3206,7 +3209,7 @@ const TUTO_EN = [
     <li><b>Discord</b>: shows the current game on your Discord profile. A simple switch in Settings, Accounts.</li></ul>` },
   { t:'Appearance and updates', h:`<ul><li><b>Themes and sounds</b>: colors based on the console, navigation sounds.</li>
     <li><b>Console bar</b>: horizontal, vertical or icons, order and hidden consoles.</li>
-    <li><b>Wallpaper and startup</b>: wallpaper, language, full screen (F11), launch with Windows.</li>
+    <li><b>Wallpaper and startup</b>: wallpaper, full screen (F11), launch with Windows. <b>Language</b>: French or English.</li>
     <li><b>Update</b>: Emuglob checks for the latest version online and updates in one click. The old version is kept.</li></ul>
     <div class="tip">That's all! Have fun.</div>` },
 ];
@@ -3242,6 +3245,7 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   hydrateIcons();
   cfg = await api.loadConfig();
   if (applyLang()) { location.reload(); return; }
+  try { if (sessionStorage.getItem('emuglob-reopen') === 'lang') { sessionStorage.removeItem('emuglob-reopen'); setTimeout(() => { setSec = 'lang'; openSettingsPanel(); }, 300); } } catch { /* rien */ }
   cfg.games = cfg.games || [];
   cfg.ra = cfg.ra || { user: '', key: '' };
   cfg.emulators = cfg.emulators || [];

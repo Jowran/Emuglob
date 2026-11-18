@@ -127,7 +127,7 @@
     'Manette : A jouer · X options · Y favori · B retour · Start plein écran · LB/RB rien': 'Controller: A play · X options · Y favorite · B back · Start full screen · LB/RB nothing',
     'Fond d\'écran': 'Wallpaper', 'Choisir une image…': 'Choose an image…', 'Par défaut': 'Default', 'Démarrer Emuglob en plein écran': 'Start Emuglob in full screen',
     'Lancer Emuglob au démarrage de Windows': 'Launch Emuglob when Windows starts', 'Mode portable': 'Portable mode', 'Rendre portable': 'Make portable',
-    'Langue': 'Language', 'Automatique (langue du système)': 'Automatic (system language)',
+    'Langue': 'Language', '✓ Utilisée': '✓ In use', 'Utilisée': 'In use', 'Langue de Windows': 'Windows language', 'Interface en français': 'French interface', 'Interface en anglais': 'English interface', 'Fond d\'écran, plein écran, Windows': 'Wallpaper, full screen, Windows',
     'Afficher le jeu en cours sur mon profil Discord': 'Show the current game on my Discord profile', 'Automatique : il suffit que Discord soit ouvert sur ce PC.': 'Automatic: Discord just needs to be open on this PC.',
     'Connecté à Discord.': 'Connected to Discord.', 'connecté': 'connected',
     'Entretien de la bibliothèque': 'Library maintenance', 'Dossiers surveillés (Emuglob y cherche de nouveaux jeux à chaque démarrage)': 'Watched folders (Emuglob looks for new games there at each startup)',
