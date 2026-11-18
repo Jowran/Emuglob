@@ -548,13 +548,13 @@ ipcMain.handle('saves:find', (_e, { games, emus, dirs }) => {
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
 ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
-ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid }) => {
+ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid, title }) => {
   let loc = { dir: null, tid: tid || '' };
-  try { loc = cemuSaveDir(exe, rom, { tid }); } catch { /* Cemu absent */ }
+  try { loc = cemuSaveDir(exe || '', rom, { tid, title }); } catch { /* Cemu absent */ }
   return { copies: getVault().listDir(String(gameId)), dir: loc.dir, tid: loc.tid };
 });
 ipcMain.handle('wiiusave:snap', (_e, { gameId, exe, rom, tid }) => {
-  try { const loc = cemuSaveDir(exe, rom, { tid }); if (!loc.dir) return { ok: false, error: 'aucune sauvegarde de ce jeu dans Cemu' }; return { ok: true, ...getVault().snapDir(String(gameId), loc.dir) }; } catch (e) { return { ok: false, error: e.message }; }
+  try { const loc = cemuSaveDir(exe || '', rom, { tid }); if (!loc.dir) return { ok: false, error: 'aucune sauvegarde de ce jeu dans Cemu' }; return { ok: true, ...getVault().snapDir(String(gameId), loc.dir) }; } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('wiiusave:restore', (_e, { gameId, exe, rom, tid, name }) => {
   if (emucfg.running(exe)) return { ok: false, error: 'Cemu est ouvert : ferme-le avant de restaurer.' };

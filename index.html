@@ -2461,17 +2461,16 @@ async function openFindSaves(pre) {
 }
 // Wii U : dossier de sauvegarde Cemu pas encore copié dans Emuglob
 async function findWiiuSaves() {
-  const cemu = cfg.emulators.find((e) => e.id === 'cemu'), out = [];
-  if (!cemu || !cemu.exe) return out;
+  const cemu = cfg.emulators.find((e) => e.id === 'cemu'), out = [];   // Cemu pas réglé : on regarde quand même %APPDATA%\Cemu
   for (const g of cfg.games.filter((x) => emuOf(x).id === 'cemu')) {
-    const r = await api.wiiuSaveList({ gameId: g.id, exe: cemu.exe, rom: g.path, tid: g.wiiuTid || '' });
+    const r = await api.wiiuSaveList({ gameId: g.id, exe: (cemu && cemu.exe) || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });
     if (r.tid && g.wiiuTid !== r.tid) { g.wiiuTid = r.tid; save(); }
     if (r.dir && !r.copies.length) out.push({ gameId: g.id, title: g.title, file: r.dir, size: 0, mtime: Date.now(), where: 'Cemu (Wii U)', match: 'exact', vault: null, same: false, newer: true, wiiu: true });
   }
   return out;
 }
 function openWiiuSaves(g) {   // copies du dossier de sauvegarde Cemu gardées par Emuglob, avec restauration
-  const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe, rom: g.path, tid: g.wiiuTid || '' });
+  const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });
   const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
   const draw = async () => {
     const r = await api.wiiuSaveList(q());
