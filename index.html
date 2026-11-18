@@ -121,6 +121,8 @@
   .fr .fa { width:44px; height:44px; border-radius:50%; background:#3a2a6a center/cover; flex:none; }
   .fr img.b { width:48px; height:48px; border-radius:8px; flex:none; background:#2a2350; }
   .fr .tx { flex:1; min-width:0; } .fr small { display:block; color:var(--muted); }
+  .fr.me { box-shadow:inset 3px 0 0 var(--acc); }
+  .fr .moi { color:var(--acc); }
   .fr .pts { color:#ffc83d; font-weight:700; white-space:nowrap; }
   .subt { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:600; background:color-mix(in srgb, var(--acc) 40%, transparent); color:#fff; vertical-align:1px; }
   .frh { margin:6px 0 12px; font-size:18px; } .frh small { color:var(--muted); font-weight:400; font-size:13px; margin-left:8px; }
@@ -2247,7 +2249,7 @@ function drawSetPane() {
 const navSel = () => (mode === 'settings' ? '.snav, .sset' : '.lcard, .lhead');
 
 /* ---------- amis RetroAchievements : activité (en jeu, rich presence) + derniers succès ---------- */
-let friends = null, feed = [], frState = '', frTimer = 0, frBusy = false;
+let friends = null, feed = [], myAch = [], frState = '', frTimer = 0, frBusy = false;
 const raDate = (d) => (d ? Date.parse(String(d).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(d) ? '' : 'Z')) : 0);   // dates RA = UTC
 const FR_LIVE = 5 * 60000;   // rich presence de moins de 5 min = en jeu (RALibretro l'envoie toutes les ~2 min)
 async function loadFriends(force) {
@@ -2255,7 +2257,9 @@ async function loadFriends(force) {
   frBusy = true;
   if (!friends) { frState = 'Chargement des amis…'; renderFr(); }
   try {
-    const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 300);
+    const [r, mine] = await Promise.all([api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 300), api.ra('GetUserRecentAchievements', { m: 20160 }, force ? 0 : 110)]);
+    const me = cfg.ra.user;   // tes propres succès, mêlés à ceux des amis
+    myAch = (mine.ok && Array.isArray(mine.data) ? mine.data : []).map((x) => ({ ...x, friend: me, me: true, at: raDate(x.Date), ...splitSubset(x.GameTitle) }));
     if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
     const res = (r.data && (r.data.Results || r.data.results)) || [];
     const prev = new Map((friends || []).map((f) => [f.user, f]));
@@ -2280,7 +2284,7 @@ async function loadFriends(force) {
     await Promise.all([worker(), worker(), worker(), worker()]);
     friends = list;
     const since = Date.now() - 14 * 864e5;
-    feed = list.flatMap((f) => f.ach || []).filter((x) => x.at > since).sort((x, y) => y.at - x.at).slice(0, 100);
+    feed = list.flatMap((f) => f.ach || []).concat(myAch).filter((x) => x.at > since).sort((x, y) => y.at - x.at).slice(0, 100);
     frState = '';
   } finally { frBusy = false; }
 }
@@ -2309,13 +2313,14 @@ function openFriendGame(user) {
   if (mine) return openSheet(mine, 'friends');
   openSheet({ id: 'ra-' + f.game.id, title: f.game.title || 'Jeu', raId: +f.game.id, raConsole: f.game.console, virtual: true, friend: f.user, rp: f.live ? f.rp : '', path: '' }, 'friends');
 }
-const friendRow = (a) => `<div class="fr"><div class="fa" style="background-image:url('${RAM}/UserPic/${encodeURIComponent(a.friend)}.png')"></div>
+const friendRow = (a) => `<div class="fr${a.me ? ' me' : ''}"><div class="fa" style="background-image:url('${a.me && profile && profile.UserPic ? RAM + esc(profile.UserPic) : `${RAM}/UserPic/${encodeURIComponent(a.friend)}.png`}')"></div>
   <img class="b" src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
-  <div class="tx"><b translate="no">${esc(a.friend)}</b> a débloqué <b translate="no">${esc(a.Title)}</b><small>${esc(a.base || a.GameTitle || '')} ${subTag(a)} · ${esc(a.ConsoleName || '')} · ${esc(agoMs(a.at))}${a.HardcoreMode ? '' : ' · softcore'}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
+  <div class="tx">${a.me ? '<b class="moi">Tu</b> <span>as débloqué</span>' : `<b translate="no">${esc(a.friend)}</b> <span>a débloqué</span>`} <b translate="no">${esc(a.Title)}</b><small>${esc(a.base || a.GameTitle || '')} ${subTag(a)} · ${esc(a.ConsoleName || '')} · ${esc(agoMs(a.at))}${a.HardcoreMode ? '' : ' · softcore'}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
 function renderFr() {
   let body;
   if (frState) body = `<p class="muted">${esc(frState)}</p>`;
-  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.</p>';
+  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.</p>'
+    + (feed.length ? '<h3 class="frh">Derniers succès <small>14 jours</small></h3>' + feed.map(friendRow).join('') : '');
   else if (!friends) body = '';
   else {
     const sorted = [...friends].sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || Math.max(b.rpAt || 0, b.playedAt || 0) - Math.max(a.rpAt || 0, a.playedAt || 0));
@@ -2323,7 +2328,7 @@ function renderFr() {
     const off = friends.some((f) => f.stale);
     body = `<h3 class="frh">Activité <small>${nLive ? `${nLive} en jeu` : 'personne en jeu'} · ${friends.length} ami(s)${off ? ' · hors ligne, dernières infos connues' : ''}</small></h3>
       <div class="fgrid">${sorted.map(friendCard).join('')}</div>
-      <h3 class="frh">Derniers succès <small>14 jours</small></h3>` + (feed.length ? feed.map(friendRow).join('') : '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>');
+      <h3 class="frh">Derniers succès <small>14 jours</small></h3>` + (feed.length ? feed.map(friendRow).join('') : '<p class="muted">Aucun succès débloqué par toi ou tes amis ces 14 derniers jours.</p>');
   }
   const y = $('#fr-body').scrollTop;
   $('#fr-body').innerHTML = body;

@@ -187,7 +187,8 @@
     'Chargement des amis…': 'Loading friends…', 'En jeu': 'In game', 'en jeu': 'in game', 'Jeu': 'Game', 'a débloqué': 'unlocked', 'Activité': 'Activity', 'Derniers succès': 'Latest achievements',
     '14 jours': '14 days', 'personne en jeu': 'nobody in game', 'dernier jeu': 'last game', 'nouveau jeu': 'new game', 'hors ligne, dernières infos connues': 'offline, last known info', '· dernier jeu': '· last game', '· hors ligne, dernières infos connues': '· offline, last known info',
     'Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.': "You don't follow anyone on RetroAchievements yet. Follow players on the site: their activity will show here.",
-    'Aucun succès débloqué par tes amis ces 14 derniers jours.': 'No achievements unlocked by your friends in the last 14 days.',
+    'Aucun succès débloqué par toi ou tes amis ces 14 derniers jours.': 'No achievements unlocked by you or your friends in the last 14 days.',
+    'Tu': 'You', 'as débloqué': 'unlocked',
     // bibliothèque, entretien
     'Aucun jeu.': 'No games.', 'hors ligne': 'offline', 'Aucun nouveau jeu.': 'No new games.', 'Aucun dossier surveillé : utilise « Scanner un dossier ».': 'No watched folder: use "Scan a folder".',
     'Retirer': 'Remove', 'Aucun dossier surveillé. « Scanner un dossier » en ajoute un.': 'No watched folders. "Scan a folder" adds one.', 'Tous les fichiers sont présents.': 'All files are present.',
