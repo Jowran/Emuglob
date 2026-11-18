@@ -121,6 +121,21 @@
   .fr img.b { width:48px; height:48px; border-radius:8px; flex:none; background:#2a2350; }
   .fr .tx { flex:1; min-width:0; } .fr small { display:block; color:var(--muted); }
   .fr .pts { color:#ffc83d; font-weight:700; white-space:nowrap; }
+  .subt { display:inline-block; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:600; background:color-mix(in srgb, var(--acc) 40%, transparent); color:#fff; vertical-align:1px; }
+  .frh { margin:6px 0 12px; font-size:18px; } .frh small { color:var(--muted); font-weight:400; font-size:13px; margin-left:8px; }
+  .fgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; margin-bottom:26px; }
+  .fcard { padding:14px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .fcard.live { border-color:color-mix(in srgb, #3ddc84 55%, transparent); background:linear-gradient(160deg, rgba(61,220,132,.12), rgba(255,255,255,.05) 60%); }
+  .fhead { display:flex; gap:12px; align-items:center; } .fhead b { display:block; font-size:15px; }
+  .fcard .fa { width:42px; height:42px; border-radius:50%; background:#3a2a6a center/cover; flex:none; position:relative; }
+  .fcard .fa i { position:absolute; right:-1px; bottom:-1px; width:12px; height:12px; border-radius:50%; background:#6b6690; border:2px solid #1a1440; }
+  .fcard.live .fa i { background:#3ddc84; box-shadow:0 0 8px #3ddc84; }
+  .fst { font-size:12px; color:var(--muted); } .fst.on { color:#3ddc84; font-weight:600; }
+  .fgame { display:flex; gap:10px; align-items:center; cursor:pointer; border-radius:8px; margin:-4px; padding:4px; } .fgame:hover { background:rgba(255,255,255,.07); } .fgame img { width:40px; height:40px; border-radius:8px; flex:none; background:#2a2350; }
+  .fgame div { min-width:0; } .fgame b { display:block; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .fgame small, .flast small { color:var(--muted); font-size:12px; }
+  .frp { font-size:12.5px; padding:8px 10px; border-radius:8px; background:rgba(0,0,0,.22); overflow-wrap:anywhere; }
+  .flast { display:flex; gap:8px; align-items:center; } .flast img { width:24px; height:24px; border-radius:5px; flex:none; }
+  body.light .fcard { background:rgba(255,255,255,.7); border-color:#e3e6ee; } body.light .frp { background:rgba(0,0,0,.05); } body.light .fcard .fa i { border-color:#fff; }
   .ach { display:flex; gap:14px; align-items:center; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,.07); margin-bottom:8px; }
   .ach.lock { opacity:.45; }
   .ach img { width:56px; height:56px; border-radius:8px; flex:none; background:#2a2350; }
@@ -1609,14 +1624,23 @@ function closeOv() {
 const sheetX = {};   // données chargées par jeu : { gp: GetGameProgression, wiki }
 const fmtH = (sec) => { const h = sec / 3600; return h < 1 ? Math.max(1, Math.round(sec / 60)) + ' min' : (h < 10 ? Math.round(h * 2) / 2 : Math.round(h)).toString().replace('.', ',') + ' h'; };
 const dayFr = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
-async function openSheet(g = cur()) {
+let sheetFrom = '';
+const closeSheet = () => { const back = sheetFrom; closeOv(); if (back === 'friends') openFriends(); };
+async function openSheet(g = cur(), from = '') {
   if (!g) return;
   closeOv();
+  sheetFrom = from;
+  if (from === 'friends') setTop('fr');
   mode = 'sheet'; sheetGame = g; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
-  if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
+  if (g.virtual && raOn()) jobs.push((async () => {   // jeu d'un ami, absent de la bibliothèque : tout vient de RetroAchievements
+    await loadProg(g);
+    if (!x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
+    if (g.friend && x.fpUser !== g.friend) { const r = await api.ra('GetGameInfoAndUserProgress', { g: g.raId, u: g.friend }, 60); if (r.ok && r.data) { x.fp = r.data; x.fpUser = g.friend; } }
+  })());
+  else if (raOn() && raSys(g)) jobs.push(ensureRA(g).then(async () => {
     if (g.raId > 0 && !x.gp) { const r = await api.ra('GetGameProgression', { i: g.raId }, 604800); if (r.ok && r.data) x.gp = r.data; }
   }));
   if (!x.wiki || x.wiki.error) jobs.push((async () => {
@@ -1629,7 +1653,8 @@ async function openSheet(g = cur()) {
 let sheetGame = null;
 function renderSheet() {
   const g = sheetGame; if (!g) return;
-  const x = sheetX[g.id] || {}, p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), gp = x.gp, emu = emuOf(g);
+  const x = sheetX[g.id] || {}, p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), gp = x.gp, emu = g.virtual ? null : emuOf(g);
+  const fp = x.fpUser === g.friend ? x.fp : null, fGot = fp && fp.Achievements ? Object.values(fp.Achievements).filter((a) => a.DateEarned || a.DateEarnedHardcore) : null;
   const year = p && p.Released ? p.Released.slice(0, 4) : '';
   const who = [year, p && p.Publisher, p && p.Developer && p.Developer !== p.Publisher ? p.Developer : ''].filter(Boolean).join(' · ');
   const genres = p && p.Genre ? p.Genre.split(/,\s*/).filter(Boolean) : [];
@@ -1656,13 +1681,16 @@ function renderSheet() {
   $('#sh-body').innerHTML = `<div class="sh">
   <div>
     <div class="sh-cov ${g.cover || g.thumb ? 'ct' : ''}" style="${art ? `background-image:url('${art.replace(/'/g, '%27')}')` : ''}"></div>
-    <div class="sh-btns"><button class="btn p" data-sh="play">▶ Jouer</button><button class="btn" data-sh="fav" title="Favori">${ic('star')}</button><button class="btn" data-sh="menu" title="Options">${ic('more')}</button></div>
+    ${g.virtual ? `<div class="sh-btns"><button class="btn" disabled style="opacity:.6;cursor:default">Pas dans ta bibliothèque</button></div>
+      ${g.friend ? `<div class="sh-card"><h4>${esc(g.friend)}</h4>${!fp ? '<div class="sh-load">Chargement…</div>' : `<div class="sh-prog"><b>${fGot.length} / ${fp.NumAchievements || Object.keys(fp.Achievements || {}).length}</b><span class="sh-sub">succès</span></div>
+        <div class="sh-bar"><i style="width:${fp.NumAchievements ? Math.round((100 * fGot.length) / fp.NumAchievements) : 0}%"></i></div>${g.rp ? `<div class="sh-src">${esc(g.rp)}</div>` : ''}`}</div>` : ''}`
+    : `<div class="sh-btns"><button class="btn p" data-sh="play">▶ Jouer</button><button class="btn" data-sh="fav" title="Favori">${ic('star')}</button><button class="btn" data-sh="menu" title="Options">${ic('more')}</button></div>
     <div class="sh-card"><h4>Ma partie</h4><div class="sh-kv">
       <div><b>${g.playSeconds >= 60 ? fmtDur(g.playSeconds) : '–'}</b><span>Temps de jeu</span></div><div><b>${g.playCount || 0}</b><span>Parties</span></div>
-      <div><b>${g.lastPlayed ? ago(g.lastPlayed) : 'Jamais'}</b><span>Dernière fois</span></div><div><b>${g.added ? dayFr(g.added) : '–'}</b><span>Ajouté le</span></div></div></div>
+      <div><b>${g.lastPlayed ? ago(g.lastPlayed) : 'Jamais'}</b><span>Dernière fois</span></div><div><b>${g.added ? dayFr(g.added) : '–'}</b><span>Ajouté le</span></div></div></div>`}
   </div>
   <div>
-    <div class="sh-sub">${esc(labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
+    <div class="sh-sub">${esc(g.virtual ? (p && p.ConsoleName) || g.raConsole || '' : labelOf(g))}${emu ? ' · ' + esc(emu.name) : ''}</div>
     <h1>${esc(g.title)}</h1>
     ${who ? `<div class="sh-sub">${esc(who)}</div>` : ''}
     ${genres.length || g.favorite ? `<div class="sh-tags">${genres.map((t, i) => `<span class="${i ? '' : 'c'}">${esc(t)}</span>`).join('')}${g.favorite ? '<span>★ Favori</span>' : ''}</div>` : '<div style="height:18px"></div>'}
@@ -1674,16 +1702,16 @@ function renderSheet() {
   </div>
   <div class="sh-side">
     ${!raOn() ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.</div></div>'
-      : !raSys(g) ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Pas de succès RetroAchievements pour cette console.</div></div>'
+      : !g.virtual && !raSys(g) ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Pas de succès RetroAchievements pour cette console.</div></div>'
       : g.raId === -1 ? '<div class="sh-card"><h4>Succès</h4><div class="sh-file">Jeu non reconnu par RetroAchievements. Renseigne son ID dans Options, Modifier.</div></div>'
       : !s ? '<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-load">Chargement…</div></div>'
-      : `<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
+      : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
         <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString('fr-FR')} joueurs sur RetroAchievements</div>` : ''}</div>
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
-    <div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>
+    ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
 }
-$('#sh-close').onclick = () => closeOv();
+$('#sh-close').onclick = () => closeSheet();
 $('#sh-body').onclick = (e) => {
   const wl = e.target.closest('[data-wiki]'); if (wl) return api.wikiOpen(wl.dataset.wiki);
   const b = e.target.closest('[data-sh]'); if (!b || !sheetGame) return;
@@ -2049,46 +2077,98 @@ function drawSetPane() {
 }
 const navSel = () => (mode === 'settings' ? '.snav, .sset' : '.lcard, .lhead');
 
-/* ---------- amis RetroAchievements ---------- */
-let friends = null, feed = [], frState = '';
+/* ---------- amis RetroAchievements : activité (en jeu, rich presence) + derniers succès ---------- */
+let friends = null, feed = [], frState = '', frTimer = 0, frBusy = false;
+const raDate = (d) => (d ? Date.parse(String(d).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(d) ? '' : 'Z')) : 0);   // dates RA = UTC
+const FR_LIVE = 5 * 60000;   // rich presence de moins de 5 min = en jeu (RALibretro l'envoie toutes les ~2 min)
 async function loadFriends(force) {
-  frState = 'Chargement des amis…'; renderFr();
-  const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 120);
-  if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
-  const res = (r.data && (r.data.Results || r.data.results)) || [];
-  friends = res.map((f) => ({ user: f.User || f.user })).filter((f) => f.user);
-  feed = [];
-  const list = friends.slice(0, 40);
-  let i = 0;
-  const worker = async () => {
-    while (i < list.length) {
-      const f = list[i++];
-      const a = await api.ra('GetUserRecentAchievements', { u: f.user, m: 20160 }, force ? 0 : 120);
-      if (a.ok && Array.isArray(a.data)) a.data.forEach((x) => feed.push({ ...x, friend: f.user }));
-    }
-  };
-  await Promise.all([worker(), worker(), worker(), worker()]);
-  feed.sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
-  feed = feed.slice(0, 100);
-  frState = '';
+  if (frBusy) return;
+  frBusy = true;
+  if (!friends) { frState = 'Chargement des amis…'; renderFr(); }
+  try {
+    const r = await api.ra('GetUsersIFollow', { c: 100 }, force ? 0 : 300);
+    if (!r.ok) { frState = 'Erreur : ' + r.error; return; }
+    const res = (r.data && (r.data.Results || r.data.results)) || [];
+    const prev = new Map((friends || []).map((f) => [f.user, f]));
+    const list = res.map((f) => f.User || f.user).filter(Boolean).slice(0, 40).map((u) => prev.get(u) || { user: u });
+    let i = 0;
+    const worker = async () => {
+      while (i < list.length) {
+        const f = list[i++];
+        // GetUserSummary ne renvoie les succès que des jeux « récemment joués » : un succès de subset (autre ID de jeu) en était absent.
+        // Les succès viennent donc de GetUserRecentAchievements (14 jours, tous jeux confondus, subsets compris).
+        const [a, ra] = await Promise.all([api.ra('GetUserSummary', { u: f.user, g: 1, a: 0 }, force ? 0 : 50), api.ra('GetUserRecentAchievements', { u: f.user, m: 20160 }, force ? 0 : 110)]);
+        if (!a.ok || !a.data) continue;
+        const d = a.data, last = d.LastGame || (d.RecentlyPlayed || [])[0] || null;
+        const rpAt = raDate(d.RichPresenceMsgDate);
+        const ach = (ra.ok && Array.isArray(ra.data) ? ra.data : []).map((x) => ({ ...x, friend: f.user, at: raDate(x.Date), ...splitSubset(x.GameTitle) }));
+        ach.sort((x, y) => y.at - x.at);
+        Object.assign(f, { pic: d.UserPic, rp: d.RichPresenceMsg || '', rpAt, status: d.Status || '', game: last ? { id: last.ID || last.GameID, title: last.Title, console: last.ConsoleName, icon: last.ImageIcon } : null,
+          playedAt: raDate((d.RecentlyPlayed || [])[0] && d.RecentlyPlayed[0].LastPlayed), ach, stale: !!a.stale });
+        f.live = /online/i.test(f.status) || (rpAt && Date.now() - rpAt < FR_LIVE);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    friends = list;
+    const since = Date.now() - 14 * 864e5;
+    feed = list.flatMap((f) => f.ach || []).filter((x) => x.at > since).sort((x, y) => y.at - x.at).slice(0, 100);
+    frState = '';
+  } finally { frBusy = false; }
+}
+// « Jeu [Subset - Bonus] » → jeu principal + nom du subset (set secondaire RetroAchievements, avec son propre ID de jeu)
+const splitSubset = (t) => { const m = /^(.*?)\s*\[Subset\s*-\s*(.+?)\]\s*$/i.exec(t || ''); return m ? { base: m[1], subset: m[2] } : { base: t || '', subset: '' }; };
+const subTag = (x) => (x.subset ? `<span class="subt" title="Set secondaire RetroAchievements">Subset · ${esc(x.subset)}</span>` : '');
+const agoMs = (t) => {
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`;
+};
+const friendCard = (f) => {
+  const seen = Math.max(f.rpAt || 0, f.playedAt || 0);
+  const st = f.live ? '<span class="fst on">En jeu</span>' : `<span class="fst">${seen ? 'Vu ' + agoMs(seen) : 'Hors ligne'}</span>`;
+  const g = f.game;
+  const lastA = (f.ach || [])[0];
+  return `<div class="fcard ${f.live ? 'live' : ''}">
+    <div class="fhead"><div class="fa" style="background-image:url('${RAM}${esc(f.pic || '/UserPic/' + encodeURIComponent(f.user) + '.png')}')"><i></i></div><div><b>${esc(f.user)}</b>${st}</div></div>
+    ${g ? `<div class="fgame" data-fg="${esc(f.user)}" title="Voir la fiche du jeu"><img src="${RAM}${esc(g.icon || '')}" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(g.title || '')}</b><small>${esc(g.console || '')}${f.live ? '' : ' · dernier jeu'}</small></div></div>` : ''}
+    ${f.rp && (f.live || (f.rpAt && Date.now() - f.rpAt < 864e5)) ? `<div class="frp">${esc(f.rp)}</div>` : ''}
+    ${lastA ? `<div class="flast"><img src="${RAM}/Badge/${esc(lastA.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'"><small><b>${esc(lastA.Title)}</b> ${subTag(lastA)} · ${esc(agoMs(lastA.at))}</small></div>` : ''}
+  </div>`;
+};
+function openFriendGame(user) {
+  const f = (friends || []).find((x) => x.user === user); if (!f || !f.game || !f.game.id) return;
+  const mine = cfg.games.find((g) => g.raId === +f.game.id);
+  if (mine) return openSheet(mine, 'friends');
+  openSheet({ id: 'ra-' + f.game.id, title: f.game.title || 'Jeu', raId: +f.game.id, raConsole: f.game.console, virtual: true, friend: f.user, rp: f.live ? f.rp : '', path: '' }, 'friends');
 }
 const friendRow = (a) => `<div class="fr"><div class="fa" style="background-image:url('${RAM}/UserPic/${encodeURIComponent(a.friend)}.png')"></div>
   <img class="b" src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
-  <div class="tx"><b>${esc(a.friend)}</b> a débloqué <b>${esc(a.Title)}</b><small>${esc(a.GameTitle || '')} · ${esc(a.ConsoleName || '')} · ${esc((a.Date || '').slice(0, 16))}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
+  <div class="tx"><b>${esc(a.friend)}</b> a débloqué <b>${esc(a.Title)}</b><small>${esc(a.base || a.GameTitle || '')} ${subTag(a)} · ${esc(a.ConsoleName || '')} · ${esc(agoMs(a.at))}${a.HardcoreMode ? '' : ' · softcore'}</small></div><div class="pts">${a.Points || 0} pts</div></div>`;
 function renderFr() {
   let body;
   if (frState) body = `<p class="muted">${esc(frState)}</p>`;
-  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leurs succès apparaîtront ici.</p>';
-  else if (!feed.length) body = '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>';
-  else body = `<p class="muted">${friends.length} ami(s) suivi(s) · derniers succès débloqués (14 jours)${friends.length > 40 ? ' · 40 premiers amis' : ''}</p>` + feed.map(friendRow).join('');
+  else if (friends && !friends.length) body = '<p class="muted">Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.</p>';
+  else if (!friends) body = '';
+  else {
+    const sorted = [...friends].sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || Math.max(b.rpAt || 0, b.playedAt || 0) - Math.max(a.rpAt || 0, a.playedAt || 0));
+    const nLive = friends.filter((f) => f.live).length;
+    const off = friends.some((f) => f.stale);
+    body = `<h3 class="frh">Activité <small>${nLive ? `${nLive} en jeu` : 'personne en jeu'} · ${friends.length} ami(s)${off ? ' · hors ligne, dernières infos connues' : ''}</small></h3>
+      <div class="fgrid">${sorted.map(friendCard).join('')}</div>
+      <h3 class="frh">Derniers succès <small>14 jours</small></h3>` + (feed.length ? feed.map(friendRow).join('') : '<p class="muted">Aucun succès débloqué par tes amis ces 14 derniers jours.</p>');
+  }
+  const y = $('#fr-body').scrollTop;
   $('#fr-body').innerHTML = body;
+  $('#fr-body').scrollTop = y;
 }
 async function openFriends() {
   closeOv();
   if (!raOn()) { toast('Renseigne ton pseudo et ta clé API RetroAchievements.'); return openSettings(); }
   mode = 'friends'; setTop('fr'); $('#ov-fr').hidden = false;
+  if (friends) renderFr();
   await loadFriends(false);
   renderFr();
+  clearInterval(frTimer);   // rafraîchissement léger tant que l'onglet est ouvert
+  frTimer = setInterval(async () => { if (mode !== 'friends' || document.hidden) { if (mode !== 'friends') clearInterval(frTimer); return; } await loadFriends(false); if (mode === 'friends') renderFr(); }, 60000);
 }
 
 /* ---------- identification des disques (Wii, GameCube, PS1, PS2, PSP, DS) ---------- */
@@ -2664,6 +2744,7 @@ $('#f-stage').addEventListener('wheel', (e) => {
 window.addEventListener('resize', () => { if (mode === 'home') placeFlow(); });
 $('#tab-fr').onclick = openFriends;
 $('#fr-close').onclick = closeOv;
+$('#fr-body').onclick = (e) => { const c = e.target.closest('[data-fg]'); if (c) openFriendGame(c.dataset.fg); };
 $('#fr-refresh').onclick = async () => { await loadFriends(true); renderFr(); };
 $('#lib-less').onclick = () => setAllOpen(false);
 $('#lib-more').onclick = () => setAllOpen(true);
@@ -2717,8 +2798,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'F11') { e.preventDefault(); return setFullscreen(); }
   if (mode === 'game') return;
   if (document.querySelector('dialog[open]')) return;
+  if (e.key === 'Escape' && mode === 'sheet') return closeSheet();
   if (e.key === 'Escape' && mode !== 'home') return closeOv();
-  if (mode === 'sheet' && e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); const g = sheetGame; closeOv(); return launch(g); }
+  if (mode === 'sheet' && e.key === 'Enter' && e.target.tagName !== 'BUTTON' && !sheetGame.virtual) { e.preventDefault(); const g = sheetGame; closeOv(); return launch(g); }
   if (e.target.tagName === 'INPUT') return;
   if (mode === 'home') {
     const k = e.key, kl = k.toLowerCase();
@@ -2768,9 +2850,9 @@ function pad() {
       if (b) closeOv();
     } else if (mode === 'sheet') {
       if (dy) $('#sh-body').scrollBy(0, dy * 40);
-      if (a) { const g = sheetGame; closeOv(); launch(g); }
-      if (y && sheetGame) { toggleFav(sheetGame); renderSheet(); }
-      if (b) closeOv();
+      if (a && !sheetGame.virtual) { const g = sheetGame; closeOv(); launch(g); }
+      if (y && sheetGame && !sheetGame.virtual) { toggleFav(sheetGame); renderSheet(); }
+      if (b) closeSheet();
     } else if (mode === 'trophies' || mode === 'friends' || mode === 'profile') {
       if (dy) $(mode === 'friends' ? '#fr-body' : mode === 'profile' ? '#pro-body' : '#tro-body').scrollBy(0, dy * 40);
       if (b) closeOv();
