@@ -99,7 +99,15 @@ function checkUserData() {
   return warn;
 }
 
-// émulateurs configurés mais introuvables (disque débranché, dossier déplacé ou renommé)
+// émulateurs configurés mais introuvables : la cause dit quoi faire (disque débranché, dossier supprimé, exe renommé)
+const INSTALLABLE = { ralibretro: 'RALibretro', pcsx2: 'PCSX2' };
+let emuMissing = [];   // [{ id, name }] pour les boutons du message
+function whyMissing(exe) {
+  const root = path.parse(exe).root, dir = path.dirname(exe);
+  if (root && !fs.existsSync(root)) return `le lecteur ${root.replace(/[\\/]+$/, '')} n'est pas branché`;
+  if (!fs.existsSync(dir)) return 'son dossier a été déplacé, renommé ou supprimé';
+  return `le dossier existe mais ${path.basename(exe)} n'y est plus (supprimé ou renommé)`;
+}
 function checkEmulators(cfg) {
   let found = {};
   try { found = require('./emucfg.js').detect(app.isPackaged ? EXE_DIR : path.join(HERE, '..')); } catch { /* détection facultative */ }
@@ -108,9 +116,16 @@ function checkEmulators(cfg) {
   for (const e of list.concat(cfg.ralibretro && !found.ralibretro ? [{ name: 'RALibretro', exe: cfg.ralibretro }] : [])) {
     if (!e || !e.exe || typeof e.exe !== 'string' || seen.has(e.exe.toLowerCase())) continue;
     seen.add(e.exe.toLowerCase());
-    if (!fs.existsSync(e.exe)) out.push(`${e.name || 'Émulateur'} : ${e.exe}`);
+    if (fs.existsSync(e.exe)) continue;
+    const why = whyMissing(e.exe), drive = /lecteur/.test(why);
+    out.push(`${e.name || 'Émulateur'} : ${e.exe}\n    → ${why}.`);
+    emuMissing.push({ id: e.id || 'ralibretro', name: e.name || 'Émulateur', drive });
   }
-  return out.length ? [`Émulateur(s) introuvable(s) :\n  • ${out.join('\n  • ')}\n  Que faire : rebranche le disque, ou corrige le chemin dans Paramètres, Émulateurs.`] : [];
+  if (!out.length) return [];
+  const reinst = [...new Set(emuMissing.filter((x) => !x.drive && INSTALLABLE[x.id]).map((x) => INSTALLABLE[x.id]))];
+  const drive = emuMissing.some((x) => x.drive), other = emuMissing.some((x) => !x.drive);
+  const todo = [drive && 'rebranche le lecteur', other && 'choisis le nouvel emplacement de l\'émulateur', reinst.length && `réinstalle ${reinst.join(' et ')} (Paramètres, Installation)`].filter(Boolean).join(', ou ');
+  return [`Émulateur(s) introuvable(s) :\n  • ${out.join('\n  • ')}\n  Que faire : ${todo}.`];
 }
 
 // les avertissements ne bloquent pas : ils s'affichent une fois par problème différent
@@ -120,12 +135,20 @@ function showWarnings(win, warns) {
   let last = '';
   try { last = JSON.parse(fs.readFileSync(memo, 'utf-8')).shown; } catch { /* jamais affiché */ }
   if (last === key) return;
+  // boutons utiles pour le premier émulateur introuvable (hors lecteur débranché) : nouveau chemin, réinstallation
+  const fix = emuMissing.find((x) => !x.drive), ins = emuMissing.find((x) => !x.drive && INSTALLABLE[x.id]);
+  const acts = [['Continuer', null],
+    ...(fix ? [[`Choisir le nouveau chemin${emuMissing.length > 1 ? ` de ${fix.name}` : ''}`, `fixEmuPath(${JSON.stringify(fix.id)})`]] : []),
+    ...(ins ? [[`Réinstaller ${INSTALLABLE[ins.id]}`, `openInstall(${JSON.stringify(ins.id)})`]] : []),
+    ['Quitter', 'quit']];
   dialog.showMessageBox(win, {
-    type: 'warning', title: 'Emuglob', buttons: ['Continuer', 'Quitter'], defaultId: 0, cancelId: 0, noLink: true,
+    type: 'warning', title: 'Emuglob', buttons: acts.map((a) => a[0]), defaultId: 0, cancelId: 0, noLink: true,
     message: warns.length > 1 ? `${warns.length} problèmes détectés au démarrage` : 'Problème détecté au démarrage',
     detail: warns.join('\n\n'),
   }).then((r) => {
-    if (r.response === 1) return app.quit();
+    const act = acts[r.response] && acts[r.response][1];
+    if (act === 'quit') return app.quit();
+    if (act) setTimeout(() => { if (!win.isDestroyed()) win.webContents.executeJavaScript(`typeof ${act.split('(')[0]} === 'function' && ${act}`).catch(() => {}); }, 1500);
     try { fs.writeFileSync(memo, JSON.stringify({ shown: key })); } catch { /* tant pis, il reviendra */ }
   }, () => {});
 }

@@ -34,6 +34,6 @@ npm run build-info
 Écrit `build-info.json` (date + empreintes SHA-256). Au lancement, `boot.js` s'en sert pour signaler un fichier abîmé.
 
 ## Crédits
-Emuglob ne contient aucun émulateur. [RALibretro](https://github.com/RetroAchievements/RALibretro) (GPL-3.0, RetroAchievements) et [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0) peuvent être installés depuis Emuglob : ils sont alors téléchargés directement depuis leur source officielle (site de RetroAchievements, Releases GitHub de PCSX2) et lancés comme des programmes séparés. Aucun BIOS n'est fourni.
+Emuglob ne contient aucun émulateur. [RALibretro](https://github.com/RetroAchievements/RALibretro) (GPL-3.0, RetroAchievements) et [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0) peuvent être installés depuis Emuglob : ils sont alors téléchargés directement depuis leur source officielle (site de RetroAchievements, Releases GitHub de PCSX2) et lancés comme des programmes séparés. Les cores de RALibretro sont téléchargés à la demande depuis le buildbot officiel de libretro (buildbot.libretro.com). Aucun BIOS n'est fourni.
 
 Logiciels tiers inclus : [7-Zip](https://www.7-zip.org) (`tools/7za.exe`, Igor Pavlov, GNU LGPL), utilisé seulement pour décompresser les émulateurs téléchargés. Voir `tools/7za-LICENSE.txt`.

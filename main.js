@@ -621,9 +621,60 @@ ipcMain.handle('game:identify', (_e, file) => {
 ipcMain.handle('cores:installed', (_e, exe) => {
   try {
     const dir = path.join(path.dirname(exe), 'Cores');
-    return fs.readdirSync(dir).filter((f) => /_libretro\.(dll|so|dylib)$/i.test(f)).map((f) => f.replace(/\.(dll|so|dylib)$/i, ''));
+    // un .dll vide ou tronqué (téléchargement raté) ne compte pas : RALibretro ne pourrait pas le charger
+    return fs.readdirSync(dir).filter((f) => /_libretro\.(dll|so|dylib)$/i.test(f) && fs.statSync(path.join(dir, f)).size >= 1024).map((f) => f.replace(/\.(dll|so|dylib)$/i, ''));
   } catch {
     return [];
+  }
+});
+
+// cores RALibretro : téléchargés depuis le buildbot officiel libretro (Windows 64 bits), comme le fait RALibretro lui-même
+const CORE_URL = process.env.EMUGLOB_CORE_URL || 'https://buildbot.libretro.com/nightly/windows/x86_64/latest/';
+ipcMain.handle('cores:list', (_e, exe) => {   // { nom: { size, mtime } } des cores présents
+  const out = {};
+  try {
+    const dir = path.join(path.dirname(exe), 'Cores');
+    for (const f of fs.readdirSync(dir)) { const m = /^(.+_libretro)\.(dll|so|dylib)$/i.exec(f); if (!m) continue; const s = fs.statSync(path.join(dir, f)); out[m[1]] = { size: s.size, mtime: s.mtimeMs }; }
+  } catch { /* pas de dossier Cores */ }
+  return out;
+});
+ipcMain.handle('cores:delete', (_e, { exe, core }) => {
+  if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
+  if (emucfg.running(exe)) return { ok: false, error: 'RALibretro est ouvert : ferme-le avant.' };
+  try { fs.unlinkSync(path.join(path.dirname(exe), 'Cores', core + '.dll')); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('cores:download', async (_e, { exe, core }) => {
+  if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
+  if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'RALibretro introuvable' };
+  if (emucfg.running(exe) && fs.existsSync(path.join(path.dirname(exe), 'Cores', core + '.dll'))) return { ok: false, error: 'RALibretro est ouvert : ferme-le pour mettre à jour ce core.' };
+  const work = path.join(app.getPath('userData'), 'update', 'core-' + core);
+  const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('inst:progress', { id: 'core', core, ...p }); };
+  try {
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.mkdirSync(path.join(work, 'x'), { recursive: true });
+    const r = await fetch(CORE_URL + core + '.dll.zip', { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(300000) });
+    if (r.status === 404) throw new Error("absent du buildbot libretro");
+    if (!r.ok) throw new Error('téléchargement refusé (' + r.status + ')');
+    const total = +r.headers.get('content-length') || 0, chunks = []; let got = 0;
+    for await (const c of r.body) { chunks.push(c); got += c.length; send({ step: 'download', got, total }); }
+    const buf = Buffer.concat(chunks);
+    if (buf.slice(0, 2).toString() !== 'PK') throw new Error("le fichier téléchargé n'est pas un zip");
+    const file = path.join(work, core + '.dll.zip');
+    fs.writeFileSync(file, buf);
+    send({ step: 'extract' });
+    await extract(file, path.join(work, 'x'));
+    const dll = findFile(path.join(work, 'x'), [core.toLowerCase() + '.dll'], 2);
+    if (!dll || fs.statSync(dll).size < 1024) throw new Error(`${core}.dll introuvable dans l'archive`);
+    const dir = path.join(path.dirname(exe), 'Cores');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.copyFileSync(dll, path.join(dir, core + '.dll'));
+    fs.rmSync(work, { recursive: true, force: true });
+    embedLog(`core ${core} installé dans ${dir}`);
+    return { ok: true };
+  } catch (e) {
+    embedLog(`core ${core} : ${e.message}`);
+    try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignoré */ }
+    return { ok: false, error: e.message };
   }
 });
 
