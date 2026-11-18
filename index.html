@@ -47,6 +47,7 @@
   #prog { margin-top:6px; color:#e5e0f5; display:flex; align-items:center; gap:12px; min-height:26px; }
   .bar { width:220px; height:8px; background:rgba(255,255,255,.22); border-radius:4px; overflow:hidden; }
   .bar i { display:block; height:100%; background:#ffc83d; }
+  #prog { flex-wrap:wrap; row-gap:4px; } #prog .subl { flex-basis:100%; display:flex; align-items:center; justify-content:inherit; gap:12px; font-size:13px; opacity:.85; } #prog .subl .bar { width:160px; height:6px; }
   .actions { display:flex; gap:12px; margin-top:14px; }
   .btn { background:var(--glass); border:2px solid transparent; color:#fff; border-radius:40px; height:54px; font-size:20px; font-weight:600; font-family:inherit; cursor:pointer; padding:0 64px; backdrop-filter:blur(8px); }
   .btn.round { width:54px; padding:0; font-size:24px; }
@@ -1201,10 +1202,42 @@ function stats(g) {
   const got = all.filter((a) => a.DateEarned || a.DateEarnedHardcore);
   return { all, got, total: p.data.NumAchievements || all.length, pts: got.reduce((s, a) => s + (a.Points || 0), 0) };
 }
+// subsets RetroAchievements du jeu (« Titre [Subset - Nom] » dans la liste RA de la console + ROM patchées rangées dessous) et leur progression
+const subRA = {};   // raId du jeu de base → [{ id, name }]
+async function subsetIdsOf(g) {
+  if (subRA[g.raId]) return subRA[g.raId];
+  const out = [], seen = new Set([+g.raId]);
+  const add = (id, name) => { id = +id; if (id > 0 && !seen.has(id)) { seen.add(id); out.push({ id, name }); } };
+  for (const v of subsetsOf(g)) if (v.raId > 0) add(v.raId, v.subName || subTagOf(v.raTitle) || v.title);
+  const p = prog[g.raId] && prog[g.raId].data, base = String((p && p.Title) || g.raTitle || '').trim().toLowerCase();
+  const L = base ? await raList(raSys(g)) : null;
+  if (L) for (const r of L.rows) {
+    const m = /^(.*?)\s*\[\s*subset\s*-\s*([^\]]+?)\s*\]\s*$/i.exec(r.title);
+    if (m && m[1].trim().toLowerCase() === base) add(r.id, m[2]);
+  }
+  return (subRA[g.raId] = out);
+}
+async function loadSubProg(g) {
+  if (!(g.raId > 0)) return;
+  const subs = await subsetIdsOf(g);
+  await Promise.all(subs.map(async (x) => {
+    const c = prog[x.id];
+    if (c && Date.now() - c.t < 300000) return;
+    const r = await api.ra('GetGameInfoAndUserProgress', { g: x.id }, 30);
+    if (r.ok && r.data && r.data.Achievements !== undefined) prog[x.id] = { t: Date.now(), data: r.data };
+  }));
+}
+function subStats(g) {   // progression de chaque subset ; on n'affiche que ceux commencés ou dont la ROM patchée est dans la bibliothèque
+  const subs = g && g.raId > 0 ? subRA[g.raId] || [] : [];
+  const vs = subsetsOf(g), mine = new Set(vs.map((v) => +v.raId)), names = new Set(vs.map((v) => (v.subName || '').toLowerCase()));
+  return subs.map((x) => ({ ...x, s: stats({ raId: x.id }) })).filter((x) => x.s && x.s.total && (x.s.got.length || mine.has(x.id) || names.has(x.name.toLowerCase())));
+}
 async function ensureRA(g) {
   if (!g || !raOn() || !raSys(g)) return;
+  for (const v of subsetsOf(g)) if (v.raId === 0 && v.subName) { delete v.raId; delete v.raV; }   // ROM patchée créée avant : à reconnaître par son empreinte
   if (g.raId === undefined) { await matchGame(g); save(); }
-  if (g.raId > 0) await loadProg(g);
+  for (const v of subsetsOf(g)) if (v.raId === undefined) { await matchGame(v); delete subRA[g.raId]; save(); }
+  if (g.raId > 0) { await loadProg(g); await loadSubProg(g).catch(() => {}); }
   if (cur() === g) { renderInfo(); renderBottom(); }
 }
 async function refreshRA() {
@@ -1407,7 +1440,8 @@ function raLine(g) {
   const s = stats(g);
   if (!s) return '<span style="opacity:.7">Succès : chargement…</span>';
   const pc = s.total ? Math.round((100 * s.got.length) / s.total) : 0;
-  return `${ic('trophy')} ${s.got.length}/${s.total} succès · ${s.pts} pts<div class="bar"><i style="width:${pc}%"></i></div>`;
+  return `${ic('trophy')} ${s.got.length}/${s.total} succès · ${s.pts} pts<div class="bar"><i style="width:${pc}%"></i></div>`
+    + subStats(g).map((x) => `<div class="subl">Subset ${esc(x.name)} : ${x.s.got.length}/${x.s.total} · ${x.s.pts} pts<div class="bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('');
 }
 function renderInfo() {
   const g = cur(), n = cfg.games.length;
@@ -1618,8 +1652,8 @@ async function applyPatch(g, p, opts) {
   let v = cfg.games.find((x) => x.path === r.out);
   if (!v) {
     v = { ...g, id: Math.random().toString(36).slice(2, 10), title: `${g.title} [Subset - ${p.name}]`, path: r.out, subName: p.name,
-      favorite: false, lastPlayed: 0, playCount: 0, playSeconds: 0, raId: 0, raV: 0, hash: '', missing: false };
-    delete v.subLast;
+      favorite: false, lastPlayed: 0, playCount: 0, playSeconds: 0, missing: false };
+    ['subLast', 'raId', 'raV', 'raBy', 'hash', 'raManual'].forEach((k) => delete v[k]);   // reconnu ensuite par son empreinte (ID du subset)
     cfg.games.push(v);
   }
   g.subLast = v.id; save();
@@ -1867,6 +1901,8 @@ function renderSheet() {
       : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
         <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString(LOC)} joueurs sur RetroAchievements</div>` : ''}</div>
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
+    ${g.virtual ? '' : subStats(g).map((x) => `<div class="sh-card"><h4>Subset · ${esc(x.name)}</h4><div class="sh-prog"><b>${x.s.got.length} / ${x.s.total}</b><span class="sh-sub">${x.s.pts} pts</span></div>
+      <div class="sh-bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('')}
     ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
 }
