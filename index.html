@@ -131,6 +131,24 @@
   dialog .fsr input { flex:none; width:auto; padding:0; accent-color:#8f7dff; } .fsr .fp { flex:1; min-width:0; word-break:break-all; color:#e8e5ff; }
   .fsr .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.08); white-space:nowrap; }
   .fsr .tag.warn { background:rgba(255,200,61,.18); color:#ffc83d; }
+  #dlg-cores { width:min(1000px, 94vw); }
+  #co-list { max-height:60vh; overflow:auto; margin-top:8px; }
+  .cosys { padding:8px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+  .cosys > b { display:block; margin-bottom:4px; }
+  .corow { display:flex; align-items:center; gap:10px; font-size:13px; padding:3px 0; }
+  .corow .cn { flex:1; min-width:0; } .corow .cn small { color:var(--muted); margin-left:8px; }
+  .corow .ci { color:var(--muted); min-width:170px; text-align:right; } .corow .ci.ok { color:#7fe0a0; }
+  .corow button { padding:4px 10px; font-size:12px; }
+  #dlg-tuto { width:min(760px, 94vw); }
+  #tu-dots { display:flex; gap:6px; margin-bottom:14px; }
+  #tu-dots i { flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,.12); cursor:pointer; }
+  #tu-dots i.on { background:#ffc83d; }
+  #tu-body { min-height:300px; }
+  #tu-body .tuh { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  #tu-body .tuh .ico { width:44px; height:44px; padding:10px; border-radius:12px; background:rgba(143,125,255,.18); color:#cfc5ff; flex:none; }
+  #tu-body h2 { margin:0; } #tu-body .tun { color:var(--muted); font-size:12px; }
+  #tu-body ol, #tu-body ul { margin:8px 0 0; padding-left:20px; line-height:1.6; }
+  #tu-body li { margin:4px 0; } #tu-body b { color:#fff; } #tu-body .tip { margin-top:12px; padding:10px 12px; border-radius:10px; background:rgba(255,200,61,.1); color:#ffe39a; font-size:13px; line-height:1.5; }
   #c-note { color:var(--muted); font-size:12px; margin-top:10px; word-break:break-all; }
   #m-list { display:flex; flex-direction:column; gap:8px; min-width:260px; }
   .ico { width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; vertical-align:-.14em; flex:none; }
@@ -400,7 +418,7 @@
   <label id="i-src">Dernière version</label><div id="i-new">…</div>
   <div id="i-state" style="margin-top:12px;color:var(--muted);min-height:1.2em"></div>
   <div id="i-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5"></div>
-  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
+  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-cores" hidden>Cores de base</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
 </dialog>
 
 <dialog id="dlg-fsav">
@@ -409,6 +427,28 @@
   <div id="fs-list"></div>
   <div id="fs-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Les fichiers trouvés sont <b>copiés</b> dans les sauvegardes d'Emuglob : l'original n'est ni déplacé ni modifié, et une sauvegarde déjà présente dans Emuglob part d'abord dans l'historique du jeu. Au prochain lancement, Emuglob la donne à l'émulateur si elle est plus récente que la sienne.<br>Les cartes mémoire communes à tous les jeux (PCSX2, Dolphin) restent dans leur émulateur.</div>
   <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
+</dialog>
+
+<dialog id="dlg-core">
+  <h2 id="k-title">Core manquant</h2>
+  <div id="k-text" style="line-height:1.5"></div>
+  <div id="k-state" style="margin-top:12px;color:var(--muted);min-height:1.2em"></div>
+  <div style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Les cores sont téléchargés depuis le site officiel de libretro (buildbot.libretro.com, Windows 64 bits) et placés dans le dossier Cores de RALibretro. Ce sont des logiciels libres, distincts d'Emuglob.</div>
+  <div class="row"><button id="k-no" style="margin-right:auto">Annuler</button><button id="k-go" style="background:#5b46d6">Télécharger</button></div>
+</dialog>
+
+<dialog id="dlg-cores">
+  <h2>Cores RALibretro</h2>
+  <div id="co-state" style="color:var(--muted);min-height:1.2em"></div>
+  <div id="co-list"></div>
+  <div style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Téléchargés depuis le site officiel de libretro (buildbot.libretro.com, Windows 64 bits) dans le dossier Cores de RALibretro. « Mettre à jour » reprend la dernière version. Logiciels libres, distincts d'Emuglob.</div>
+  <div class="row"><button id="co-ok" style="margin-right:auto">Fermer</button><button id="co-base" style="background:#5b46d6">Installer les cores de base</button></div>
+</dialog>
+
+<dialog id="dlg-tuto">
+  <div id="tu-dots"></div>
+  <div id="tu-body"></div>
+  <div class="row"><button id="tu-skip" style="margin-right:auto">Passer le tuto</button><button id="tu-go" hidden>Y aller</button><button id="tu-prev">Précédent</button><button id="tu-next" style="background:#5b46d6">Suivant</button></div>
 </dialog>
 
 <dialog id="dlg-ctl">
@@ -541,13 +581,12 @@ const BAD_CORES = new Set(['mednafen_pce_libretro', 'pcsx_rearmed_libretro', 'st
 // choisit le core à lancer parmi ceux réellement installés
 function pickCore(g, inst) {
   const cands = CORE_CANDS[g.system] || [];
-  if (!inst.length) return g.core || cands[0] || '';
   if (g.coreManual && inst.includes(g.core)) return g.core;
   return cands.find((c) => inst.includes(c)) || (inst.includes(g.core) ? g.core : '');
 }
 const EXT = {'.md':1,'.gen':1,'.smd':1,'.z64':2,'.n64':2,'.v64':2,'.sfc':3,'.smc':3,'.gb':4,'.gba':5,'.gbc':6,'.nes':7,'.pce':8,'.sms':11,
   '.cue':12,'.chd':12,'.pbp':12,'.gg':15,'.lnx':13,'.ngp':14,'.ngc':14,'.nds':18,'.a26':25};
-const EXT_EMU = { '.nsp':'switch', '.xci':'switch', '.nsz':'switch', '.xcz':'switch', '.wbfs':'dolphin', '.rvz':'dolphin', '.wia':'dolphin', '.gcz':'dolphin', '.gcm':'dolphin', '.iso':'dolphin', '.cso':'ppsspp', '.3ds':'azahar', '.cci':'azahar', '.cxi':'azahar', '.3dsx':'azahar', '.cia':'azahar' };
+const EXT_EMU = { '.nsp':'switch', '.xci':'switch', '.nsz':'switch', '.xcz':'switch', '.wbfs':'dolphin', '.rvz':'dolphin', '.wia':'dolphin', '.gcz':'dolphin', '.gcm':'dolphin', '.iso':'dolphin', '.cso':'ppsspp', '.3ds':'azahar', '.cci':'azahar', '.cxi':'azahar', '.3dsx':'azahar', '.cia':'azahar', '.wux':'cemu', '.wud':'cemu', '.wua':'cemu', '.wuhb':'cemu', '.rpx':'cemu' };
 const DEFAULT_EMUS = [
   { id:'ralibretro', name:'RALibretro', kind:'libretro', exe:'', args:'', builtin:true },
   { id:'lichii', name:'Lichii (Switch 2)', lab:'Nintendo Switch 2', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
@@ -556,6 +595,7 @@ const DEFAULT_EMUS = [
   { id:'pcsx2', name:'PCSX2', lab:'PlayStation 2', kind:'standalone', exe:'', args:'-batch -fullscreen -- "{game}"', builtin:true },
   { id:'ppsspp', name:'PPSSPP', lab:'PSP', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
   { id:'azahar', name:'Azahar', lab:'Nintendo 3DS', kind:'standalone', exe:'', args:'"{game}"', builtin:true },
+  { id:'cemu', name:'Cemu', lab:'Wii U', kind:'standalone', exe:'', args:'-f -g "{game}"', builtin:true },
 ];
 const RAM = 'https://media.retroachievements.org';
 // plateformes détectées dans les images disque : libellé d'onglet et id de console RetroAchievements
@@ -590,7 +630,7 @@ function styleOf(g) {
     return c ? { k:'box', t:'#fff', ...c } : { n:sysName(g.system).toUpperCase(), c:'#444', t:'#fff', ar:.72, k:'box' };
   }
   if (e.id === 'lichii') return { n:'SWITCH 2', c:'#d4202b', t:'#fff', ar:.72, k:'box' };
-  return { n:e.name.toUpperCase().slice(0, 18), c:`hsl(${hue(e.name)},60%,38%)`, t:'#fff', ar:({ dolphin:.71, pcsx2:.71, ppsspp:.6, azahar:.88, eden:.72 })[e.id] || .75, k:'box' };
+  return { n:e.name.toUpperCase().slice(0, 18), c:`hsl(${hue(e.name)},60%,38%)`, t:'#fff', ar:({ dolphin:.71, pcsx2:.71, ppsspp:.6, azahar:.88, eden:.72, cemu:.72 })[e.id] || .75, k:'box' };
 }
 
 // icônes vectorielles (traits, couleur = texte)
@@ -768,6 +808,7 @@ function thumbFolders(g) {
   const P = { wii:['Nintendo - Wii'], gc:['Nintendo - GameCube'], ps2:['Sony - PlayStation 2'], psp:['Sony - PlayStation Portable'] };
   if (P[g.platform]) return P[g.platform];
   if (e.id === 'azahar') return ['Nintendo - Nintendo 3DS'];
+  if (e.id === 'cemu') return ['Nintendo - Wii U'];
   return e.id === 'dolphin' ? ['Nintendo - Wii', 'Nintendo - GameCube'] : [];
 }
 // jaquettes de secours trouvées grâce au numéro de série / à l'identifiant du jeu
@@ -910,7 +951,7 @@ function flowColor(g) {
   if (e.id === 'lichii') return '#a855f7';
   if (e.id === 'eden') return '#e60012';
   const PC = { wii:'#38bdf8', gc:'#6d28d9', ps2:'#1e40af', psp:'#334155' };
-  return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : `hsl(${hue(e.name)},60%,40%)`);
+  return PC[g.platform] || (e.id === 'dolphin' ? '#2d6cdf' : e.id === 'azahar' ? '#0284c7' : e.id === 'cemu' ? '#009ac7' : `hsl(${hue(e.name)},60%,40%)`);
 }
 // mode d'affichage effectif : « auto » passe en vertical au-delà de 10 consoles
 const tabsModeNow = () => {
@@ -1192,7 +1233,7 @@ async function launch(g, opts = {}) {
   if (emu.kind === 'libretro') {
     if (!g.system) return toast('Définis le système (Options, puis Modifier).');
     const core = pickCore(g, (await api.coresInstalled(emu.exe)) || []);
-    if (!core) return toast(`Aucun core ${sysName(g.system)} dans le dossier Cores de RALibretro. Dans RALibretro : menu Core, Télécharger. Cores possibles : ${(CORE_CANDS[g.system] || []).join(', ')}.`);
+    if (!core) return openCoreDlg(g, emu);
     if (core !== g.core) { g.core = core; save(); }
     args = ['--core', core, '--system', String(g.system), '--game', g.path];
   } else {
@@ -1319,8 +1360,8 @@ function renderTro() {
 let proData = null;
 async function openProfile() {
   closeOv(); setTop(''); mode = 'profile'; $('#ov-pro').hidden = false;
-  if (!raOn()) { $('#pro-body').innerHTML = '<p class="muted">Lie ton compte RetroAchievements pour voir ton profil.</p><button class="fb" id="pro-link">Lier mon compte</button>' + localStatsHTML(); return; }
-  $('#pro-body').innerHTML = '<p class="muted">Chargement du profil…</p>';
+  if (!raOn()) { $('#pro-body').innerHTML = localStatsHTML() + '<p class="muted">Lie ton compte RetroAchievements pour voir tes points et tes succès ici.</p><button class="fb" id="pro-link">Lier mon compte</button>'; return; }
+  $('#pro-body').innerHTML = localStatsHTML() + '<p class="muted">Chargement du profil…</p>';
   const [p, aw, c0] = await Promise.all([api.ra('GetUserProfile', {}, 0), api.ra('GetUserAwards', {}, 300), api.ra('GetUserCompletionProgress', { c: 500, o: 0 }, 600)]);
   const games = [];
   let total = 0;
@@ -1338,7 +1379,7 @@ async function openProfile() {
 }
 function renderPro() {
   const { p, a, games, total, err } = proData;
-  if (!p && !a) { $('#pro-body').innerHTML = `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`; return; }
+  if (!p && !a) { $('#pro-body').innerHTML = localStatsHTML() + `<p class="muted">Impossible de charger le profil (${esc(err || 'erreur')}). Vérifie ton pseudo et ta clé API.</p><button class="fb" id="pro-link">Réglages du compte</button>`; return; }
   const num = (v) => (v === undefined || v === null ? '–' : Number(v).toLocaleString('fr-FR'));
   const kind = (x) => x.HighestAwardKind || x.highestAwardKind || '';
   const finished = games.filter((x) => kind(x)).length;
@@ -1354,9 +1395,9 @@ function renderPro() {
   const pic = p && p.UserPic ? `style="background-image:url('${RAM}${p.UserPic}')"` : '';
   $('#pro-body').innerHTML = `<div class="pro-head"><div class="av" ${pic}></div><div><h3>${esc((p && p.User) || cfg.ra.user)}</h3>
     ${p && p.Motto ? `<small>${esc(p.Motto)}</small>` : ''}${p && p.MemberSince ? `<small>Membre depuis le ${esc(String(p.MemberSince).slice(0, 10))}</small>` : ''}${p && p.RichPresenceMsg ? `<small>${esc(p.RichPresenceMsg)}</small>` : ''}</div></div>
-    <div class="stats">${cards.map(([t, v]) => `<div class="st"><b>${num(v)}</b><small>${t}</small></div>`).join('')}</div>` +
+    ${localStatsHTML()}<div class="stats">${cards.map(([t, v]) => `<div class="st"><b>${num(v)}</b><small>${t}</small></div>`).join('')}</div>` +
     (awards.length ? `<h3>Derniers jeux terminés</h3>` + awards.map((x) => `<div class="ach"><img src="${RAM}${esc(x.ImageIcon || '')}" alt="" onerror="this.style.visibility='hidden'">
-      <div class="tx"><b>${esc(x.Title)}</b><small>${esc(x.ConsoleName || '')} · ${esc(label(x))} · ${esc((x.AwardedAt || '').slice(0, 10))}</small></div></div>`).join('') : '') + localStatsHTML();
+      <div class="tx"><b>${esc(x.Title)}</b><small>${esc(x.ConsoleName || '')} · ${esc(label(x))} · ${esc((x.AwardedAt || '').slice(0, 10))}</small></div></div>`).join('') : '');
 }
 
 /* ---------- entretien de la bibliothèque : fichiers introuvables, dossiers surveillés, doublons ---------- */
@@ -1498,14 +1539,26 @@ function randomGame() {
 }
 function localStatsHTML() {
   const gs = cfg.games, total = gs.reduce((s, g) => s + (g.playSeconds || 0), 0), launches = gs.reduce((s, g) => s + (g.playCount || 0), 0);
+  const played = gs.filter((g) => g.playCount || g.playSeconds).length;
   const top = gs.filter((g) => g.playSeconds >= 60).sort((a, b) => b.playSeconds - a.playSeconds).slice(0, 5);
   const by = new Map();
   gs.forEach((g) => { if (g.playSeconds) by.set(labelOf(g), (by.get(labelOf(g)) || 0) + g.playSeconds); });
-  const cons = [...by].sort((a, b) => b[1] - a[1]).slice(0, 6), max = cons.length ? cons[0][1] : 1;
-  const cards = [['Jeux dans la bibliothèque', gs.length], ['Parties lancées', launches], ['Temps de jeu', total >= 60 ? fmtDur(total) : '–'], ['Consoles', new Set(gs.map(labelOf)).size]];
-  return '<h3>Sur Emuglob</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString('fr-FR') : v}</b><small>${t}</small></div>`).join('') + '</div>' +
-    (top.length ? '<h3>Jeux les plus joués</h3>' + top.map((g) => `<div class="ach"><div class="tx"><b>${esc(g.title)}</b><small>${esc(labelOf(g))} · ${fmtDur(g.playSeconds)}${g.playCount ? ' · ' + g.playCount + ' partie(s)' : ''}</small></div></div>`).join('') : '') +
-    (cons.length ? '<h3>Temps par console</h3>' + cons.map(([k, v]) => `<div class="ach"><div class="tx"><b>${esc(k)}</b><small>${fmtDur(v)}</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div></div>`).join('') : '');
+  const cons = [...by].sort((a, b) => b[1] - a[1]).slice(0, 8), max = cons.length ? cons[0][1] : 1;
+  const ses = cfg.sessions || [], now = Date.now(), day = 86400000;
+  const since = (ms) => ses.filter((x) => x.end >= now - ms).reduce((s, x) => s + x.s, 0);
+  const last = ses[ses.length - 1], lastG = last && find(last.id);
+  const recent = !last ? gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed)[0] : null;
+  const dur = (v) => (v >= 60 ? fmtDur(v) : '–');
+  const cards = [['Temps de jeu total', dur(total)], ['Cette semaine', ses.length ? dur(since(7 * day)) : '–'], ['Ce mois-ci', ses.length ? dur(since(30 * day)) : '–'],
+    ['Parties lancées', launches], ['Jeux lancés', `${played} / ${gs.length}`], ['Durée moyenne', launches && total >= 60 ? fmtDur(total / launches) : '–']];
+  const lastTxt = last ? `${esc(lastG ? lastG.title : 'Jeu retiré')} · ${fmtDur(last.s)} · ${new Date(last.end).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}`
+    : recent ? `${esc(recent.title)} · ${new Date(recent.lastPlayed).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}` : '';
+  return '<h3>Mon temps de jeu</h3><div class="stats">' + cards.map(([t, v]) => `<div class="st"><b>${typeof v === 'number' ? v.toLocaleString('fr-FR') : v}</b><small>${t}</small></div>`).join('') + '</div>' +
+    (lastTxt ? `<h3>Dernière partie</h3><div class="ach"><div class="tx"><b>${lastTxt.split(' · ')[0]}</b><small>${lastTxt.split(' · ').slice(1).join(' · ')}</small></div></div>` : '') +
+    (top.length ? '<h3>Jeux les plus joués</h3>' + top.map((g, i) => `<div class="ach"><div class="tx"><b>${i === 0 ? '★ ' : ''}${esc(g.title)}</b><small>${esc(labelOf(g))} · ${fmtDur(g.playSeconds)}${g.playCount ? ' · ' + g.playCount + ' partie(s)' : ''}</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * g.playSeconds) / top[0].playSeconds)}%"></i></div></div></div>`).join('') : '') +
+    (cons.length ? '<h3>Temps par console</h3>' + cons.map(([k, v]) => `<div class="ach"><div class="tx"><b>${esc(k)}</b><small>${fmtDur(v)} · ${Math.round((100 * v) / total)} %</small><div class="bar" style="width:100%"><i style="width:${Math.round((100 * v) / max)}%"></i></div></div></div>`).join('') : '') +
+    (!ses.length ? '<p class="muted" style="font-size:12px">Les stats « cette semaine » et « ce mois-ci » se remplissent à partir de ta prochaine partie.</p>' : '') +
+    '<h3>RetroAchievements</h3>';
 }
 
 /* ---------- onglet Paramètres ---------- */
@@ -1584,6 +1637,8 @@ const SET_ITEMS = [
   { g:'jeu', ic:'expand', t:'Lancement des jeux', s:'Intégration, sauvegardes partagées', act:() => openSettings('jeu') },
   { g:'inst', ic:'download', t:'RALibretro', s:'Installer ou mettre à jour', act:() => openInstall('ralibretro') },
   { g:'inst', ic:'download', t:'PCSX2', s:'PlayStation 2 · installer ou mettre à jour', act:() => openInstall('pcsx2') },
+  { g:'inst', ic:'download', t:'Cemu', s:'Wii U · installer ou mettre à jour', act:() => openInstall('cemu') },
+  { g:'inst', ic:'download', t:'Cores RALibretro', s:'Un core par console · installer, mettre à jour', act:() => openCores() },
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
   { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
@@ -1592,6 +1647,7 @@ const SET_ITEMS = [
   { g:'acc', ic:'user', t:'Discord', get s() { return dcOn() ? 'Statut de jeu activé' : 'Statut de jeu désactivé'; }, act:() => openSettings('discord') },
   { g:'jeu', ic:'folder', t:'Rechercher des sauvegardes', s:'Retrouver tes anciennes saves de jeux', act:() => openFindSaves() },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
+  { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
   { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
   { g:'sys', ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
@@ -1662,6 +1718,12 @@ function applyDisc(g, r) {
   }
 }
 async function identifyDiscs() {
+  // Wii U extrait (.rpx dans code\) : titre lu dans meta\meta.xml, sinon nom du dossier du jeu
+  for (const g of cfg.games.filter((x) => extOf(x.path) === '.rpx' && !x.wiiuNamed)) {
+    const t = await api.wiiuTitle(g.path);
+    if (!g.titleManual) g.title = t || g.path.split(/[\\/]/).slice(-3, -2)[0] || g.title;
+    g.wiiuNamed = true;
+  }
   const todo = cfg.games.filter((g) => g.disc === undefined && (DISC_EXT.has(extOf(g.path)) || g.emulator === 'dolphin'));
   for (const g of todo) applyDisc(g, (await api.identify(g.path)) || { platform: 'unknown', id: '' });
   if (todo.length) save();
@@ -2001,7 +2063,12 @@ api.onGameExit(({ id, seconds, short }) => {
   leaveGame();
   playing = null; playStart = 0; presence(null);
   const g = find(id);
-  if (g && !short) { g.playSeconds = (g.playSeconds || 0) + seconds; save(); }
+  if (g && !short) {
+    g.playSeconds = (g.playSeconds || 0) + seconds;
+    cfg.sessions = [...(cfg.sessions || []), { id: g.id, end: Date.now(), s: seconds }].slice(-1000);   // historique des parties (stats par période)
+    if (!cfg.statsSince) cfg.statsSince = Date.now() - seconds * 1000;
+    save();
+  }
   render();
   toast(short ? "L'émulateur s'est fermé tout de suite. Vérifie son chemin et ses arguments (Paramètres, Émulateurs)." : `Retour à Emuglob · ${fmtDur(seconds)} de jeu`);
   if (g && g.raId > 0) loadProg(g, true).then(() => { renderInfo(); renderBottom(); });
@@ -2216,8 +2283,13 @@ async function adoptDetectedEmus() {
 /* ---------- Installation : émulateurs depuis leurs sources officielles ---------- */
 const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
+  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
+api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte
+  const t = (p.core ? p.core + ' : ' : '') + (p.step === 'extract' ? 'Extraction…' : `Téléchargement… ${p.total ? Math.round(p.got * 100 / p.total) + ' %' : (p.got / 1048576).toFixed(1) + ' Mo'}`);
+  const el = $('#dlg-core').open ? $('#k-state') : $('#dlg-cores').open ? $('#co-state') : $('#i-state'); if (el) el.textContent = t;
+});
 async function openInstall(id) {
   const d = $('#dlg-inst'), emu = cfg.emulators.find((e) => e.id === id), info = INST_INFO[id];
   $('#i-title').textContent = 'Installer ' + emu.name.replace(/\s*\(.*\)$/, '');
@@ -2234,16 +2306,34 @@ async function openInstall(id) {
     $('#i-go').textContent = !st.installed ? `Installer ${st.name}` : st.upToDate ? 'Réinstaller' : `Mettre à jour vers ${st.latest}`;
     $('#i-go').disabled = false;
   };
-  if (!openInstall.hooked) openInstall.hooked = true, api.onInstProgress((p) => { $('#i-state').textContent = p.step === 'extract' ? 'Extraction…' : `Téléchargement… ${p.total ? Math.round(p.got * 100 / p.total) + ' %' : (p.got / 1048576).toFixed(1) + ' Mo'}`; });
+
   $('#i-go').onclick = async () => {
     $('#i-go').disabled = true;
     const r = await api.instInstall(id, emu.exe);
     if (!r.ok) { $('#i-state').textContent = 'Échec : ' + r.error; $('#i-go').disabled = false; return; }
-    emu.exe = r.exe; save(); render();
-    toast(`${emu.name} ${r.version} installé${r.moved ? ' dans le dossier emulators (l\'ancien dossier était protégé)' : ''}.${id === 'ralibretro' ? ' Les cores se téléchargent dans RALibretro (menu Core).' : id === 'pcsx2' ? ' Pense au BIOS de ta PS2.' : ''}`);
+    emu.exe = r.exe; save(); render(); if (id === 'ralibretro' && openInstall.refreshCores) openInstall.refreshCores();
+    toast(`${emu.name} ${r.version} installé${r.moved ? ' dans le dossier emulators (l\'ancien dossier était protégé)' : ''}.${id === 'ralibretro' ? ' Clique sur « Cores de base » pour avoir un core par console.' : id === 'pcsx2' ? ' Pense au BIOS de ta PS2.' : ''}`);
     show();
   };
   $('#i-ok').onclick = () => d.close();
+  // RALibretro installé : bouton pour les cores de base (un par console)
+  const cb = $('#i-cores');
+  cb.hidden = true;
+  if (id === 'ralibretro') {
+    const refresh = async () => {
+      const have = emu.exe && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
+      const miss = have ? BASE_CORES.filter((c) => !have.includes(c)) : [];
+      cb.hidden = !have || !miss.length;
+      cb.textContent = have && have.length ? `Cores manquants (${miss.length})` : `Cores de base (${miss.length})`;
+      cb.onclick = async () => {
+        cb.disabled = true; $('#i-go').disabled = true;
+        const fails = await downloadCores(emu, miss, (t) => { $('#i-state').textContent = t; });
+        $('#i-state').textContent = fails.length ? `${miss.length - fails.length} cores installés, ${fails.length} en échec (${fails[0]}).` : `${miss.length} cores installés.`;
+        cb.disabled = false; $('#i-go').disabled = false; refresh();
+      };
+    };
+    refresh(); openInstall.refreshCores = refresh;
+  }
   d.showModal(); show();
 }
 /* ---------- sauvegardes déjà présentes sur le PC : recherche puis import (copie) après confirmation ---------- */
@@ -2300,9 +2390,139 @@ async function openFindSaves(pre) {
 }
 async function proposeSaves() {   // une seule fois : si des sauvegardes plus récentes existent ailleurs, on propose l'import
   if (cfg.savesProposed || !cfg.games.length) return;
+  if (document.querySelector('dialog[open]')) return setTimeout(proposeSaves, 5000);   // après le tuto ou une autre fenêtre
   cfg.savesProposed = true; save();
   const r = await findSaves();
   if (r.ok && r.items.some((c) => c.newer) && !document.querySelector('dialog[open]')) openFindSaves(r);
+}
+async function fixEmuPath(id) {   // appelé depuis le message de démarrage « émulateur introuvable »
+  const emu = cfg.emulators.find((e) => e.id === id); if (!emu) return;
+  const p = await api.pickExe(); if (!p) return;
+  emu.exe = p; save(); render(); toast(`${emu.name} : nouveau chemin enregistré.`);
+}
+/* ---------- cores RALibretro : téléchargement du core manquant, ou des cores de base ---------- */
+const BASE_CORES = [...new Set(Object.values(CORE_CANDS).map((c) => c[0]))];
+async function downloadCores(emu, list, state) {
+  const fails = [];
+  for (const [i, core] of list.entries()) {
+    state(`Téléchargement de ${core} (${i + 1}/${list.length})…`);
+    const r = await api.coreDownload(emu.exe, core);
+    if (!r.ok) fails.push(`${core} : ${r.error}`);
+  }
+  return fails;
+}
+function openCoreDlg(g, emu) {   // jeu lancé sans core installé pour sa console : on propose de le télécharger puis de lancer
+  const d = $('#dlg-core'), core = (CORE_CANDS[g.system] || [])[0] || g.core;
+  $('#k-title').textContent = `Core ${sysName(g.system)} manquant`;
+  $('#k-text').innerHTML = `RALibretro n'a aucun core pour la ${esc(sysName(g.system))} : le jeu ne peut pas se lancer.<br>Emuglob peut télécharger <b>${esc(core)}</b> et lancer <b>${esc(g.title)}</b> ensuite.`;
+  $('#k-state').textContent = ''; $('#k-go').disabled = false; $('#k-go').textContent = 'Télécharger et jouer';
+  $('#k-no').onclick = () => d.close();
+  $('#k-go').onclick = async () => {
+    $('#k-go').disabled = true;
+    const fails = await downloadCores(emu, [core], (t) => { $('#k-state').textContent = t; });
+    if (fails.length) { $('#k-state').textContent = 'Échec : ' + fails[0]; $('#k-go').disabled = false; return; }
+    d.close(); toast(`${core} installé.`); launch(g);
+  };
+  d.showModal();
+}
+function openCores() {   // section Paramètres : cores par console, installés ou non
+  const d = $('#dlg-cores'), emu = cfg.emulators.find((e) => e.id === 'ralibretro');
+  let busy = false;
+  const fmt = (t) => new Date(t).toLocaleDateString('fr-FR');
+  const draw = async () => {
+    if (!emu.exe || !(await api.filesExist([emu.exe]))[0]) {
+      $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
+      $('#co-state').textContent = "RALibretro n'est pas installé : installe-le d'abord (Paramètres, Installation, RALibretro)."; return;
+    }
+    const have = await api.coreList(emu.exe), miss = BASE_CORES.filter((c) => !have[c]);
+    $('#co-base').disabled = busy || !miss.length;
+    $('#co-base').textContent = miss.length ? `Installer les cores de base (${miss.length})` : 'Cores de base installés';
+    const used = new Set(cfg.games.map((g) => g.core));
+    $('#co-list').innerHTML = Object.entries(SYSTEMS).filter(([s]) => CORE_CANDS[s]).map(([s, [name]]) => `<div class="cosys"><b>${esc(name)}</b>`
+      + CORE_CANDS[s].map((c, i) => { const h = have[c], bad = h && h.size < 1024;
+        return `<div class="corow"><span class="cn">${esc(c.replace(/_libretro$/, ''))}${i === 0 ? '<small>conseillé</small>' : ''}${used.has(c) ? '<small>utilisé par tes jeux</small>' : ''}</span>`
+          + `<span class="ci ${h && !bad ? 'ok' : ''}">${!h ? 'Non installé' : bad ? 'Fichier abîmé' : `Installé · ${fmt(h.mtime)} · ${(h.size / 1048576).toFixed(1)} Mo`}</span>`
+          + `<button data-dl="${esc(c)}" ${busy ? 'disabled' : ''}>${h && !bad ? 'Mettre à jour' : 'Installer'}</button>`
+          + (h ? `<button data-rm="${esc(c)}" ${busy ? 'disabled' : ''}>Supprimer</button>` : '') + '</div>'; }).join('') + '</div>').join('');
+  };
+  const run = async (list, verb) => {
+    busy = true; draw();
+    const fails = await downloadCores(emu, list, (t) => { $('#co-state').textContent = t; });
+    $('#co-state').textContent = fails.length ? `${list.length - fails.length}/${list.length} ${verb}. Échec : ${fails[0]}` : `${list.length > 1 ? list.length + ' cores' : list[0]} ${verb}.`;
+    busy = false; draw();
+  };
+  $('#co-list').onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b || busy) return;
+    if (b.dataset.dl) return run([b.dataset.dl], 'installé(s)');
+    const r = await api.coreDelete(emu.exe, b.dataset.rm);
+    $('#co-state').textContent = r.ok ? `${b.dataset.rm} supprimé.` : 'Échec : ' + r.error; draw();
+  };
+  $('#co-base').onclick = async () => { const have = await api.coreList(emu.exe); run(BASE_CORES.filter((c) => !have[c]), 'installé(s)'); };
+  $('#co-ok').onclick = () => d.close();
+  $('#co-state').textContent = ''; d.showModal(); draw();
+}
+/* ---------- mini tuto : une page par fonction, au premier démarrage puis dans Paramètres, Système ---------- */
+const TUTO = [
+  { ic:'star', t:'Bienvenue sur Emuglob', h:`Emuglob range tes jeux rétro par console et les lance dans le bon émulateur, avec tes succès RetroAchievements, tes sauvegardes et ton temps de jeu.
+    <ul><li>Tout se fait au <b>clavier</b>, à la <b>souris</b> ou à la <b>manette</b> : flèches ou stick pour bouger, A / Entrée pour valider, B / Échap pour revenir.</li>
+    <li>En haut : <b>Jeux</b>, <b>Amis</b>, <b>Paramètres</b>, <b>Succès</b>, et ton <b>profil</b> (le rond à droite).</li></ul>
+    <div class="tip">Ce tuto se rouvre quand tu veux : Paramètres, Système, « Aide et tuto ».</div>` },
+  { ic:'plus', t:'Ajouter des jeux', go:() => openSettingsPanel(), h:`<ol><li>Paramètres, Bibliothèque : <b>Ajouter des jeux</b> (quelques fichiers) ou <b>Scanner un dossier</b> (tout un dossier de ROMs).</li>
+    <li>La console est reconnue toute seule grâce à l'extension (.gba, .sfc, .cue, .iso, .wua, .rpx…), et les <b>jaquettes</b> se téléchargent seules.</li>
+    <li>Dans <b>Entretien</b>, les dossiers surveillés ajoutent tes nouveaux jeux à chaque démarrage. Tu peux aussi y retirer les jeux introuvables et les doublons.</li></ol>
+    <div class="tip">Un jeu mal reconnu : menu « … » du jeu, Modifier, pour changer sa console ou son titre.</div>` },
+  { ic:'download', t:'Installer les émulateurs', go:() => openInstall('ralibretro'), h:`<ul><li><b>RALibretro</b> lance la plupart des consoles rétro (NES, SNES, GBA, Mega Drive, PS1, N64…). Paramètres, Installation : un clic pour l'installer ou le mettre à jour.</li>
+    <li><b>PCSX2</b> (PS2) et <b>Cemu</b> (Wii U) s'installent pareil. PCSX2 a besoin du <b>BIOS de ta propre PS2</b>, Cemu des <b>clés de ta console</b> pour les .wud/.wux : rien de tout ça n'est fourni.</li>
+    <li>Pour les autres (Dolphin, Azahar…) : pose-les dans le dossier <b>emulators</b> à côté d'Emuglob.exe (détectés seuls), ou règle leur chemin dans Paramètres, Émulateurs.</li></ul>` },
+  { ic:'list', t:'Les cores', go:() => openCores(), h:`RALibretro a besoin d'un <b>core</b> par console : c'est le moteur qui émule la machine (mGBA pour la GBA, Snes9x pour la SNES…).
+    <ul><li>Paramètres, Installation, <b>Cores RALibretro</b> : installer, mettre à jour ou supprimer chaque core, ou « Installer les cores de base » (un par console).</li>
+    <li>Si tu lances un jeu sans son core, Emuglob te propose de le <b>télécharger puis de jouer</b>.</li></ul>` },
+  { ic:'gamepad', t:'Jouer', h:`<ol><li>Choisis un jeu puis <b>Jouer</b> : l'émulateur s'ouvre avec le jeu.</li>
+    <li>Quitte l'émulateur pour revenir à Emuglob. Si la fenêtre d'Emuglob reste cachée : <b>Ctrl + Maj + E</b>.</li>
+    <li>Ton <b>temps de jeu</b> est compté automatiquement : clique sur ton profil pour le voir (total, semaine, par console).</li></ol>
+    <div class="tip">« Lancement des jeux » (Paramètres) règle l'intégration de l'émulateur dans Emuglob et le partage des sauvegardes.</div>` },
+  { ic:'gamepad', t:'Contrôles', go:() => openControls(), h:`Paramètres, <b>Contrôles</b> : choisis l'émulateur en haut, clique sur une action, puis appuie sur la touche ou le bouton de manette voulu.
+    <ul><li>La <b>manette dessinée</b> s'allume quand tu appuies : tu vois tout de suite ce qui est réglé.</li>
+    <li>La <b>zone morte</b> des sticks se règle pour PCSX2 et Dolphin.</li>
+    <li>Une copie .bak de la config de l'émulateur est gardée. Ferme l'émulateur avant de modifier.</li></ul>` },
+  { ic:'shield', t:'Sauvegardes', go:() => openFindSaves(), h:`<ul><li>Les sauvegardes « cartouche » (.srm, .sav…) sont <b>partagées entre émulateurs</b> : Emuglob donne toujours la plus récente à celui que tu lances.</li>
+    <li>Chaque jeu a son <b>historique</b> (20 dernières versions) : rien n'est jamais perdu.</li>
+    <li><b>Rechercher des sauvegardes</b> retrouve celles que tu avais déjà ailleurs sur le PC et les copie dans Emuglob, sans toucher aux originaux.</li>
+    <li>Paramètres, Système, <b>Sauvegardes</b> : exporter ou restaurer ta bibliothèque et tes réglages.</li></ul>` },
+  { ic:'trophy', t:'Succès RetroAchievements', go:() => openSettings('ra'), h:`<ol><li>Crée un compte gratuit sur <b>retroachievements.org</b>.</li>
+    <li>Dans Emuglob, Paramètres, Comptes, <b>RetroAchievements</b> : ton pseudo et ta <b>clé API Web</b> (sur le site : Paramètres, Clés). Emuglob affiche alors tes points, tes succès et ceux de chaque jeu.</li>
+    <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li></ol>
+    <ul><li><b>Hardcore</b> : pas de sauvegarde d'état, de retour arrière ni de ralenti, mais les points comptent pleinement. <b>Softcore</b> : tout est permis, les succès sont marqués à part.</li>
+    <li>Seules les ROMs <b>reconnues</b> par RetroAchievements (bonne version, non modifiée) ont des succès.</li></ul>` },
+  { ic:'user', t:'Profil, amis et Discord', go:() => openSettings('discord'), h:`<ul><li><b>Profil</b> (le rond en haut à droite) : temps de jeu, jeux les plus joués, puis tes stats RetroAchievements.</li>
+    <li><b>Amis</b> : ce que jouent les gens que tu suis sur RetroAchievements.</li>
+    <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
+  { ic:'music', t:'Apparence et mises à jour', go:() => openAmbDlg(), h:`<ul><li><b>Thèmes et sons</b> : couleurs selon la console, sons de navigation.</li>
+    <li><b>Barre des consoles</b> : horizontale, verticale ou en icônes, ordre et consoles cachées.</li>
+    <li><b>Fond et démarrage</b> : fond d'écran, plein écran (F11), lancement avec Windows.</li>
+    <li><b>Mettre à jour</b> : Emuglob vérifie la dernière version en ligne et se met à jour en un clic. L'ancienne version est gardée.</li></ul>
+    <div class="tip">C'est tout ! Bon jeu.</div>` },
+];
+function openTuto(first) {
+  const d = $('#dlg-tuto');
+  let i = 0;
+  const show = () => {
+    const p = TUTO[i];
+    $('#tu-dots').innerHTML = TUTO.map((_, k) => `<i class="${k <= i ? 'on' : ''}" data-k="${k}"></i>`).join('');
+    $('#tu-body').innerHTML = `<div class="tuh">${ic(p.ic)}<div><div class="tun">${i + 1} / ${TUTO.length}</div><h2>${p.t}</h2></div></div>${p.h}`;
+    $('#tu-prev').disabled = i === 0;
+    $('#tu-next').textContent = i === TUTO.length - 1 ? 'Terminer' : 'Suivant';
+    $('#tu-go').hidden = !p.go;
+    $('#tu-skip').textContent = first ? 'Passer le tuto' : 'Fermer';
+  };
+  const done = () => { if (!cfg.tutoSeen) { cfg.tutoSeen = true; save(); } d.close(); };
+  $('#tu-dots').onclick = (e) => { const k = e.target.dataset.k; if (k !== undefined) { i = +k; show(); } };
+  $('#tu-prev').onclick = () => { if (i) { i--; show(); } };
+  $('#tu-next').onclick = () => { if (i < TUTO.length - 1) { i++; show(); } else done(); };
+  $('#tu-skip').onclick = done;
+  $('#tu-go').onclick = () => { const go = TUTO[i].go; done(); go(); };
+  d.onkeydown = (e) => { if (e.key === 'ArrowRight') $('#tu-next').click(); else if (e.key === 'ArrowLeft') $('#tu-prev').click(); };
+  show(); d.showModal(); $('#tu-next').focus();
 }
 async function hintRalib() {   // première ouverture sans RALibretro : on indique où l'installer, une seule fois
   const ra = cfg.emulators.find((e) => e.id === 'ralibretro');
@@ -2324,7 +2544,8 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   const ra = cfg.emulators.find((e) => e.id === 'ralibretro');
   if (!ra.exe && cfg.ralibretro) ra.exe = cfg.ralibretro;
   await adoptDetectedEmus();
-  setTimeout(hintRalib, 2500);
+  if (!cfg.tutoSeen) setTimeout(() => { if (!document.querySelector('dialog[open]')) openTuto(true); }, 1200);
+  else setTimeout(hintRalib, 2500);
   setTimeout(proposeSaves, 6000);
   cfg.open = cfg.open || {};
   cfg.folders = cfg.folders || [];
