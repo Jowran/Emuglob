@@ -9,3 +9,4 @@ saves/
 config.json
 
 !tools/7za.exe
+!tools/xdelta3.exe

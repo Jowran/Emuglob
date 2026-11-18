@@ -47,6 +47,7 @@
   #prog { margin-top:6px; color:#e5e0f5; display:flex; align-items:center; gap:12px; min-height:26px; }
   .bar { width:220px; height:8px; background:rgba(255,255,255,.22); border-radius:4px; overflow:hidden; }
   .bar i { display:block; height:100%; background:#ffc83d; }
+  #prog { flex-wrap:wrap; row-gap:4px; } #prog .subl { flex-basis:100%; display:flex; align-items:center; justify-content:inherit; gap:12px; font-size:13px; opacity:.85; } #prog .subl .bar { width:160px; height:6px; }
   .actions { display:flex; gap:12px; margin-top:14px; }
   .btn { background:var(--glass); border:2px solid transparent; color:#fff; border-radius:40px; height:54px; font-size:20px; font-weight:600; font-family:inherit; cursor:pointer; padding:0 64px; backdrop-filter:blur(8px); }
   .btn.round { width:54px; padding:0; font-size:24px; }
@@ -1209,10 +1210,42 @@ function stats(g) {
   const got = all.filter((a) => a.DateEarned || a.DateEarnedHardcore);
   return { all, got, total: p.data.NumAchievements || all.length, pts: got.reduce((s, a) => s + (a.Points || 0), 0) };
 }
+// subsets RetroAchievements du jeu (« Titre [Subset - Nom] » dans la liste RA de la console + ROM patchées rangées dessous) et leur progression
+const subRA = {};   // raId du jeu de base → [{ id, name }]
+async function subsetIdsOf(g) {
+  if (subRA[g.raId]) return subRA[g.raId];
+  const out = [], seen = new Set([+g.raId]);
+  const add = (id, name) => { id = +id; if (id > 0 && !seen.has(id)) { seen.add(id); out.push({ id, name }); } };
+  for (const v of subsetsOf(g)) if (v.raId > 0) add(v.raId, v.subName || subTagOf(v.raTitle) || v.title);
+  const p = prog[g.raId] && prog[g.raId].data, base = String((p && p.Title) || g.raTitle || '').trim().toLowerCase();
+  const L = base ? await raList(raSys(g)) : null;
+  if (L) for (const r of L.rows) {
+    const m = /^(.*?)\s*\[\s*subset\s*-\s*([^\]]+?)\s*\]\s*$/i.exec(r.title);
+    if (m && m[1].trim().toLowerCase() === base) add(r.id, m[2]);
+  }
+  return (subRA[g.raId] = out);
+}
+async function loadSubProg(g) {
+  if (!(g.raId > 0)) return;
+  const subs = await subsetIdsOf(g);
+  await Promise.all(subs.map(async (x) => {
+    const c = prog[x.id];
+    if (c && Date.now() - c.t < 300000) return;
+    const r = await api.ra('GetGameInfoAndUserProgress', { g: x.id }, 30);
+    if (r.ok && r.data && r.data.Achievements !== undefined) prog[x.id] = { t: Date.now(), data: r.data };
+  }));
+}
+function subStats(g) {   // progression de chaque subset ; on n'affiche que ceux commencés ou dont la ROM patchée est dans la bibliothèque
+  const subs = g && g.raId > 0 ? subRA[g.raId] || [] : [];
+  const vs = subsetsOf(g), mine = new Set(vs.map((v) => +v.raId)), names = new Set(vs.map((v) => (v.subName || '').toLowerCase()));
+  return subs.map((x) => ({ ...x, s: stats({ raId: x.id }) })).filter((x) => x.s && x.s.total && (x.s.got.length || mine.has(x.id) || names.has(x.name.toLowerCase())));
+}
 async function ensureRA(g) {
   if (!g || !raOn() || !raSys(g)) return;
+  for (const v of subsetsOf(g)) if (v.raId === 0 && v.subName) { delete v.raId; delete v.raV; }   // ROM patchée créée avant : à reconnaître par son empreinte
   if (g.raId === undefined) { await matchGame(g); save(); }
-  if (g.raId > 0) await loadProg(g);
+  for (const v of subsetsOf(g)) if (v.raId === undefined) { await matchGame(v); delete subRA[g.raId]; save(); }
+  if (g.raId > 0) { await loadProg(g); await loadSubProg(g).catch(() => {}); }
   if (cur() === g) { renderInfo(); renderBottom(); }
 }
 async function refreshRA() {
@@ -1316,7 +1349,7 @@ function openSort() {
 }
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
 function tabsList(all) {
-  const gs = cfg.games;
+  const gs = visibleGames();
   const played = gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
   const rest = gs.filter((g) => !g.lastPlayed).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || alpha(a, b));
   const keep = cfg.onlyUnplayed ? (g) => !g.lastPlayed : () => true;   // filtre « jamais lancés » (tous les onglets)
@@ -1415,7 +1448,8 @@ function raLine(g) {
   const s = stats(g);
   if (!s) return '<span style="opacity:.7">Succès : chargement…</span>';
   const pc = s.total ? Math.round((100 * s.got.length) / s.total) : 0;
-  return `${ic('trophy')} ${s.got.length}/${s.total} succès · ${s.pts} pts<div class="bar"><i style="width:${pc}%"></i></div>`;
+  return `${ic('trophy')} ${s.got.length}/${s.total} succès · ${s.pts} pts<div class="bar"><i style="width:${pc}%"></i></div>`
+    + subStats(g).map((x) => `<div class="subl">Subset ${esc(x.name)} : ${x.s.got.length}/${x.s.total} · ${x.s.pts} pts<div class="bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('');
 }
 function renderInfo() {
   const g = cur(), n = cfg.games.length;
@@ -1432,6 +1466,8 @@ function renderInfo() {
   parts.push(g.lastPlayed ? `Dernière partie ${ago(g.lastPlayed)}` : 'Jamais lancé');
   if (g.playCount) parts.push(`${g.playCount} partie(s)`);
   if (g.playSeconds >= 60) parts.push(fmtDur(g.playSeconds) + ' de jeu');
+  const nsub = subsetsOf(g).length;
+  if (nsub) parts.push(`${nsub} subset${nsub > 1 ? 's' : ''}`);
   if (g.favorite) parts.push('Favori');
   if (g.missing) parts.push('Fichier introuvable');
   $('#f-sub').textContent = parts.join(' · ');
@@ -1567,24 +1603,121 @@ document.addEventListener('mouseover', (e) => {
 });
 
 /* ---------- lancement ---------- */
+/* ---------- subsets RetroAchievements ----------
+   Une ROM patchée pour un subset (« Jeu [Subset - Nom].iso », « Jeu patch subset.iso »…) est rangée sous le jeu de base :
+   elle disparaît de la bibliothèque et Jouer propose de lancer le jeu de base ou l'un de ses subsets. */
+const SUB_RX = /subset/i;
+const subTagOf = (t) => { const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(t || ''); return m ? m[1] : ''; };
+const fileOf = (p) => String(p || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+const dirOf = (p) => String(p || '').replace(/[\\/][^\\/]*$/, '');
+const subNorm = (t) => String(t || '').replace(/\[\s*subset\s*-[^\]]*\]/ig, ' ').replace(/\([^)]*\b(?:subset|patch(?:ed)?)\b[^)]*\)/ig, ' ')
+  .replace(/\b(?:patch(?:ed)?|subset)\b/ig, ' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const looseKey = (t) => String(t || '').replace(/\[[^\]]*\]|\([^)]*\)/g, ' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const isSubVar = (g) => SUB_RX.test(g.title || '') || SUB_RX.test(fileOf(g.path));
+function subsetLinks() {   // id de la variante subset → jeu de base (même émulateur, même nom une fois « subset/patch » retirés)
+  const base = new Map(), par = new Map();
+  cfg.games.forEach((g) => { if (!isSubVar(g)) { base.set(g.emulator + '|' + subNorm(g.title), g); base.set(g.emulator + '|' + subNorm(fileOf(g.path)), g); } });
+  cfg.games.forEach((g) => {
+    if (!isSubVar(g)) return;
+    const b = base.get(g.emulator + '|' + subNorm(g.title)) || base.get(g.emulator + '|' + subNorm(fileOf(g.path)));
+    if (b && b !== g) par.set(g.id, b);
+  });
+  return par;
+}
+const visibleGames = () => { const par = subsetLinks(); return cfg.games.filter((g) => !par.has(g.id)); };
+const subsetsOf = (g) => { if (!g) return []; const par = subsetLinks(); return cfg.games.filter((v) => par.get(v.id) === g); };
+async function nameSubsets(vars) {   // nom du subset : tag du titre/fichier, sinon le patch « [Subset - Nom] » rangé à côté de la ROM
+  for (const v of vars) if (!v.subName) v.subName = subTagOf(v.title) || subTagOf(fileOf(v.path)) || '';
+  const left = vars.filter((v) => !v.subName);
+  for (const dir of new Set(left.map((v) => dirOf(v.path)))) {
+    const inDir = left.filter((v) => dirOf(v.path) === dir);
+    const names = ((await api.subsetPatches(dir).catch(() => [])) || []).filter((n) => !vars.some((v) => v.subName === n));
+    if (inDir.length === 1 && names.length === 1) inDir[0].subName = names[0];
+  }
+  if (vars.some((v) => v.subName)) save();
+}
+// patchs « [Subset - Nom] » (.xdelta, .bps, .ips) rangés près de la ROM de base et pas encore appliqués (ROM patchée absente de la bibliothèque)
+async function pendingPatches(g, vars) {
+  const keys = new Set([looseKey(fileOf(g.path)), looseKey(g.title), looseKey(fileOf(dirOf(g.path) + '.x'))].filter(Boolean));   // nom du fichier, titre, dossier de la ROM (régions ignorées)
+  const list = ((await api.subsetPatchFiles(dirOf(g.path)).catch(() => [])) || [])
+    .filter((p) => keys.has(looseKey(fileOf(p.file))));
+  const seen = new Set();
+  return list.filter((p) => !vars.some((v) => (v.subName || '').toLowerCase() === p.name.toLowerCase()) && !seen.has(p.name.toLowerCase()) && seen.add(p.name.toLowerCase()));
+}
+async function applyPatch(g, p, opts) {
+  const d = $('#dlg-menu');
+  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div><p id="sp-state" style="margin:4px 2px;max-width:420px">Création de la ROM patchée « ${esc(p.name)} »… La ROM d'origine n'est pas modifiée.</p><button data-a="x" disabled>Patienter…</button>`;
+  d.onclick = (e) => { const b = e.target.closest('button'); if (b && !b.disabled) d.close(); };
+  if (!d.open) d.showModal();
+  api.onSubsetProgress && !applyPatch.hooked && (applyPatch.hooked = true, api.onSubsetProgress((x) => { const el = $('#sp-state'); if (el) el.textContent = `Création de la ROM patchée… ${x.pct} %`; }));
+  const r = await api.subsetApply({ src: g.path, patch: p.file, name: p.name });
+  if (!r.ok) {
+    $('#sp-state').textContent = 'Échec : ' + r.error;
+    const b = $('#m-list button'); b.disabled = false; b.textContent = 'Fermer';
+    return;
+  }
+  d.close();
+  let v = cfg.games.find((x) => x.path === r.out);
+  if (!v) {
+    v = { ...g, id: Math.random().toString(36).slice(2, 10), title: `${g.title} [Subset - ${p.name}]`, path: r.out, subName: p.name,
+      favorite: false, lastPlayed: 0, playCount: 0, playSeconds: 0, missing: false };
+    ['subLast', 'raId', 'raV', 'raBy', 'hash', 'raManual'].forEach((k) => delete v[k]);   // reconnu ensuite par son empreinte (ID du subset)
+    cfg.games.push(v);
+  }
+  g.subLast = v.id; save();
+  toast(r.existed ? `ROM patchée déjà présente : ${p.name}.` : `ROM patchée créée : ${p.name}.`);
+  launch(g, { ...opts, rom: v.path, subset: p.name });
+}
+async function pickSubset(g, vars, opts, pend) {
+  await nameSubsets(vars);
+  if (!pend) pend = await pendingPatches(g, vars);
+  const d = $('#dlg-menu'), last = vars.some((v) => v.id === g.subLast) ? g.subLast : '';
+  const btn = (id, label) => `<button data-v="${id}" class="${id === last ? 'sel' : ''}">${label}</button>`;
+  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div>`
+    + btn('', 'Jeu de base (sans subset)')
+    + vars.map((v) => btn(v.id, 'Subset · ' + esc(v.subName || v.title))).join('')
+    + pend.map((p, i) => `<button data-p="${i}" title="Patch trouvé : ${esc(fileOf(p.file))}. Emuglob crée une nouvelle ROM à côté de l'originale (qui n'est pas modifiée), puis lance le jeu.">Subset · ${esc(p.name)} <small style="opacity:.7">(appliquer le patch)</small></button>`).join('')
+    + (g.raId > 0 ? '<button data-ra="1" title="Les subsets « bonus » se chargent avec le jeu de base, sans ROM patchée (multiset : PCSX2 2.6+, RetroArch 1.22.1+…). On les active ou désactive sur la page du jeu.">Subsets bonus sur RetroAchievements…</button>' : '')
+    + '<button data-a="x">Annuler</button>';
+  d.onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.ra) return api.raGamePage(g.raId);
+    if (b.dataset.p !== undefined) return applyPatch(g, pend[+b.dataset.p], opts);
+    d.close();
+    if (b.dataset.v === undefined) return;
+    const v = vars.find((x) => x.id === b.dataset.v);
+    g.subLast = v ? v.id : ''; save();
+    launch(g, { ...opts, rom: v ? v.path : g.path, subset: v ? (v.subName || v.title) : '' });
+  };
+  d.showModal();
+  const sel = $('#m-list button.sel') || $('#m-list button'); if (sel) sel.focus();
+}
+
 async function launch(g, opts = {}) {
   if (!g) return;
-  if (g.missing) {   // disque débranché ? on revérifie avant de refuser
-    const [there] = await api.filesExist([g.path]);
-    if (!there) return toast(`Fichier introuvable : ${g.path}. Disque débranché ?`);
-    g.missing = false; render();
+  if (opts.rom === undefined) {   // jeu avec des subsets dans la bibliothèque : on demande lequel lancer
+    const vars = subsetsOf(g);
+    await nameSubsets(vars);
+    const pend = await pendingPatches(g, vars);
+    if (vars.length || pend.length) return pickSubset(g, vars, opts, pend);
+  }
+  const rom = opts.rom || g.path;
+  if (g.missing || rom !== g.path) {   // disque débranché ? on revérifie avant de refuser
+    const [there] = await api.filesExist([rom]);
+    if (!there) return toast(`Fichier introuvable : ${rom}. Disque débranché ?`);
+    if (rom === g.path) { g.missing = false; render(); }
   }
   const emu = emuOf(g);
   if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
-  if (['.wud', '.wux'].includes(extOf(g.path)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
+  if (['.wud', '.wux'].includes(extOf(rom)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
     if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
       const r = await api.cemuKeysImport(emu.exe);
       if (!r.ok) return r.canceled ? undefined : toast('keys.txt non importé : ' + r.error);
       toast(`keys.txt importé (${r.keys} clés).`);
     }
   }
-  if (extOf(g.path) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
-    const c = await api.wiiuCheck(g.path);
+  if (extOf(rom) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
+    const c = await api.wiiuCheck(rom);
     if (!c.ok) return toast(c.alone
       ? "Jeu Wii U incomplet : ce .rpx est seul. Il faut le dossier complet du jeu (code, content et meta) et ajouter le .rpx qui est dans code. Un .wua, .wux ou .wud marche aussi."
       : `Jeu Wii U incomplet : dossier ${c.missing.join(' et ')} absent à côté de code (${c.root}). Recopie le jeu en entier.`);
@@ -1595,14 +1728,14 @@ async function launch(g, opts = {}) {
     const core = pickCore(g, (await api.coresInstalled(emu.exe)) || []);
     if (!core) return openCoreDlg(g, emu);
     if (core !== g.core) { g.core = core; save(); }
-    args = ['--core', core, '--system', String(g.system), '--game', g.path];
+    args = ['--core', core, '--system', String(g.system), '--game', rom];
   } else {
     const tpl = emu.args && emu.args.includes('{game}') ? emu.args : (emu.args || '') + ' "{game}"';
-    args = splitArgs(tpl).map((a) => a.split('{game}').join(g.path));
+    args = splitArgs(tpl).map((a) => a.split('{game}').join(rom));
   }
   const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
   if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
-  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '', title: g.title || '' } : null;
+  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: rom, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '', title: g.title || '' } : null;
   const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', stream: !!cfg.streamMirror, sync, cover: { title: g.title, emu: emu.name, id: emu.id, img: artUrl(g), c: flowColor(g), f: cartForm(g, emu), k: (/^(dolphin|pcsx2|cemu|ppsspp)$/.test(emu.id) || g.platform === 'ps1' || g.system === 12) ? 'disc' : 'cart' } });
   if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
   playing = g; playStart = Date.now(); presence(g);
@@ -1612,7 +1745,7 @@ async function launch(g, opts = {}) {
   if (embed && !r.embedding) leaveGame();
   g.lastPlayed = Date.now(); g.playCount = (g.playCount || 0) + 1; save();
   sfx('launch');
-  toast('Lancement de ' + g.title + '…');
+  toast('Lancement de ' + g.title + (opts.subset ? ` (subset ${opts.subset})` : '') + '…');
   render();
 }
 
@@ -1657,7 +1790,7 @@ function openLibrary(focusSearch) {
 }
 function libGroups() {
   const q = $('#lib-q').value.toLowerCase(), by = new Map();
-  cfg.games.filter((g) => g.title.toLowerCase().includes(q)).forEach((g) => {
+  visibleGames().filter((g) => g.title.toLowerCase().includes(q)).forEach((g) => {
     const k = labelOf(g);
     if (!by.has(k)) by.set(k, []);
     by.get(k).push(g);
@@ -1776,6 +1909,8 @@ function renderSheet() {
       : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
         <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString(LOC)} joueurs sur RetroAchievements</div>` : ''}</div>
         ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
+    ${g.virtual ? '' : subStats(g).map((x) => `<div class="sh-card"><h4>Subset · ${esc(x.name)}</h4><div class="sh-prog"><b>${x.s.got.length} / ${x.s.total}</b><span class="sh-sub">${x.s.pts} pts</span></div>
+      <div class="sh-bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('')}
     ${g.virtual ? '' : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
 }
