@@ -154,7 +154,7 @@ function defaultSaveDirs(env) {
 }
 
 // renvoie [{ gameId, title, file, size, mtime, where, match: 'exact'|'proche', vault: { mtime } | null, same, newer }]
-function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.env }) {
+function findExisting({ games, emus, extraDirs = [], files = [], vaultBase, env = process.env }) {
   const exact = new Map(), loose = new Map();
   const add = (m, k, g) => { if (!k) return; if (!m.has(k)) m.set(k, []); if (!m.get(k).includes(g)) m.get(k).push(g); };
   for (const g of games || []) {
@@ -173,6 +173,16 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
   for (const d of extraDirs) dirs.push([d, 5, 'dossier choisi']);
   const vaultAbs = vaultBase ? path.resolve(vaultBase) : null;
   const seen = new Set(), out = [];
+  // fichiers choisis un par un : gardés même sans jeu reconnu (l'utilisateur choisira le jeu)
+  for (const p of files) {
+    const st = statOf(p); if (!st || st.size > MAX_SAVE) continue;
+    seen.add(low(path.resolve(p)));
+    const ks = saveKeys(path.basename(p));
+    let gs = ks.map((k) => exact.get(k)).find(Boolean), match = 'exact';
+    if (!gs) { gs = ks.map((k) => loose.get(looseOf(k))).find(Boolean); match = 'proche'; }
+    const g = gs && gs.length === 1 ? gs[0] : null;
+    out.push({ gameId: g ? g.id : null, title: g ? g.title || stemOf(g.path) : '', file: p, size: st.size, mtime: st.mtimeMs, where: 'fichier choisi', match: g ? match : 'aucun', picked: true });
+  }
   for (const [dir, depth, where] of dirs) {
     if (!dir) continue;
     walk(dir, depth, (p) => {
@@ -192,6 +202,7 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
   if (vaultBase) {
     const v = new SaveVault(vaultBase);
     for (const c of out) {
+      if (!c.gameId) { c.vault = null; c.same = false; c.newer = true; continue; }
       const vs = statOf(v.file(c.gameId));
       c.vault = vs ? { mtime: vs.mtimeMs } : null;
       c.same = !!vs && same(v.file(c.gameId), c.file);
@@ -199,7 +210,7 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
     }
   }
   // pour un même jeu, la plus récente d'abord
-  return out.sort((a, b) => a.title.localeCompare(b.title) || b.mtime - a.mtime);
+  return out.sort((a, b) => (a.gameId ? 0 : 1) - (b.gameId ? 0 : 1) || a.title.localeCompare(b.title) || b.mtime - a.mtime);
 }
 
 // copie les sauvegardes choisies dans le coffre ; l'ancienne du coffre part dans l'historique ; l'original reste en place
@@ -221,14 +232,31 @@ function importExisting(vaultBase, items) {
 
 // ---------- Cemu (Wii U) : sauvegardes en dossier, mlc01\usr\save\<id haut>\<id bas>\ ; copies complètes dans le coffre ----------
 const KEEP_DIRS = 10;
+// où Cemu range ses données : à côté de l'exe (portable / ancien Cemu) ou %APPDATA%\Cemu (Cemu 2.x installé)
+const cemuDataDirs = (exe, env) => [...(exe ? [path.join(path.dirname(exe), 'portable'), path.dirname(exe)] : []), ...(env.APPDATA ? [path.join(env.APPDATA, 'Cemu')] : []),
+  ...(env.LOCALAPPDATA ? [path.join(env.LOCALAPPDATA, 'Cemu')] : [])];
 function cemuMlcRoots(exe, env = process.env) {
-  const d = path.dirname(exe), A = env.APPDATA || '', out = [];
-  for (const s of [path.join(d, 'portable', 'settings.xml'), path.join(d, 'settings.xml'), path.join(A, 'Cemu', 'settings.xml')]) {
+  const out = [];
+  for (const s of cemuDataDirs(exe, env).map((d) => path.join(d, 'settings.xml'))) {
     try { const m = /<mlc_path>([^<]*)<\/mlc_path>/i.exec(fs.readFileSync(s, 'utf-8')); if (m && m[1].trim()) out.push(path.resolve(path.dirname(s), m[1].trim())); } catch { /* absent */ }
   }
-  out.push(path.join(d, 'portable', 'mlc01'), path.join(d, 'mlc01'), path.join(A, 'Cemu', 'mlc01'));
+  out.push(...cemuDataDirs(exe, env).map((d) => path.join(d, 'mlc01')));
   return [...new Set(out)].filter((x) => { try { return fs.statSync(path.join(x, 'usr', 'save')).isDirectory(); } catch { return false; } });
 }
+// noms des jeux connus de Cemu (title_list_cache.xml) : { identifiant: nom } — pour les .wua / .wux / .wud sans meta.xml
+function cemuTitleNames(exe, env = process.env) {
+  const out = {};
+  for (const d of cemuDataDirs(exe, env)) {
+    let xml; try { xml = fs.readFileSync(path.join(d, 'title_list_cache.xml'), 'utf-8'); } catch { continue; }
+    for (const m of xml.matchAll(/<title\b([^>]*)>([\s\S]*?)<\/title>/g)) {
+      const id = (/titleId="([0-9a-fA-F]{16})"/.exec(m[1]) || /<title_?id>\s*([0-9a-fA-F]{16})/i.exec(m[2]) || [])[1];
+      const name = (/<name>([^<]+)<\/name>/.exec(m[2]) || [])[1];
+      if (id && name) out[low(id)] = name.trim();
+    }
+  }
+  return out;
+}
+const nameKey = (s) => low(String(s || '')).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/[^a-z0-9]+/g, '');
 // identifiant du jeu (16 hexa) : meta.xml d'un jeu extrait (.rpx dans code\)
 function wiiuTitleId(rom) {
   try {
@@ -245,9 +273,14 @@ function newestMtime(dir, depth = 6) {
   return best;
 }
 // dossier de sauvegarde du jeu : par identifiant connu (meta.xml ou déjà trouvé), sinon celui modifié pendant la partie
-function cemuSaveDir(exe, rom, { tid, since } = {}) {
+function cemuSaveDir(exe, rom, { tid, since, title } = {}) {
   const roots = cemuMlcRoots(exe);
-  const id = low(tid || wiiuTitleId(rom) || '');
+  let id = low(tid || wiiuTitleId(rom) || '');
+  if (!id && title) {   // .wua / .wux / .wud : identifiant retrouvé par le nom dans la liste de jeux de Cemu
+    const want = nameKey(title), names = cemuTitleNames(exe);
+    const hit = Object.keys(names).filter((k) => /^00050000/.test(k) && nameKey(names[k]) === want);
+    if (hit.length === 1) id = hit[0];
+  }
   if (/^[0-9a-f]{16}$/.test(id)) {
     for (const r of roots) { const p = path.join(r, 'usr', 'save', id.slice(0, 8), id.slice(8)); if (fs.existsSync(p)) return { dir: p, tid: id }; }
     if (!since) return { dir: null, tid: id };
@@ -293,4 +326,4 @@ SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
   fs.renameSync(tmp, dst);
 };
 
-module.exports = { SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId };
+module.exports = { SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };

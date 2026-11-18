@@ -129,6 +129,7 @@
   .fsr { display:flex; gap:10px; align-items:center; font-size:13px; padding:3px 0; color:var(--muted); }
   dialog label.fsr { display:flex; margin:0; font-size:13px; cursor:pointer; }
   dialog .fsr input { flex:none; width:auto; padding:0; accent-color:#8f7dff; } .fsr .fp { flex:1; min-width:0; word-break:break-all; color:#e8e5ff; }
+  .fsr select { width:auto; max-width:340px; padding:4px 8px; }
   .fsr .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.08); white-space:nowrap; }
   .fsr .tag.warn { background:rgba(255,200,61,.18); color:#ffc83d; }
   #dlg-cores { width:min(1000px, 94vw); }
@@ -322,6 +323,17 @@
   #gbar button:hover { border-color:#8f7bff; }
   #g-state { color:var(--muted); font-size:13px; }
   #gview { flex:1; position:relative; background:#000; }
+  #g-volw { display:inline-flex; align-items:center; gap:8px; }
+  #g-volw[hidden], #g-quick[hidden], #gquick[hidden] { display:none; }
+  #g-vol { width:110px; accent-color:#8f7bff; }
+  #g-voln { min-width:34px; font-weight:500; color:var(--muted); font-size:13px; }
+  #g-mute.off { color:#ff8a8a; border-color:#6a3550; }
+  #gquick { flex:none; display:flex; align-items:center; gap:22px; flex-wrap:wrap; padding:10px 18px; background:#16133a; border-bottom:1px solid #2a2550; font-size:13px; }
+  #gq-list { display:flex; gap:18px; flex-wrap:wrap; }
+  #gq-list label { display:flex; align-items:center; gap:8px; color:var(--muted); }
+  #gq-list select { background:#262046; color:#fff; border:1px solid #3a3560; border-radius:8px; padding:4px 8px; font:inherit; }
+  #gq-list select.chg { border-color:#ffc83d; }
+  #gq-note { color:var(--muted); font-size:12px; }
   #g-wait { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; }
   .case.miss { filter:grayscale(1) brightness(.5); }
   .mrow { display:flex; gap:10px; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #2a2550; font-size:13px; }
@@ -368,7 +380,10 @@
 
 <div id="game" hidden>
   <div id="gbar"><b id="g-title"></b><span id="g-state"></span><span class="sp"></span>
+    <span id="g-volw" hidden><button id="g-mute" title="Couper / remettre le son"><i data-ic="volume"></i></button><input id="g-vol" type="range" min="0" max="100" step="1" value="100" title="Volume de l'émulateur"><b id="g-voln">–</b></span>
+    <button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
     <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
+  <div id="gquick" hidden><div id="gq-list"></div><div id="gq-note"></div></div>
   <div id="gview"><div id="g-wait"></div></div>
 </div>
 
@@ -418,7 +433,7 @@
   <label id="i-src">Dernière version</label><div id="i-new">…</div>
   <div id="i-state" style="margin-top:12px;color:var(--muted);min-height:1.2em"></div>
   <div id="i-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5"></div>
-  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-cores" hidden>Cores de base</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
+  <div class="row"><button id="i-ok" style="margin-right:auto">Fermer</button><button id="i-cores" hidden>Cores de base</button><button id="i-keys" hidden>Importer mon keys.txt</button><button id="i-go" style="background:#5b46d6">Installer</button></div>
 </dialog>
 
 <dialog id="dlg-fsav">
@@ -426,7 +441,7 @@
   <div id="fs-state" style="color:var(--muted)"></div>
   <div id="fs-list"></div>
   <div id="fs-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Les fichiers trouvés sont <b>copiés</b> dans les sauvegardes d'Emuglob : l'original n'est ni déplacé ni modifié, et une sauvegarde déjà présente dans Emuglob part d'abord dans l'historique du jeu. Au prochain lancement, Emuglob la donne à l'émulateur si elle est plus récente que la sienne.<br>Les cartes mémoire communes à tous les jeux (PCSX2, Dolphin) restent dans leur émulateur.</div>
-  <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
+  <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-files">Importer des fichiers…</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
 </dialog>
 
 <dialog id="dlg-core">
@@ -669,6 +684,7 @@ const ICONS = {
   more: '<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  volume: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
   dice: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
   download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
   music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
@@ -1237,6 +1253,13 @@ async function launch(g, opts = {}) {
   }
   const emu = emuOf(g);
   if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
+  if (['.wud', '.wux'].includes(extOf(g.path)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
+    if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
+      const r = await api.cemuKeysImport(emu.exe);
+      if (!r.ok) return r.canceled ? undefined : toast('keys.txt non importé : ' + r.error);
+      toast(`keys.txt importé (${r.keys} clés).`);
+    }
+  }
   if (extOf(g.path) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
     const c = await api.wiiuCheck(g.path);
     if (!c.ok) return toast(c.alone
@@ -2063,20 +2086,54 @@ function enterGame(g) {
   $('#game').hidden = false;
 }
 function leaveGame() {
-  $('#game').hidden = true;
+  $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true;
   if (mode === 'game') mode = 'home';
 }
 api.onGameEmbedded(({ ok, reason }) => {
-  if (ok) { $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); return; }
+  if (ok) { $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools(); return; }
   leaveGame();
   toast(`Intégration impossible : ${reason}. L'émulateur tourne dans sa propre fenêtre (journal : Paramètres).`);
 });
 $('#g-stop').onclick = () => api.stopGame();
 $('#g-full').onclick = () => api.fullscreen();
+/* ---------- barre en jeu : volume (à chaud) et réglages rapides (écrits à la fermeture de l'émulateur) ---------- */
+let quickPending = null;   // { exe, values } : appliqué quand l'émulateur se ferme (sinon il réécrirait sa config par-dessus)
+const showVol = (r) => {
+  if (!r || !r.ok) return;
+  if (r.level >= 0) { $('#g-vol').value = r.level; $('#g-voln').textContent = r.level + ' %'; }
+  $('#g-mute').classList.toggle('off', !!r.mute);
+  $('#g-volw').title = r.sessions ? '' : "L'émulateur n'a pas encore joué de son : le réglage s'appliquera dès qu'il en jouera.";
+};
+async function gameTools() {
+  const emu = playing && emuOf(playing);
+  $('#g-volw').hidden = false;
+  showVol(await api.gameVol());
+  setTimeout(async () => { if (mode === 'game') showVol(await api.gameVol()); }, 4000);   // le son démarre souvent après la fenêtre
+  const q = emu && emu.exe ? await api.quickGet(emu.exe) : null;
+  $('#g-quick').hidden = !(q && q.ok);
+  if (!(q && q.ok)) return;
+  const pend = quickPending && quickPending.exe === emu.exe ? quickPending.values : {};
+  $('#gq-list').innerHTML = q.items.map((it) => `<label>${esc(it.label)}<select data-k="${it.key}" data-v="${esc(it.value)}" class="${pend[it.key] !== undefined && pend[it.key] !== it.value ? 'chg' : ''}">`
+    + it.opts.map(([v, t]) => `<option value="${esc(v)}" ${(pend[it.key] ?? it.value) === v ? 'selected' : ''}>${esc(t)}</option>`).join('') + '</select></label>').join('');
+  $('#gq-note').textContent = `S'applique au prochain lancement : ${emu.name} réécrit ses réglages en quittant, Emuglob les enregistre donc juste après la fermeture du jeu.`;
+  $('#gq-list').onchange = (e) => {
+    const s = e.target.closest('select'); if (!s) return;
+    quickPending = quickPending && quickPending.exe === emu.exe ? quickPending : { exe: emu.exe, values: {} };
+    if (s.value === s.dataset.v) delete quickPending.values[s.dataset.k]; else quickPending.values[s.dataset.k] = s.value;
+    s.classList.toggle('chg', s.value !== s.dataset.v);
+  };
+}
+$('#g-vol').oninput = (e) => { $('#g-voln').textContent = e.target.value + ' %'; clearTimeout(gameTools.t); gameTools.t = setTimeout(async () => showVol(await api.gameVol(+e.target.value, false)), 60); };
+$('#g-mute').onclick = async () => showVol(await api.gameVol(undefined, !$('#g-mute').classList.contains('off')));
+$('#g-quick').onclick = () => { $('#gquick').hidden = !$('#gquick').hidden; api.gameFocus(); };
 new ResizeObserver(() => { if (mode === 'game') api.gameMove(gameRect()); }).observe($('#gview'));
 
 /* ---------- retour au launcher quand l'émulateur se ferme ---------- */
 api.onGameExit(({ id, seconds, short, saved }) => {
+  if (quickPending && Object.keys(quickPending.values).length) {   // réglages rapides choisis pendant la partie
+    const qp = quickPending; quickPending = null;
+    setTimeout(async () => { const r = await api.quickSave(qp.exe, qp.values); toast(r.ok ? `Réglages enregistrés (${r.n}) : ils s'appliquent au prochain lancement.` : 'Réglages non enregistrés : ' + r.error); }, 1500);
+  }
   { const gg = find(id); if (gg && saved && saved.tid && gg.wiiuTid !== saved.tid) { gg.wiiuTid = saved.tid; save(); } }
   leaveGame();
   playing = null; playStart = 0; presence(null);
@@ -2301,7 +2358,7 @@ async function adoptDetectedEmus() {
 /* ---------- Installation : émulateurs depuis leurs sources officielles ---------- */
 const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
-  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
+  cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés tirées de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. « Importer mon keys.txt » le copie au bon endroit pour Cemu. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
 api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte
@@ -2337,6 +2394,11 @@ async function openInstall(id) {
   // RALibretro installé : bouton pour les cores de base (un par console)
   const cb = $('#i-cores');
   cb.hidden = true;
+  $('#i-keys').hidden = id !== 'cemu';
+  $('#i-keys').onclick = async () => {
+    const r = await api.cemuKeysImport(emu.exe || '');
+    if (!r.canceled) $('#i-state').textContent = r.ok ? `keys.txt importé (${r.keys} clés) dans ${r.file}.` : 'Échec : ' + r.error;
+  };
   if (id === 'ralibretro') {
     const refresh = async () => {
       const have = emu.exe && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
@@ -2355,18 +2417,20 @@ async function openInstall(id) {
   d.showModal(); show();
 }
 /* ---------- sauvegardes déjà présentes sur le PC : recherche puis import (copie) après confirmation ---------- */
-async function findSaves(dirs) {
+async function findSaves(dirs, files) {
   const games = cfg.games.filter((g) => !g.missing).map((g) => ({ id: g.id, title: g.title, path: g.path }));
-  return api.savesFind({ games, emus: cfg.emulators.filter((e) => e.exe).map((e) => ({ name: e.name, exe: e.exe })), dirs: dirs || cfg.saveDirs || [] });
+  return api.savesFind({ games, emus: cfg.emulators.filter((e) => e.exe).map((e) => ({ name: e.name, exe: e.exe })), dirs: dirs || cfg.saveDirs || [], files: files || [] });
 }
 async function openFindSaves(pre) {
   const d = $('#dlg-fsav');
-  let items = [];
+  let items = [], files = [];
   const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const kb = (n) => (n < 1024 ? n + ' o' : (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' Ko');
   const draw = () => {
     const by = new Map();
-    items.forEach((c, i) => { if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
+    items.forEach((c, i) => { if (!c.gameId) return; if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
+    const orphan = items.map((c, i) => (c.gameId ? -1 : i)).filter((i) => i >= 0);
+    const gameOpts = cfg.games.slice().sort((a, b) => a.title.localeCompare(b.title)).map((g) => `<option value="${esc(g.id)}">${esc(g.title)} (${esc(labelOf(g))})</option>`).join('');
     const todo = items.filter((c) => c.newer).length;
     $('#fs-state').textContent = !items.length ? 'Aucune sauvegarde trouvée pour les jeux de ta bibliothèque.'
       : `${items.length} sauvegarde${items.length > 1 ? 's' : ''} trouvée${items.length > 1 ? 's' : ''} pour ${by.size} jeu${by.size > 1 ? 'x' : ''}. Choisis celle à importer pour chaque jeu.`;
@@ -2376,27 +2440,33 @@ async function openFindSaves(pre) {
       return `<div class="fsg"><b>${esc(items[ix[0]].title)}</b>${v ? `<div class="fsr">Déjà dans Emuglob : sauvegarde du ${fmt(v.mtime)}</div>` : ''}`
         + ix.map((i) => { const c = items[i];
           return `<label class="fsr"><input type="radio" name="fs-${esc(c.gameId)}" value="${i}" ${i === first ? 'checked' : ''} ${c.same ? 'disabled' : ''}>`
-            + `<span class="fp">${esc(c.file)}</span><span>${fmt(c.mtime)} · ${kb(c.size)}</span><span class="tag">${esc(c.where)}</span>`
+            + `<span class="fp">${esc(c.file)}</span><span>${c.wiiu ? 'dossier' : fmt(c.mtime) + ' · ' + kb(c.size)}</span><span class="tag">${esc(c.where)}</span>`
             + (c.same ? '<span class="tag">déjà importée</span>' : !c.newer ? '<span class="tag warn">plus ancienne</span>' : '')
             + (c.match === 'proche' ? '<span class="tag warn">nom proche</span>' : '') + '</label>'; }).join('')
         + `<label class="fsr"><input type="radio" name="fs-${esc(items[ix[0]].gameId)}" value="-1" ${first === undefined ? 'checked' : ''}><span class="fp">Ne rien importer</span></label></div>`;
-    }).join('');
+    }).join('') + (orphan.length ? '<div class="fsg"><b>Fichiers à associer à un jeu</b>' + orphan.map((i) => { const c = items[i];
+      return `<div class="fsr"><span class="fp">${esc(c.file)}</span><span>${fmt(c.mtime)} · ${kb(c.size)}</span><select class="fs-game" data-i="${i}"><option value="">Ne pas importer</option>${gameOpts}</select></div>`; }).join('') + '</div>' : '');
     $('#fs-go').disabled = !items.length;
     $('#fs-go').textContent = todo ? 'Importer la sélection' : 'Importer';
   };
   const run = async () => {
     $('#fs-state').textContent = 'Recherche en cours…'; $('#fs-list').innerHTML = ''; $('#fs-go').disabled = true;
-    const r = pre || await findSaves(); pre = null;
+    const r = pre || await findSaves(null, files); pre = null;
     if (r.ok) r.items = r.items.concat(await findWiiuSaves());
     if (!r.ok) { $('#fs-state').textContent = 'Erreur : ' + r.error; return; }
     items = r.items; draw();
+  };
+  $('#fs-files').onclick = async () => {
+    const f = await api.savesPickFiles(); if (!f.length) return;
+    files = [...new Set([...files, ...f])]; run();
   };
   $('#fs-dir').onclick = async () => {
     const dir = await api.savesPickDir(); if (!dir) return;
     cfg.saveDirs = [...new Set([...(cfg.saveDirs || []), dir])]; save(); run();
   };
   $('#fs-go').onclick = async () => {
-    const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }));
+    const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }))
+      .concat([...d.querySelectorAll('#fs-list select.fs-game')].filter((s) => s.value).map((s) => ({ gameId: s.value, file: items[+s.dataset.i].file })));
     if (!pick.length) { toast('Rien de coché.'); return; }
     $('#fs-go').disabled = true;
     const wu = pick.filter((x) => items.find((c) => c.gameId === x.gameId && c.file === x.file && c.wiiu));
@@ -2412,17 +2482,16 @@ async function openFindSaves(pre) {
 }
 // Wii U : dossier de sauvegarde Cemu pas encore copié dans Emuglob
 async function findWiiuSaves() {
-  const cemu = cfg.emulators.find((e) => e.id === 'cemu'), out = [];
-  if (!cemu || !cemu.exe) return out;
+  const cemu = cfg.emulators.find((e) => e.id === 'cemu'), out = [];   // Cemu pas réglé : on regarde quand même %APPDATA%\Cemu
   for (const g of cfg.games.filter((x) => emuOf(x).id === 'cemu')) {
-    const r = await api.wiiuSaveList({ gameId: g.id, exe: cemu.exe, rom: g.path, tid: g.wiiuTid || '' });
+    const r = await api.wiiuSaveList({ gameId: g.id, exe: (cemu && cemu.exe) || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });
     if (r.tid && g.wiiuTid !== r.tid) { g.wiiuTid = r.tid; save(); }
     if (r.dir && !r.copies.length) out.push({ gameId: g.id, title: g.title, file: r.dir, size: 0, mtime: Date.now(), where: 'Cemu (Wii U)', match: 'exact', vault: null, same: false, newer: true, wiiu: true });
   }
   return out;
 }
 function openWiiuSaves(g) {   // copies du dossier de sauvegarde Cemu gardées par Emuglob, avec restauration
-  const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe, rom: g.path, tid: g.wiiuTid || '' });
+  const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });
   const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
   const draw = async () => {
     const r = await api.wiiuSaveList(q());
@@ -2534,6 +2603,7 @@ const TUTO = [
     <ul><li>Paramètres, Installation, <b>Cores RALibretro</b> : installer, mettre à jour ou supprimer chaque core, ou « Installer les cores de base » (un par console).</li>
     <li>Si tu lances un jeu sans son core, Emuglob te propose de le <b>télécharger puis de jouer</b>.</li></ul>` },
   { ic:'gamepad', t:'Jouer', h:`<ol><li>Choisis un jeu puis <b>Jouer</b> : l'émulateur s'ouvre avec le jeu.</li>
+    <li>En jeu, la barre du haut règle le <b>volume</b> de l'émulateur et ses <b>réglages rapides</b> (résolution, VSync… pour Dolphin et PCSX2).</li>
     <li>Quitte l'émulateur pour revenir à Emuglob. Si la fenêtre d'Emuglob reste cachée : <b>Ctrl + Maj + E</b>.</li>
     <li>Ton <b>temps de jeu</b> est compté automatiquement : clique sur ton profil pour le voir (total, semaine, par console).</li></ol>
     <div class="tip">« Lancement des jeux » (Paramètres) règle l'intégration de l'émulateur dans Emuglob et le partage des sauvegardes.</div>` },

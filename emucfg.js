@@ -537,4 +537,51 @@ function detect(base) {
   return found;
 }
 
-module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running };
+// ======================= réglages rapides (barre en jeu) : lus à chaud, écrits quand l'émulateur est fermé =======================
+const RES = [['1', 'Native'], ['2', '2x (720p)'], ['3', '3x (1080p)'], ['4', '4x (1440p)'], ['6', '6x (4K)']];
+const YN = (no, yes) => [[no, 'Non'], [yes, 'Oui']];
+const QUICK = {
+  dolphin: (exe) => { const d = DOL.dir(exe), g = path.join(d, 'GFX.ini'), m = path.join(d, 'Dolphin.ini'); return [
+    { key: 'res', label: 'Résolution interne', file: g, sec: 'Settings', k: 'InternalResolution', opts: RES, def: '1' },
+    { key: 'vsync', label: 'Synchro verticale (VSync)', file: g, sec: 'Hardware', k: 'VSync', opts: YN('False', 'True'), def: 'False' },
+    { key: 'fps', label: 'Afficher les FPS', file: g, sec: 'Settings', k: 'ShowFPS', opts: YN('False', 'True'), def: 'False' },
+    { key: 'speed', label: 'Vitesse du jeu', file: m, sec: 'Core', k: 'EmulationSpeed', opts: [['1', 'Normale (100 %)'], ['0', 'Illimitée'], ['0.5', '50 %'], ['2', '200 %']], def: '1' },
+  ]; },
+  pcsx2: (exe) => { const f = P2.file(exe); return [
+    { key: 'res', label: 'Résolution interne', file: f, sec: 'EmuCore/GS', k: 'upscale_multiplier', opts: RES, def: '1' },
+    { key: 'vsync', label: 'Synchro verticale (VSync)', file: f, sec: 'EmuCore/GS', k: 'VsyncEnable', opts: YN('false', 'true'), def: 'false' },
+    { key: 'fps', label: 'Afficher les FPS', file: f, sec: 'EmuCore/GS', k: 'OsdShowFPS', opts: YN('false', 'true'), def: 'false' },
+  ]; },
+};
+const sameVal = (a, b) => (a !== '' && !isNaN(a) && b !== '' && !isNaN(b) ? parseFloat(a) === parseFloat(b) : String(a).toLowerCase() === String(b).toLowerCase());
+function quickFor(exe) {
+  const id = /dolphin/i.test(path.basename(exe || '')) ? 'dolphin' : /pcsx2/i.test(path.basename(exe || '')) ? 'pcsx2' : '';
+  return id ? { id, items: QUICK[id](exe) } : null;
+}
+function quick(exe) {
+  const q = quickFor(exe);
+  if (!q) return { ok: false, error: 'pas de réglages rapides pour cet émulateur' };
+  const cache = {};
+  const items = q.items.map((it) => {
+    const ini = cache[it.file] || (cache[it.file] = new Ini(readText(it.file) || ''));
+    const raw = ini.get(it.sec, it.k), cur = raw === undefined ? it.def : raw.trim();
+    const o = it.opts.find(([v]) => sameVal(v, cur));
+    return { key: it.key, label: it.label, opts: o ? it.opts : [...it.opts, [cur, cur]], value: o ? o[0] : cur };
+  });
+  return { ok: true, id: q.id, items };
+}
+function quickSave(exe, values) {
+  const q = quickFor(exe);
+  if (!q) throw new Error('pas de réglages rapides pour cet émulateur');
+  if (running(exe)) throw new Error("l'émulateur est encore ouvert");
+  const byFile = {};
+  for (const it of q.items) if (values[it.key] !== undefined && it.opts.some(([v]) => v === String(values[it.key]))) (byFile[it.file] = byFile[it.file] || []).push(it);
+  for (const [f, its] of Object.entries(byFile)) {
+    const ini = new Ini(readText(f) || '');
+    for (const it of its) ini.set(it.sec, it.k, String(values[it.key]));
+    writeWithBackup(f, ini.toString());
+  }
+  return Object.values(byFile).reduce((n, a) => n + a.length, 0);
+}
+
+module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running, quick, quickSave };

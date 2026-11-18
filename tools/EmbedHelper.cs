@@ -1,6 +1,7 @@
 // Module d'intégration : place la fenêtre d'un émulateur DANS / SUR la fenêtre d'Emuglob (Win32).
 // Protocole texte (une commande par ligne sur stdin, événements sur stdout) :
 //   embed <pid> <hwndParent> <x> <y> <w> <h> <timeoutMs> [child|overlay]   move <x> <y> <w> <h>   focus   close   release   quit
+//   vol <pid> <0-100 ou -1> <muet 0|1|-1>   (volume de l'émulateur dans le mélangeur de Windows ; -1 = ne pas changer) → vol <niveau> <muet> <sessions>
 // (x y w h = zone cliente d'Emuglob, en pixels physiques)
 // Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed
 // Deux modes :
@@ -142,11 +143,115 @@ public static class EmbedHelper
             case "release":
                 Release();
                 break;
+            case "vol":
+                Out(Volume(int.Parse(p[1]), p.Length > 2 ? int.Parse(p[2]) : -1, p.Length > 3 ? int.Parse(p[3]) : -1));
+                break;
             case "quit":
                 Release();
                 Environment.Exit(0);
                 break;
         }
+    }
+
+    // ---------- volume par application (sessions audio Windows, Core Audio) ----------
+    [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumeratorCo { }
+    [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMDeviceEnumerator
+    {
+        [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection devices);
+    }
+    [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMDeviceCollection
+    {
+        [PreserveSig] int GetCount(out uint count);
+        [PreserveSig] int Item(uint index, out IMMDevice device);
+    }
+    [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IMMDevice
+    {
+        [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object iface);
+    }
+    [ComImport, Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionManager2
+    {
+        [PreserveSig] int GetAudioSessionControl(IntPtr a, int b, out IntPtr c);
+        [PreserveSig] int GetSimpleAudioVolume(IntPtr a, int b, out IntPtr c);
+        [PreserveSig] int GetSessionEnumerator(out IAudioSessionEnumerator sessions);
+    }
+    [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionEnumerator
+    {
+        [PreserveSig] int GetCount(out int count);
+        [PreserveSig] int GetSession(int index, out IAudioSessionControl2 session);
+    }
+    [ComImport, Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface IAudioSessionControl2
+    {
+        // IAudioSessionControl (9 méthodes, non utilisées ici : seules leurs places comptent)
+        [PreserveSig] int GetState(out int state);
+        [PreserveSig] int GetDisplayName(out IntPtr name);
+        [PreserveSig] int SetDisplayName(IntPtr name, IntPtr ctx);
+        [PreserveSig] int GetIconPath(out IntPtr path);
+        [PreserveSig] int SetIconPath(IntPtr path, IntPtr ctx);
+        [PreserveSig] int GetGroupingParam(out Guid g);
+        [PreserveSig] int SetGroupingParam(IntPtr g, IntPtr ctx);
+        [PreserveSig] int RegisterAudioSessionNotification(IntPtr n);
+        [PreserveSig] int UnregisterAudioSessionNotification(IntPtr n);
+        // IAudioSessionControl2
+        [PreserveSig] int GetSessionIdentifier(out IntPtr id);
+        [PreserveSig] int GetSessionInstanceIdentifier(out IntPtr id);
+        [PreserveSig] int GetProcessId(out uint pid);
+    }
+    [ComImport, Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    interface ISimpleAudioVolume
+    {
+        [PreserveSig] int SetMasterVolume(float level, ref Guid ctx);
+        [PreserveSig] int GetMasterVolume(out float level);
+        [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid ctx);
+        [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
+    }
+
+    // processus de l'émulateur : le pid lancé et ceux qui portent le même nom (certains émulateurs jouent le son dans un sous-processus)
+    static System.Collections.Generic.HashSet<uint> EmuPids(int pid)
+    {
+        System.Collections.Generic.HashSet<uint> set = new System.Collections.Generic.HashSet<uint>();
+        set.Add((uint)pid);
+        try
+        {
+            string name = Process.GetProcessById(pid).ProcessName;
+            foreach (Process q in Process.GetProcessesByName(name)) set.Add((uint)q.Id);
+        }
+        catch (Exception) { }
+        return set;
+    }
+
+    static string Volume(int pid, int level, int mute)
+    {
+        System.Collections.Generic.HashSet<uint> pids = EmuPids(pid);
+        Guid ctx = Guid.Empty, iidMgr = typeof(IAudioSessionManager2).GUID;
+        float cur = -1; bool muted = false; int n = 0;
+        IMMDeviceEnumerator en = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo();
+        IMMDeviceCollection devs;
+        if (en.EnumAudioEndpoints(0, 1, out devs) != 0) return "vol -1 0 0";   // sorties audio actives
+        uint count; devs.GetCount(out count);
+        for (uint i = 0; i < count; i++)
+        {
+            IMMDevice dev; if (devs.Item(i, out dev) != 0) continue;
+            object o; if (dev.Activate(ref iidMgr, 23, IntPtr.Zero, out o) != 0) continue;   // CLSCTX_ALL
+            IAudioSessionEnumerator ses; if (((IAudioSessionManager2)o).GetSessionEnumerator(out ses) != 0) continue;
+            int sc; ses.GetCount(out sc);
+            for (int k = 0; k < sc; k++)
+            {
+                IAudioSessionControl2 c; if (ses.GetSession(k, out c) != 0 || c == null) continue;
+                uint sp; if (c.GetProcessId(out sp) != 0 || !pids.Contains(sp)) continue;
+                ISimpleAudioVolume v = (ISimpleAudioVolume)c;
+                if (level >= 0) v.SetMasterVolume(Math.Max(0, Math.Min(100, level)) / 100f, ref ctx);
+                if (mute >= 0) v.SetMute(mute == 1, ref ctx);
+                v.GetMasterVolume(out cur); v.GetMute(out muted);
+                n++;
+            }
+        }
+        return "vol " + (cur < 0 ? -1 : (int)Math.Round(cur * 100)) + " " + (muted ? 1 : 0) + " " + n;
     }
 
     static void DoEmbed(int pid, IntPtr parent, int x, int y, int w, int h, int timeoutMs, string mode)

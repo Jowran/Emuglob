@@ -520,6 +520,21 @@ ipcMain.handle('emucfg:save', (_e, { exe, changes }) => {
   return r;
 });
 ipcMain.handle('game:move', (_e, r) => { if (helperObj && current && current.embedded) helperObj.send(`move ${r.x} ${r.y} ${r.w} ${r.h}`); });
+// volume de l'émulateur en cours (mélangeur de Windows), à chaud
+ipcMain.handle('game:vol', (_e, { level, mute }) => new Promise((resolve) => {
+  if (!helperObj || !current || !current.child) return resolve({ ok: false, error: 'aucun jeu intégré' });
+  let t;
+  const off = helperObj.on((line) => {
+    if (!line.startsWith('vol ')) return;
+    off(); clearTimeout(t);
+    const [, l, m, n] = line.split(' ').map(Number);
+    resolve({ ok: true, level: l, mute: m === 1, sessions: n });
+  });
+  t = setTimeout(() => { off(); resolve({ ok: false, error: 'pas de réponse' }); }, 3000);
+  helperObj.send(`vol ${current.child.pid} ${Number.isFinite(level) ? Math.round(level) : -1} ${mute === undefined || mute === null ? -1 : mute ? 1 : 0}`);
+}));
+ipcMain.handle('quick:get', (_e, exe) => { try { return emucfg.quick(exe); } catch (e) { return { ok: false, error: e.message }; } });
+ipcMain.handle('quick:save', (_e, { exe, values }) => { try { return { ok: true, n: emucfg.quickSave(exe, values) }; } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('game:focus', () => { if (helperObj && current && current.embedded) helperObj.send('focus'); });
 ipcMain.handle('game:stop', () => {
   if (!current) return;
@@ -528,18 +543,49 @@ ipcMain.handle('game:stop', () => {
   else killTree(c.pid);
 });
 // recherche des sauvegardes existantes (dossiers des ROMs, des émulateurs, dossiers habituels, + dossiers choisis)
-ipcMain.handle('saves:find', (_e, { games, emus, dirs }) => {
-  try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
+ipcMain.handle('saves:find', (_e, { games, emus, dirs, files }) => {
+  try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), files: (files || []).filter((f) => typeof f === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
+// Cemu : keys.txt (clés tirées de la console de l'utilisateur, jamais fournies) — où Cemu le lit
+function cemuKeysTargets(exe) {
+  const d = exe ? path.dirname(exe) : '', A = process.env.APPDATA ? path.join(process.env.APPDATA, 'Cemu') : '';
+  const out = [];
+  if (d && fs.existsSync(path.join(d, 'portable'))) out.push(path.join(d, 'portable', 'keys.txt'));   // Cemu 2.x portable
+  if (A && fs.existsSync(A)) out.push(path.join(A, 'keys.txt'));                                    // Cemu 2.x installé
+  if (d) out.push(path.join(d, 'keys.txt'));                                                         // ancien Cemu, à côté de l'exe
+  return [...new Set(out)];
+}
+ipcMain.handle('cemu:keysStatus', (_e, exe) => { const t = cemuKeysTargets(exe); const f = t.find((x) => fs.existsSync(x)); return { has: !!f, file: f || '', target: t[0] || '' }; });
+ipcMain.handle('cemu:keysImport', async (_e, exe) => {
+  const t = cemuKeysTargets(exe);
+  if (!t.length) return { ok: false, error: 'règle ou installe Cemu d\'abord' };
+  const r = await dialog.showOpenDialog(win, { title: 'Ton keys.txt (clés tirées de ta propre console)', properties: ['openFile'], filters: [{ name: 'keys.txt', extensions: ['txt'] }, { name: 'Tous', extensions: ['*'] }] });
+  if (r.canceled) return { ok: false, canceled: true };
+  let txt; try { txt = fs.readFileSync(r.filePaths[0], 'utf-8'); } catch (e) { return { ok: false, error: e.message }; }
+  const n = (txt.match(/^\s*[0-9a-fA-F]{32}\b/gm) || []).length;
+  if (!n || txt.length > 1048576) return { ok: false, error: "ce fichier ne ressemble pas à un keys.txt (une clé de 32 caractères hexadécimaux par ligne)" };
+  const dst = t.find((x) => fs.existsSync(x)) || t[0];
+  try {
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    if (fs.existsSync(dst)) fs.copyFileSync(dst, dst + '.bak');
+    fs.copyFileSync(r.filePaths[0], dst);
+    return { ok: true, file: dst, keys: n };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('saves:pickfiles', async () => {
+  const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1)).concat('dat');   // .dat : seulement à la main (trop de faux positifs pour la recherche auto)
+  const r = await dialog.showOpenDialog(win, { title: 'Fichiers de sauvegarde', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Sauvegardes', extensions: exts }, { name: 'Tous', extensions: ['*'] }] });
+  return r.canceled ? [] : r.filePaths;
+});
 ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
-ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid }) => {
+ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid, title }) => {
   let loc = { dir: null, tid: tid || '' };
-  try { loc = cemuSaveDir(exe, rom, { tid }); } catch { /* Cemu absent */ }
+  try { loc = cemuSaveDir(exe || '', rom, { tid, title }); } catch { /* Cemu absent */ }
   return { copies: getVault().listDir(String(gameId)), dir: loc.dir, tid: loc.tid };
 });
 ipcMain.handle('wiiusave:snap', (_e, { gameId, exe, rom, tid }) => {
-  try { const loc = cemuSaveDir(exe, rom, { tid }); if (!loc.dir) return { ok: false, error: 'aucune sauvegarde de ce jeu dans Cemu' }; return { ok: true, ...getVault().snapDir(String(gameId), loc.dir) }; } catch (e) { return { ok: false, error: e.message }; }
+  try { const loc = cemuSaveDir(exe || '', rom, { tid }); if (!loc.dir) return { ok: false, error: 'aucune sauvegarde de ce jeu dans Cemu' }; return { ok: true, ...getVault().snapDir(String(gameId), loc.dir) }; } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('wiiusave:restore', (_e, { gameId, exe, rom, tid, name }) => {
   if (emucfg.running(exe)) return { ok: false, error: 'Cemu est ouvert : ferme-le avant de restaurer.' };
