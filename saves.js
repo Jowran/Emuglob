@@ -381,4 +381,95 @@ SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
   fs.renameSync(tmp, dst);
 };
 
-module.exports = { isBlank, retroarchSaves, SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };
+// ---------- Cemu : les autres installations du PC (portable, autre dossier, ancien Cemu) partagent leurs sauvegardes ----------
+// recherche de Cemu.exe : emplacements habituels + racine des disques (2 niveaux, 3 dans les dossiers « émulateurs / jeux »)
+const cemuScan = { t: 0, exes: [] };
+const SKIP_DIR = /^(\$|windows$|system volume information$|programdata$|recovery$|perflogs$|intel$|amd$|nvidia$|msocache$|config\.msi$|node_modules$|\.)/i;
+const DEEP_DIR = /emu|cemu|wii|jeu|game|program|t[ée]l[ée]ch|download|bureau|desktop|document|portable|tools|outils/i;
+function findCemuExes(env = process.env, extra = []) {
+  if (Date.now() - cemuScan.t < 10 * 60000) return cemuScan.exes;
+  const H = env.USERPROFILE || env.HOME || '';
+  const found = new Set();
+  const check = (dir) => { for (const n of ['Cemu.exe', 'cemu.exe']) { const p = path.join(dir, n); if (statOf(p)) { found.add(path.resolve(p)); return; } } };
+  const subdirs = (d) => { try { return fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory() && !SKIP_DIR.test(e.name)).map((e) => path.join(d, e.name)); } catch { return []; } };
+  const t0 = Date.now();
+  for (const d of [...extra, path.join(H, 'Documents'), path.join(H, 'Desktop'), path.join(H, 'Downloads'), env.ProgramFiles, env['ProgramFiles(x86)'], env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs')].filter(Boolean)) {
+    check(d); for (const a of subdirs(d)) { check(a); for (const b of subdirs(a)) check(b); }
+  }
+  if (process.platform === 'win32') {
+    for (const L of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+      const root = L + ':\\';
+      if (!fs.existsSync(root)) continue;
+      for (const a of subdirs(root)) {
+        if (Date.now() - t0 > 4000) break;   // disque lent : on s'arrête là
+        check(a);
+        for (const b of subdirs(a)) { check(b); if (DEEP_DIR.test(path.basename(a)) || DEEP_DIR.test(path.basename(b))) for (const c of subdirs(b)) check(c); }
+      }
+    }
+  }
+  cemuScan.t = Date.now(); cemuScan.exes = [...found];
+  return cemuScan.exes;
+}
+// dossiers mlc01 des AUTRES Cemu (ceux du Cemu lancé par Emuglob exclus)
+function cemuOtherRoots(exe, env = process.env) {
+  const own = new Set(cemuMlcRoots(exe, env).map((r) => low(path.resolve(r))));
+  const me = exe ? low(path.resolve(exe)) : '';
+  const out = [];
+  for (const x of findCemuExes(env, exe ? [path.dirname(path.dirname(exe))] : [])) {
+    if (low(x) === me) continue;
+    for (const r of cemuMlcRoots(x, env)) { const k = low(path.resolve(r)); if (!own.has(k)) { own.add(k); out.push({ root: r, exe: x }); } }
+  }
+  return out;
+}
+const cemuTid = (exe, rom, { tid, title } = {}) => {
+  let id = low(tid || wiiuTitleId(rom) || '');
+  if (!id && title) {
+    const want = nameKey(title), names = Object.assign({}, ...[exe, ...findCemuExes()].map((x) => cemuTitleNames(x)));
+    const hit = Object.keys(names).filter((k) => /^00050000/.test(k) && nameKey(names[k]) === want);
+    if (hit.length === 1) id = hit[0];
+  }
+  return /^[0-9a-f]{16}$/.test(id) ? id : '';
+};
+const saveIn = (root, id) => path.join(root, 'usr', 'save', id.slice(0, 8), id.slice(8));
+const hasFiles = (d) => newestMtime(d) > 0;
+function replaceDir(src, dst) {
+  const tmp = dst + '.emuglob-tmp';
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.cpSync(src, tmp, { recursive: true, preserveTimestamps: true });
+  if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  fs.renameSync(tmp, dst);
+}
+// avant le lancement : reprend la sauvegarde d'un autre Cemu si elle est plus récente (l'actuelle part d'abord dans le coffre)
+SaveVault.prototype.cemuPrepare = function cemuPrepare({ gameId, exe, rom, tid, title }) {
+  const id = cemuTid(exe, rom, { tid, title });
+  if (!id) return { action: 'none' };
+  // Cemu jamais lancé : pas encore de mlc01, on prend celui qu'il utilisera (portable\ si présent, sinon %APPDATA%\Cemu)
+  const ownRoots = cemuMlcRoots(exe);
+  if (!ownRoots.length) {
+    const env = process.env, ex = path.dirname(exe || '');
+    ownRoots.push(fs.existsSync(path.join(ex, 'portable')) ? path.join(ex, 'portable', 'mlc01')
+      : fs.existsSync(path.join(ex, 'settings.xml')) || !env.APPDATA ? path.join(ex, 'mlc01') : path.join(env.APPDATA, 'Cemu', 'mlc01'));
+  }
+  const mine = ownRoots.map((r) => saveIn(r, id)).find((d) => hasFiles(d)) || saveIn(ownRoots[0], id);
+  const mineT = hasFiles(mine) ? newestMtime(mine) : 0;
+  const best = cemuOtherRoots(exe).map((o) => ({ ...o, dir: saveIn(o.root, id) })).filter((o) => hasFiles(o.dir))
+    .map((o) => ({ ...o, t: newestMtime(o.dir) })).sort((a, b) => b.t - a.t)[0];
+  if (!best || best.t <= mineT + 2000 || dirSig(best.dir) === dirSig(mine)) return { action: mineT ? 'kept' : 'none', tid: id };
+  if (mineT) this.snapDir(String(gameId), mine, 'avant-reprise');
+  replaceDir(best.dir, mine);
+  return { action: 'copied', from: 'Cemu (' + path.dirname(best.exe) + ')', to: mine, tid: id };
+};
+// après la partie : met à jour la sauvegarde des autres Cemu qui ont déjà ce jeu (l'ancienne part d'abord dans le coffre)
+SaveVault.prototype.cemuPush = function cemuPush({ gameId, exe, dir, tid }) {
+  if (!dir || !/^[0-9a-f]{16}$/.test(tid || '') || !hasFiles(dir)) return [];
+  const t = newestMtime(dir), done = [];
+  for (const o of cemuOtherRoots(exe)) {
+    const d = saveIn(o.root, tid);
+    if (!hasFiles(d) || newestMtime(d) >= t - 2000 || dirSig(d) === dirSig(dir)) continue;
+    try { this.snapDir(String(gameId), d, 'autre-Cemu-remplacee'); replaceDir(dir, d); done.push(d); } catch { /* fichier verrouillé : tant pis */ }
+  }
+  return done;
+};
+
+module.exports = { findCemuExes, cemuOtherRoots, isBlank, retroarchSaves, SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };
