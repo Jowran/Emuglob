@@ -99,6 +99,14 @@
   .sgrp { margin-bottom:22px; }
   .sgrp h3 { margin:0 0 10px 4px; font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); }
   .sgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+  /* écrans larges / ultra-wide : une colonne par section, centrée, au lieu d'une longue ligne */
+  @media (min-width:1700px) {
+    #set-body { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:28px; max-width:2300px; margin:0 auto; width:100%; align-items:start; }
+    .sgrp { margin:0; }
+    .sgrid { grid-template-columns:1fr; }
+    .sset { padding:18px 20px; }
+  }
+  @media (min-width:2400px) { .sset b { font-size:18px; } .sset small { font-size:14px; } .sset .si { font-size:30px; } .sgrp h3 { font-size:13px; } }
   .sset { display:flex; gap:14px; align-items:center; padding:14px 18px; border-radius:18px; background:var(--glass); border:2px solid transparent; cursor:pointer; outline:none; backdrop-filter:blur(8px); }
   .sset:hover, .sset:focus { border-color:#fff; box-shadow:0 0 16px var(--glow); }
   .sset .si { font-size:26px; display:flex; opacity:.9; }
