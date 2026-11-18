@@ -219,4 +219,78 @@ function importExisting(vaultBase, items) {
   return { done, errors };
 }
 
-module.exports = { SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf };
+// ---------- Cemu (Wii U) : sauvegardes en dossier, mlc01\usr\save\<id haut>\<id bas>\ ; copies complètes dans le coffre ----------
+const KEEP_DIRS = 10;
+function cemuMlcRoots(exe, env = process.env) {
+  const d = path.dirname(exe), A = env.APPDATA || '', out = [];
+  for (const s of [path.join(d, 'portable', 'settings.xml'), path.join(d, 'settings.xml'), path.join(A, 'Cemu', 'settings.xml')]) {
+    try { const m = /<mlc_path>([^<]*)<\/mlc_path>/i.exec(fs.readFileSync(s, 'utf-8')); if (m && m[1].trim()) out.push(path.resolve(path.dirname(s), m[1].trim())); } catch { /* absent */ }
+  }
+  out.push(path.join(d, 'portable', 'mlc01'), path.join(d, 'mlc01'), path.join(A, 'Cemu', 'mlc01'));
+  return [...new Set(out)].filter((x) => { try { return fs.statSync(path.join(x, 'usr', 'save')).isDirectory(); } catch { return false; } });
+}
+// identifiant du jeu (16 hexa) : meta.xml d'un jeu extrait (.rpx dans code\)
+function wiiuTitleId(rom) {
+  try {
+    const xml = fs.readFileSync(path.join(path.dirname(path.dirname(rom)), 'meta', 'meta.xml'), 'utf-8');
+    const m = /<title_id[^>]*>\s*([0-9a-fA-F]{16})\s*<\/title_id>/.exec(xml);
+    return m ? low(m[1]) : '';
+  } catch { return ''; }
+}
+function newestMtime(dir, depth = 6) {
+  let best = 0;
+  const go = (d, n) => { let l; try { l = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of l) { const p = path.join(d, e.name); if (e.isDirectory()) { if (n) go(p, n - 1); } else { try { best = Math.max(best, fs.statSync(p).mtimeMs); } catch { /* ignoré */ } } } };
+  go(dir, depth);
+  return best;
+}
+// dossier de sauvegarde du jeu : par identifiant connu (meta.xml ou déjà trouvé), sinon celui modifié pendant la partie
+function cemuSaveDir(exe, rom, { tid, since } = {}) {
+  const roots = cemuMlcRoots(exe);
+  const id = low(tid || wiiuTitleId(rom) || '');
+  if (/^[0-9a-f]{16}$/.test(id)) {
+    for (const r of roots) { const p = path.join(r, 'usr', 'save', id.slice(0, 8), id.slice(8)); if (fs.existsSync(p)) return { dir: p, tid: id }; }
+    if (!since) return { dir: null, tid: id };
+  }
+  if (!since) return { dir: null, tid: '' };
+  let best = null;
+  for (const r of roots) {
+    const base = path.join(r, 'usr', 'save', '00050000');
+    let l = []; try { l = fs.readdirSync(base, { withFileTypes: true }); } catch { /* aucun */ }
+    for (const e of l) if (e.isDirectory() && /^[0-9a-f]{8}$/i.test(e.name)) {
+      const p = path.join(base, e.name), t = newestMtime(p);
+      if (t >= since - 3000 && (!best || t > best.t)) best = { dir: p, tid: '00050000' + low(e.name), t };
+    }
+  }
+  return best ? { dir: best.dir, tid: best.tid } : { dir: null, tid: '' };
+}
+const dirSig = (dir) => { const a = []; const go = (d, rel) => { let l; try { l = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+  for (const e of l.sort((x, y) => (x.name < y.name ? -1 : 1))) { const p = path.join(d, e.name); if (e.isDirectory()) go(p, rel + e.name + '/'); else { const s = fs.statSync(p); a.push(`${rel}${e.name}:${s.size}:${Math.round(s.mtimeMs / 1000)}`); } } };
+  go(dir, ''); return a.join('|'); };
+SaveVault.prototype.snapDir = function snapDir(gameId, src, label) {
+  const base = path.join(this.dir(gameId), 'wiiu');
+  fs.mkdirSync(base, { recursive: true });
+  const all = fs.readdirSync(base).filter((f) => fs.statSync(path.join(base, f)).isDirectory()).sort();
+  if (all.length && dirSig(path.join(base, all[all.length - 1])) === dirSig(src)) return { action: 'kept' };
+  const name = new Date().toISOString().replace(/[:T.]/g, '-').slice(0, 19) + (label ? '_' + safe(label) : '');
+  fs.cpSync(src, path.join(base, name), { recursive: true, preserveTimestamps: true });
+  for (const f of [...all, name].sort().slice(0, Math.max(0, all.length + 1 - KEEP_DIRS))) { try { fs.rmSync(path.join(base, f), { recursive: true, force: true }); } catch { /* tant pis */ } }
+  return { action: 'saved', name };
+};
+SaveVault.prototype.listDir = function listDir(gameId) {
+  const base = path.join(this.dir(gameId), 'wiiu');
+  try { return fs.readdirSync(base).filter((f) => fs.statSync(path.join(base, f)).isDirectory()).sort().reverse().map((f) => ({ name: f, mtime: newestMtime(path.join(base, f)) })); } catch { return []; }
+};
+// remet une copie du coffre dans Cemu ; l'état actuel est d'abord gardé dans le coffre
+SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
+  const src = path.join(this.dir(gameId), 'wiiu', path.basename(name));
+  if (!fs.existsSync(src)) throw new Error('copie introuvable');
+  if (fs.existsSync(dst)) this.snapDir(gameId, dst, 'avant-restauration');
+  const tmp = dst + '.emuglob-tmp';
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.cpSync(src, tmp, { recursive: true, preserveTimestamps: true });
+  if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
+  fs.renameSync(tmp, dst);
+};
+
+module.exports = { SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId };

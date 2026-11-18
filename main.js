@@ -5,7 +5,7 @@ const { spawn, execFile } = require('child_process');
 const crypto = require('crypto');
 const { romHash } = require('./romhash');
 const { identify } = require('./discid');
-const { SaveVault, findExisting, importExisting } = require('./saves');
+const { SaveVault, findExisting, importExisting, cemuSaveDir } = require('./saves');
 const { DiscordPresence } = require('./discord');
 const emucfg = require('./emucfg');
 
@@ -327,7 +327,13 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
-          if (sync && sync.rom && sync.emu) {
+          if (sync && sync.rom && sync.emu && sync.emu.id === 'cemu') {   // Wii U : copie du dossier de sauvegarde du jeu
+            try {
+              const loc = cemuSaveDir(exe, sync.rom, { tid: sync.tid, since: t0 });
+              saved = loc.dir ? { ...getVault().snapDir(sync.gameId, loc.dir), tid: loc.tid } : { action: 'none', tid: loc.tid };
+            } catch (err) { saved = { action: 'error', error: err.message }; }
+            embedLog('sauvegarde Wii U : ' + JSON.stringify(saved));
+          } else if (sync && sync.rom && sync.emu) {
             try { saved = getVault().collect(sync); } catch (err) { saved = { action: 'error', error: err.message }; }
             embedLog('sauvegarde récupérée : ' + JSON.stringify(saved));
           }
@@ -527,6 +533,25 @@ ipcMain.handle('saves:find', (_e, { games, emus, dirs }) => {
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
 ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
+ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid }) => {
+  let loc = { dir: null, tid: tid || '' };
+  try { loc = cemuSaveDir(exe, rom, { tid }); } catch { /* Cemu absent */ }
+  return { copies: getVault().listDir(String(gameId)), dir: loc.dir, tid: loc.tid };
+});
+ipcMain.handle('wiiusave:snap', (_e, { gameId, exe, rom, tid }) => {
+  try { const loc = cemuSaveDir(exe, rom, { tid }); if (!loc.dir) return { ok: false, error: 'aucune sauvegarde de ce jeu dans Cemu' }; return { ok: true, ...getVault().snapDir(String(gameId), loc.dir) }; } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('wiiusave:restore', (_e, { gameId, exe, rom, tid, name }) => {
+  if (emucfg.running(exe)) return { ok: false, error: 'Cemu est ouvert : ferme-le avant de restaurer.' };
+  try {
+    let { dir, tid: id } = cemuSaveDir(exe, rom, { tid });
+    if (!dir) { if (!/^[0-9a-f]{16}$/.test(id || '')) return { ok: false, error: "dossier de sauvegarde de Cemu inconnu pour ce jeu : lance-le une fois dans Cemu" };
+      const roots = require('./saves').cemuMlcRoots(exe); if (!roots.length) return { ok: false, error: 'dossier mlc01 de Cemu introuvable' };
+      dir = path.join(roots[0], 'usr', 'save', id.slice(0, 8), id.slice(8)); }
+    getVault().restoreDir(String(gameId), name, dir);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
 ipcMain.handle('saves:open', (_e, gameId) => { const d = getVault().dir(String(gameId)); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 // on = interrupteur des Paramètres ; legacyId = ancien ID saisi à la main (repli si DISCORD_APP_ID est vide)
 ipcMain.handle('discord:set', (_e, { on, activity, legacyId }) => { discord.set(on ? (DISCORD_APP_ID || String(legacyId || '').replace(/\D/g, '')) : '', activity); return discord.status; });

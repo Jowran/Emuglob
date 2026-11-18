@@ -451,6 +451,14 @@
   <div class="row"><button id="tu-skip" style="margin-right:auto">Passer le tuto</button><button id="tu-go" hidden>Y aller</button><button id="tu-prev">Précédent</button><button id="tu-next" style="background:#5b46d6">Suivant</button></div>
 </dialog>
 
+<dialog id="dlg-wsav">
+  <h2 id="ws-title">Sauvegardes</h2>
+  <div id="ws-cur" style="color:var(--muted);font-size:13px;word-break:break-all"></div>
+  <label>Copies gardées par Emuglob (10 dernières)</label>
+  <div id="ws-list"></div>
+  <div class="row"><button id="ws-ok" style="margin-right:auto">Fermer</button><button id="ws-open">Ouvrir le dossier</button><button id="ws-snap" style="background:#5b46d6">Copier maintenant</button></div>
+</dialog>
+
 <dialog id="dlg-ctl">
   <h2>Contrôles</h2>
   <label>Émulateur</label><select id="c-emu"></select>
@@ -1248,7 +1256,7 @@ async function launch(g, opts = {}) {
   }
   const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
   if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
-  const sync = cfg.shareSaves !== false ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu) } : null;
+  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '' } : null;
   const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', sync });
   if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
   playing = g; playStart = Date.now(); presence(g);
@@ -2034,7 +2042,7 @@ function openMenu(g = cur()) {
     else if (a === 'edit') { await openEdit(g, false); save(); render(); autoMatch(); findThumbs(); }
     else if (a === 'reveal') api.reveal(g.path);
     else if (a === 'window') launch(g, { embed: false });
-    else if (a === 'saves') api.savesOpen(g.id);
+    else if (a === 'saves') { if (emuOf(g).id === 'cemu') openWiiuSaves(g); else api.savesOpen(g.id); }
     else if (a === 'del') { cfg.games = cfg.games.filter((x) => x !== g); save(); render(); }
   };
   d.showModal();
@@ -2068,7 +2076,8 @@ $('#g-full').onclick = () => api.fullscreen();
 new ResizeObserver(() => { if (mode === 'game') api.gameMove(gameRect()); }).observe($('#gview'));
 
 /* ---------- retour au launcher quand l'émulateur se ferme ---------- */
-api.onGameExit(({ id, seconds, short }) => {
+api.onGameExit(({ id, seconds, short, saved }) => {
+  { const gg = find(id); if (gg && saved && saved.tid && gg.wiiuTid !== saved.tid) { gg.wiiuTid = saved.tid; save(); } }
   leaveGame();
   playing = null; playStart = 0; presence(null);
   const g = find(id);
@@ -2079,7 +2088,7 @@ api.onGameExit(({ id, seconds, short }) => {
     save();
   }
   render();
-  toast(short ? "L'émulateur s'est fermé tout de suite. Vérifie son chemin et ses arguments (Paramètres, Émulateurs)." : `Retour à Emuglob · ${fmtDur(seconds)} de jeu`);
+  toast(short ? "L'émulateur s'est fermé tout de suite. Vérifie son chemin et ses arguments (Paramètres, Émulateurs)." : `Retour à Emuglob · ${fmtDur(seconds)} de jeu${saved && saved.tid && saved.action === 'saved' ? ' · sauvegarde copiée dans Emuglob' : ''}`);
   if (g && g.raId > 0) loadProg(g, true).then(() => { renderInfo(); renderBottom(); });
   refreshRA();
 });
@@ -2378,6 +2387,7 @@ async function openFindSaves(pre) {
   const run = async () => {
     $('#fs-state').textContent = 'Recherche en cours…'; $('#fs-list').innerHTML = ''; $('#fs-go').disabled = true;
     const r = pre || await findSaves(); pre = null;
+    if (r.ok) r.items = r.items.concat(await findWiiuSaves());
     if (!r.ok) { $('#fs-state').textContent = 'Erreur : ' + r.error; return; }
     items = r.items; draw();
   };
@@ -2389,13 +2399,50 @@ async function openFindSaves(pre) {
     const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }));
     if (!pick.length) { toast('Rien de coché.'); return; }
     $('#fs-go').disabled = true;
-    const r = await api.savesImport(pick);
+    const wu = pick.filter((x) => items.find((c) => c.gameId === x.gameId && c.file === x.file && c.wiiu));
+    for (const x of wu) { const g = find(x.gameId), e = emuOf(g); await api.wiiuSaveSnap({ gameId: g.id, exe: e.exe, rom: g.path, tid: g.wiiuTid || '' }); }
+    const r = await api.savesImport(pick.filter((x) => !wu.includes(x)));
+    r.done.push(...wu.map((x) => ({ ...x, action: 'imported' })));
     const n = r.done.filter((x) => x.action === 'imported').length;
     toast(`${n} sauvegarde${n > 1 ? 's' : ''} importée${n > 1 ? 's' : ''}${r.errors.length ? `, ${r.errors.length} en échec (${r.errors[0].error})` : ''}.`);
     run();
   };
   $('#fs-ok').onclick = () => d.close();
   d.showModal(); run();
+}
+// Wii U : dossier de sauvegarde Cemu pas encore copié dans Emuglob
+async function findWiiuSaves() {
+  const cemu = cfg.emulators.find((e) => e.id === 'cemu'), out = [];
+  if (!cemu || !cemu.exe) return out;
+  for (const g of cfg.games.filter((x) => emuOf(x).id === 'cemu')) {
+    const r = await api.wiiuSaveList({ gameId: g.id, exe: cemu.exe, rom: g.path, tid: g.wiiuTid || '' });
+    if (r.tid && g.wiiuTid !== r.tid) { g.wiiuTid = r.tid; save(); }
+    if (r.dir && !r.copies.length) out.push({ gameId: g.id, title: g.title, file: r.dir, size: 0, mtime: Date.now(), where: 'Cemu (Wii U)', match: 'exact', vault: null, same: false, newer: true, wiiu: true });
+  }
+  return out;
+}
+function openWiiuSaves(g) {   // copies du dossier de sauvegarde Cemu gardées par Emuglob, avec restauration
+  const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe, rom: g.path, tid: g.wiiuTid || '' });
+  const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+  const draw = async () => {
+    const r = await api.wiiuSaveList(q());
+    if (r.tid && g.wiiuTid !== r.tid) { g.wiiuTid = r.tid; save(); }
+    $('#ws-cur').textContent = r.dir ? `Dans Cemu : ${r.dir}` : "Cemu n'a pas encore de sauvegarde pour ce jeu (ou ne la trouve pas : lance le jeu une fois depuis Emuglob).";
+    $('#ws-snap').disabled = !r.dir;
+    $('#ws-list').innerHTML = r.copies.length ? r.copies.map((c) => `<div class="corow"><span class="cn">${fmt(c.mtime)}${/avant-restauration/.test(c.name) ? '<small>avant une restauration</small>' : ''}</span><button data-n="${esc(c.name)}">Restaurer</button></div>`).join('')
+      : '<p class="muted">Aucune copie pour l\'instant. Emuglob en fait une à la fin de chaque partie lancée depuis Emuglob.</p>';
+  };
+  $('#ws-title').textContent = 'Sauvegardes de ' + g.title;
+  $('#ws-list').onclick = async (ev) => {
+    const n = ev.target.dataset.n; if (!n) return;
+    if (!confirm('Remettre cette sauvegarde dans Cemu ? La sauvegarde actuelle est gardée dans Emuglob avant.')) return;
+    const r = await api.wiiuSaveRestore({ ...q(), name: n });
+    toast(r.ok ? 'Sauvegarde restaurée dans Cemu.' : 'Échec : ' + r.error); draw();
+  };
+  $('#ws-snap').onclick = async () => { const r = await api.wiiuSaveSnap(q()); toast(!r.ok ? 'Échec : ' + r.error : r.action === 'kept' ? 'Déjà à jour : rien de nouveau.' : 'Copie faite.'); draw(); };
+  $('#ws-open').onclick = () => api.savesOpen(g.id);
+  $('#ws-ok').onclick = () => d.close();
+  d.showModal(); draw();
 }
 async function proposeSaves() {   // une seule fois : si des sauvegardes plus récentes existent ailleurs, on propose l'import
   if (cfg.savesProposed || !cfg.games.length) return;
@@ -2496,6 +2543,7 @@ const TUTO = [
     <li>Une copie .bak de la config de l'émulateur est gardée. Ferme l'émulateur avant de modifier.</li></ul>` },
   { ic:'shield', t:'Sauvegardes', go:() => openFindSaves(), h:`<ul><li>Les sauvegardes « cartouche » (.srm, .sav…) sont <b>partagées entre émulateurs</b> : Emuglob donne toujours la plus récente à celui que tu lances.</li>
     <li>Chaque jeu a son <b>historique</b> (20 dernières versions) : rien n'est jamais perdu.</li>
+    <li><b>Wii U (Cemu)</b> : le dossier de sauvegarde du jeu est copié dans Emuglob après chaque partie. Menu « … » du jeu, Sauvegardes, pour les voir ou en restaurer une.</li>
     <li><b>Rechercher des sauvegardes</b> retrouve celles que tu avais déjà ailleurs sur le PC et les copie dans Emuglob, sans toucher aux originaux.</li>
     <li>Paramètres, Système, <b>Sauvegardes</b> : exporter ou restaurer ta bibliothèque et tes réglages.</li></ul>` },
   { ic:'trophy', t:'Succès RetroAchievements', go:() => openSettings('ra'), h:`<ol><li>Crée un compte gratuit sur <b>retroachievements.org</b>.</li>
