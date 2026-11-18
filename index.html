@@ -1308,7 +1308,7 @@ function openSort() {
 }
 // onglets : Récents (jeux lancés en premier), Favoris, puis une console par onglet
 function tabsList(all) {
-  const gs = cfg.games;
+  const gs = visibleGames();
   const played = gs.filter((g) => g.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
   const rest = gs.filter((g) => !g.lastPlayed).sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0) || alpha(a, b));
   const keep = cfg.onlyUnplayed ? (g) => !g.lastPlayed : () => true;   // filtre « jamais lancés » (tous les onglets)
@@ -1424,6 +1424,8 @@ function renderInfo() {
   parts.push(g.lastPlayed ? `Dernière partie ${ago(g.lastPlayed)}` : 'Jamais lancé');
   if (g.playCount) parts.push(`${g.playCount} partie(s)`);
   if (g.playSeconds >= 60) parts.push(fmtDur(g.playSeconds) + ' de jeu');
+  const nsub = subsetsOf(g).length;
+  if (nsub) parts.push(`${nsub} subset${nsub > 1 ? 's' : ''}`);
   if (g.favorite) parts.push('Favori');
   if (g.missing) parts.push('Fichier introuvable');
   $('#f-sub').textContent = parts.join(' · ');
@@ -1559,24 +1561,83 @@ document.addEventListener('mouseover', (e) => {
 });
 
 /* ---------- lancement ---------- */
+/* ---------- subsets RetroAchievements ----------
+   Une ROM patchée pour un subset (« Jeu [Subset - Nom].iso », « Jeu patch subset.iso »…) est rangée sous le jeu de base :
+   elle disparaît de la bibliothèque et Jouer propose de lancer le jeu de base ou l'un de ses subsets. */
+const SUB_RX = /subset/i;
+const subTagOf = (t) => { const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(t || ''); return m ? m[1] : ''; };
+const fileOf = (p) => String(p || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+const dirOf = (p) => String(p || '').replace(/[\\/][^\\/]*$/, '');
+const subNorm = (t) => String(t || '').replace(/\[\s*subset\s*-[^\]]*\]/ig, ' ').replace(/\([^)]*\b(?:subset|patch(?:ed)?)\b[^)]*\)/ig, ' ')
+  .replace(/\b(?:patch(?:ed)?|subset)\b/ig, ' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const isSubVar = (g) => SUB_RX.test(g.title || '') || SUB_RX.test(fileOf(g.path));
+function subsetLinks() {   // id de la variante subset → jeu de base (même émulateur, même nom une fois « subset/patch » retirés)
+  const base = new Map(), par = new Map();
+  cfg.games.forEach((g) => { if (!isSubVar(g)) { base.set(g.emulator + '|' + subNorm(g.title), g); base.set(g.emulator + '|' + subNorm(fileOf(g.path)), g); } });
+  cfg.games.forEach((g) => {
+    if (!isSubVar(g)) return;
+    const b = base.get(g.emulator + '|' + subNorm(g.title)) || base.get(g.emulator + '|' + subNorm(fileOf(g.path)));
+    if (b && b !== g) par.set(g.id, b);
+  });
+  return par;
+}
+const visibleGames = () => { const par = subsetLinks(); return cfg.games.filter((g) => !par.has(g.id)); };
+const subsetsOf = (g) => { if (!g) return []; const par = subsetLinks(); return cfg.games.filter((v) => par.get(v.id) === g); };
+async function nameSubsets(vars) {   // nom du subset : tag du titre/fichier, sinon le patch « [Subset - Nom] » rangé à côté de la ROM
+  for (const v of vars) if (!v.subName) v.subName = subTagOf(v.title) || subTagOf(fileOf(v.path)) || '';
+  const left = vars.filter((v) => !v.subName);
+  for (const dir of new Set(left.map((v) => dirOf(v.path)))) {
+    const inDir = left.filter((v) => dirOf(v.path) === dir);
+    const names = ((await api.subsetPatches(dir).catch(() => [])) || []).filter((n) => !vars.some((v) => v.subName === n));
+    if (inDir.length === 1 && names.length === 1) inDir[0].subName = names[0];
+  }
+  if (vars.some((v) => v.subName)) save();
+}
+async function pickSubset(g, vars, opts) {
+  await nameSubsets(vars);
+  const d = $('#dlg-menu'), last = vars.some((v) => v.id === g.subLast) ? g.subLast : '';
+  const btn = (id, label) => `<button data-v="${id}" class="${id === last ? 'sel' : ''}">${label}</button>`;
+  $('#m-list').innerHTML = `<div class="mcap">${esc(g.title)}</div>`
+    + btn('', 'Jeu de base (sans subset)')
+    + vars.map((v) => btn(v.id, 'Subset · ' + esc(v.subName || v.title))).join('')
+    + (g.raId > 0 ? '<button data-ra="1" title="Les subsets « bonus » se chargent avec le jeu de base, sans ROM patchée (multiset : PCSX2 2.6+, RetroArch 1.22.1+…). On les active ou désactive sur la page du jeu.">Subsets bonus sur RetroAchievements…</button>' : '')
+    + '<button data-a="x">Annuler</button>';
+  d.onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.ra) return api.raGamePage(g.raId);
+    d.close();
+    if (b.dataset.v === undefined) return;
+    const v = vars.find((x) => x.id === b.dataset.v);
+    g.subLast = v ? v.id : ''; save();
+    launch(g, { ...opts, rom: v ? v.path : g.path, subset: v ? (v.subName || v.title) : '' });
+  };
+  d.showModal();
+  const sel = $('#m-list button.sel') || $('#m-list button'); if (sel) sel.focus();
+}
+
 async function launch(g, opts = {}) {
   if (!g) return;
-  if (g.missing) {   // disque débranché ? on revérifie avant de refuser
-    const [there] = await api.filesExist([g.path]);
-    if (!there) return toast(`Fichier introuvable : ${g.path}. Disque débranché ?`);
-    g.missing = false; render();
+  if (opts.rom === undefined) {   // jeu avec des subsets dans la bibliothèque : on demande lequel lancer
+    const vars = subsetsOf(g);
+    if (vars.length) return pickSubset(g, vars, opts);
+  }
+  const rom = opts.rom || g.path;
+  if (g.missing || rom !== g.path) {   // disque débranché ? on revérifie avant de refuser
+    const [there] = await api.filesExist([rom]);
+    if (!there) return toast(`Fichier introuvable : ${rom}. Disque débranché ?`);
+    if (rom === g.path) { g.missing = false; render(); }
   }
   const emu = emuOf(g);
   if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
-  if (['.wud', '.wux'].includes(extOf(g.path)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
+  if (['.wud', '.wux'].includes(extOf(rom)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
     if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
       const r = await api.cemuKeysImport(emu.exe);
       if (!r.ok) return r.canceled ? undefined : toast('keys.txt non importé : ' + r.error);
       toast(`keys.txt importé (${r.keys} clés).`);
     }
   }
-  if (extOf(g.path) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
-    const c = await api.wiiuCheck(g.path);
+  if (extOf(rom) === '.rpx') {   // un .rpx seul (sans content\ ni meta\) fait planter Cemu : on explique plutôt que de lancer
+    const c = await api.wiiuCheck(rom);
     if (!c.ok) return toast(c.alone
       ? "Jeu Wii U incomplet : ce .rpx est seul. Il faut le dossier complet du jeu (code, content et meta) et ajouter le .rpx qui est dans code. Un .wua, .wux ou .wud marche aussi."
       : `Jeu Wii U incomplet : dossier ${c.missing.join(' et ')} absent à côté de code (${c.root}). Recopie le jeu en entier.`);
@@ -1587,14 +1648,14 @@ async function launch(g, opts = {}) {
     const core = pickCore(g, (await api.coresInstalled(emu.exe)) || []);
     if (!core) return openCoreDlg(g, emu);
     if (core !== g.core) { g.core = core; save(); }
-    args = ['--core', core, '--system', String(g.system), '--game', g.path];
+    args = ['--core', core, '--system', String(g.system), '--game', rom];
   } else {
     const tpl = emu.args && emu.args.includes('{game}') ? emu.args : (emu.args || '') + ' "{game}"';
-    args = splitArgs(tpl).map((a) => a.split('{game}').join(g.path));
+    args = splitArgs(tpl).map((a) => a.split('{game}').join(rom));
   }
   const embed = opts.embed !== undefined ? opts.embed : cfg.embedGames !== false;
   if (embed) { args = args.filter((a) => !FS_FLAGS.has(a.toLowerCase())); enterGame(g); }   // fenêtre intégrée : pas de plein écran de l'émulateur
-  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: g.path, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '', title: g.title || '' } : null;
+  const sync = cfg.shareSaves !== false || emu.id === 'cemu' ? { gameId: g.id, rom: rom, emu: plainEmu(emu), emus: cfg.emulators.map(plainEmu), tid: g.wiiuTid || '', title: g.title || '' } : null;
   const r = await api.launch({ exe: emu.exe, args, gameId: g.id, hide: cfg.hideWhilePlaying !== false, embed, rect: embed ? gameRect() : null, mode: cfg.embedMode || 'overlay', stream: !!cfg.streamMirror, sync, cover: { title: g.title, emu: emu.name, id: emu.id, img: artUrl(g), c: flowColor(g), f: cartForm(g, emu), k: (/^(dolphin|pcsx2|cemu|ppsspp)$/.test(emu.id) || g.platform === 'ps1' || g.system === 12) ? 'disc' : 'cart' } });
   if (!r.ok) { if (embed) leaveGame(); return toast(r.error); }
   playing = g; playStart = Date.now(); presence(g);
@@ -1604,7 +1665,7 @@ async function launch(g, opts = {}) {
   if (embed && !r.embedding) leaveGame();
   g.lastPlayed = Date.now(); g.playCount = (g.playCount || 0) + 1; save();
   sfx('launch');
-  toast('Lancement de ' + g.title + '…');
+  toast('Lancement de ' + g.title + (opts.subset ? ` (subset ${opts.subset})` : '') + '…');
   render();
 }
 
@@ -1649,7 +1710,7 @@ function openLibrary(focusSearch) {
 }
 function libGroups() {
   const q = $('#lib-q').value.toLowerCase(), by = new Map();
-  cfg.games.filter((g) => g.title.toLowerCase().includes(q)).forEach((g) => {
+  visibleGames().filter((g) => g.title.toLowerCase().includes(q)).forEach((g) => {
     const k = labelOf(g);
     if (!by.has(k)) by.set(k, []);
     by.get(k).push(g);

@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld('api', {
   backupsImport: () => ipcRenderer.invoke('backups:import'),
   scanPath: (dir, extensions) => ipcRenderer.invoke('scan:path', { dir, extensions }),
   filesExist: (paths) => ipcRenderer.invoke('files:exist', paths),
+  raGamePage: (id) => ipcRenderer.invoke('ra:gamepage', id),
+  subsetPatches: (dir) => ipcRenderer.invoke('subset:patches', dir),
   reveal: (p) => ipcRenderer.invoke('shell:reveal', p),
   gameStatus: () => ipcRenderer.invoke('game:status'),
   appInfo: () => ipcRenderer.invoke('app:info'),

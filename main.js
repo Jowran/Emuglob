@@ -839,6 +839,24 @@ ipcMain.handle('wiki:summary', async (_e, { title, console: consoleName, lang })
     return { ok: true, ...data };
   } catch (e) { return { ok: false, error: e.message }; }
 });
+ipcMain.handle('ra:gamepage', (_e, id) => { const n = Number(id); if (Number.isInteger(n) && n > 0) shell.openExternal('https://retroachievements.org/game/' + n); });
+// noms des subsets RetroAchievements d'après les patchs rangés à côté de la ROM (« Jeu [Subset - Nom].xdelta », dossiers compris)
+ipcMain.handle('subset:patches', async (_e, dir) => {
+  const out = [];
+  const walk = async (d, depth) => {
+    let ents = [];
+    try { ents = await fs.promises.readdir(d, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.isDirectory() && depth < 2) await walk(path.join(d, e.name), depth + 1);
+      else if (e.isFile() && /\.(xdelta|vcdiff|bps|ips|ups|ppf)$/i.test(e.name)) {
+        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name);
+        if (m) out.push(m[1]);
+      }
+    }
+  };
+  if (typeof dir === 'string' && dir) await walk(dir, 0);
+  return [...new Set(out)];
+});
 ipcMain.handle('wiki:open', (_e, url) => { if (typeof url === 'string' && /^https:\/\/[a-z]{2}\.wikipedia\.org\/wiki\//.test(url)) shell.openExternal(url); });
 ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   if (!RA_ALLOWED.has(endpoint)) return { ok: false, error: 'Endpoint non autorisé' };
