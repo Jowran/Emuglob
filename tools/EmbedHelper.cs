@@ -1,6 +1,7 @@
 // Module d'intégration : place la fenêtre d'un émulateur DANS / SUR la fenêtre d'Emuglob (Win32).
 // Protocole texte (une commande par ligne sur stdin, événements sur stdout) :
 //   embed <pid> <hwndParent> <x> <y> <w> <h> <timeoutMs> [child|overlay]   move <x> <y> <w> <h>   focus   close   release   quit
+//   (embed cache aussi, dès sa création, toute fenêtre du processus hors de l'écran jusqu'à l'intégration)
 //   vol <pid> <0-100 ou -1> <muet 0|1|-1>   (volume de l'émulateur dans le mélangeur de Windows ; -1 = ne pas changer) → vol <niveau> <muet> <sessions>
 // (x y w h = zone cliente d'Emuglob, en pixels physiques)
 // Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed
@@ -37,6 +38,7 @@ public static class EmbedHelper
     const uint WS_EX_CLIENTEDGE = 0x00000200;
     const uint WS_EX_STATICEDGE = 0x00020000;
     const uint WS_EX_APPWINDOW = 0x00040000;
+    const uint SWP_NOSIZE = 0x0001;
     const uint SWP_NOZORDER = 0x0004;
     const uint SWP_NOACTIVATE = 0x0010;
     const uint SWP_FRAMECHANGED = 0x0020;
@@ -79,6 +81,14 @@ public static class EmbedHelper
     [DllImport("user32.dll")] static extern bool RedrawWindow(IntPtr hwnd, IntPtr rect, IntPtr rgn, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
     [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+    delegate void WinEventProc(IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+    [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint evMin, uint evMax, IntPtr mod, WinEventProc proc, uint pid, uint tid, uint flags);
+    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+    [StructLayout(LayoutKind.Sequential)]
+    struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public POINT pt; }
+    [DllImport("user32.dll")] static extern int GetMessage(out MSG msg, IntPtr hwnd, uint min, uint max);
+    [DllImport("user32.dll")] static extern bool TranslateMessage(ref MSG msg);
+    [DllImport("user32.dll")] static extern IntPtr DispatchMessage(ref MSG msg);
     [DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
 
     static readonly object gate = new object();
@@ -86,6 +96,75 @@ public static class EmbedHelper
     static IntPtr topWin = IntPtr.Zero;     // fenêtre principale d'Emuglob
     static string curMode = "child";
     static int rx, ry, rw, rh;              // zone de jeu (pixels physiques, relative à la zone cliente d'Emuglob)
+
+    // ---------- masquage : les fenêtres de l'émulateur sont envoyées hors de l'écran dès leur création, jusqu'à l'intégration ----------
+    const int OFF = -32000;
+    static WinEventProc hideProc;           // gardé en champ : sinon le ramasse-miettes libère le délégué utilisé par Windows
+    static int hidePid;                     // processus surveillé (0 = rien)
+    static string hideName;                 // ou un processus du même nom (lanceurs qui se relancent)
+    static DateTime hideSince;
+    static System.Collections.Generic.Dictionary<IntPtr, RECT> hidden = new System.Collections.Generic.Dictionary<IntPtr, RECT>();
+
+    static void StartHider()
+    {
+        Thread t = new Thread(delegate ()
+        {
+            hideProc = new WinEventProc(OnWinEvent);
+            // 0x8000 CREATE … 0x800B LOCATIONCHANGE (dont SHOW 0x8002) ; hors contexte (0), on ignore nos propres événements (2)
+            SetWinEventHook(0x8000, 0x800B, IntPtr.Zero, hideProc, 0, 0, 0x0002);
+            MSG msg;
+            while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) { TranslateMessage(ref msg); DispatchMessage(ref msg); }
+        });
+        t.IsBackground = true;
+        t.Start();
+    }
+
+    static void OnWinEvent(IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+    {
+        if (idObject != 0 || idChild != 0 || hwnd == IntPtr.Zero) return;
+        if (ev != 0x8000 && ev != 0x8002 && ev != 0x800B) return;
+        int want; string name;
+        lock (gate) { want = hidePid; name = hideName; }
+        if (want == 0) return;
+        if (GetAncestor(hwnd, 2) != hwnd) return;   // fenêtres de premier niveau seulement (GA_ROOT)
+        uint pid;
+        GetWindowThreadProcessId(hwnd, out pid);
+        if ((int)pid != want)
+        {
+            if (name == null) return;
+            try
+            {
+                Process q = Process.GetProcessById((int)pid);
+                if (q.ProcessName != name || q.StartTime < hideSince.AddSeconds(-2)) return;
+            }
+            catch (Exception) { return; }
+        }
+        RECT r;
+        if (!GetWindowRect(hwnd, out r) || r.Left <= OFF + 1000) return;   // déjà caché
+        lock (gate) { if (hidePid == 0) return; if (!hidden.ContainsKey(hwnd)) hidden[hwnd] = r; }
+        SetWindowPos(hwnd, IntPtr.Zero, OFF, OFF, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    static void HideStart(int pid)
+    {
+        string name = null;
+        try { name = Process.GetProcessById(pid).ProcessName; } catch (Exception) { }
+        lock (gate) { hidePid = pid; hideName = name; hideSince = DateTime.Now; hidden.Clear(); }
+    }
+
+    // fin du masquage ; restore = remettre les fenêtres cachées à leur place (intégration ratée : messages d'erreur, assistants…)
+    static void HideStop(bool restore, IntPtr keep)
+    {
+        System.Collections.Generic.Dictionary<IntPtr, RECT> list;
+        lock (gate) { hidePid = 0; hideName = null; list = hidden; hidden = new System.Collections.Generic.Dictionary<IntPtr, RECT>(); }
+        foreach (System.Collections.Generic.KeyValuePair<IntPtr, RECT> kv in list)
+        {
+            if (kv.Key == keep || !IsWindow(kv.Key)) continue;
+            RECT now;
+            if (!restore && GetWindowRect(kv.Key, out now) && now.Left > OFF + 1000) continue;
+            SetWindowPos(kv.Key, IntPtr.Zero, kv.Value.Left, kv.Value.Top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
 
     static void Out(string s)
     {
@@ -96,6 +175,7 @@ public static class EmbedHelper
     {
         try { SetProcessDPIAware(); } catch (Exception) { }
         try { timeBeginPeriod(1); } catch (Exception) { }   // minuteur à 1 ms : sans ça Sleep(2) dure ~15 ms sous Windows
+        StartHider();
         Out("ready");
         string line;
         while ((line = Console.ReadLine()) != null)
@@ -118,6 +198,7 @@ public static class EmbedHelper
                 int x = int.Parse(p[3]), y = int.Parse(p[4]), w = int.Parse(p[5]), h = int.Parse(p[6]);
                 int timeout = p.Length > 7 ? int.Parse(p[7]) : 20000;
                 string mode = p.Length > 8 && p[8] == "overlay" ? "overlay" : "child";
+                HideStart(pid);   // tout de suite, avant que l'émulateur ait créé sa fenêtre
                 Thread t = new Thread(delegate () { DoEmbed(pid, parent, x, y, w, h, timeout, mode); });
                 t.IsBackground = true;
                 t.Start();
@@ -264,16 +345,20 @@ public static class EmbedHelper
         {
             win = FindWindowFor(pid, ref name, start);
             if (win != IntPtr.Zero) break;
-            Thread.Sleep(250);
+            Thread.Sleep(30);   // recherche rapide : la fenêtre de l'émulateur ne doit pas rester visible seule à l'écran
         }
         if (win == IntPtr.Zero)
         {
+            HideStop(true, IntPtr.Zero);
             Out("error aucune fenetre trouvee pour le processus " + pid + (name != null ? " (" + name + ")" : " (deja ferme ?)"));
             return;
         }
+        // aussitôt trouvée, la fenêtre part hors de l'écran (elle continue de se charger) : plus de liste de jeux ni d'écran blanc visibles
+        SetWindowPos(win, IntPtr.Zero, OFF, OFF, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         Out("found " + win.ToInt64() + " mode " + mode);
         Thread.Sleep(300);   // laisse l'émulateur finir d'initialiser sa fenêtre
         lock (gate) { topWin = parent; curMode = mode; rx = x; ry = y; rw = w; rh = h; }
+        HideStop(false, win);   // la fenêtre principale va être placée ; les autres (boîtes de dialogue) reviennent à l'écran
         string err = mode == "overlay" ? ApplyOverlay(win, parent) : Reparent(win, parent, x, y, w, h);
         if (err != null) { Out("error " + err); return; }
         lock (gate) { embedded = win; }

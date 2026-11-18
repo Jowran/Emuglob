@@ -1,12 +1,13 @@
 {
   "name": "emuglob-launcher",
-  "version": "1.0.9",
+  "version": "1.1.0",
+  "license": "GPL-3.0-only",
   "description": "Launcher personnalisé pour RALibretro et d'autres émulateurs",
   "main": "boot.js",
   "scripts": {
     "start": "electron .",
     "build-info": "node tools/make-build-info.js",
-    "pack": "electron-packager . Emuglob --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/emulators"
+    "pack": "electron-packager . Emuglob --platform=win32 --arch=x64 --out=dist --overwrite --ignore=^/dist --ignore=^/emulators --ignore=^/docs"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

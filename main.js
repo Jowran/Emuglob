@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker, protocol, net, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execFile } = require('child_process');
@@ -89,7 +89,48 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
-app.whenReady().then(createWindow);
+// ---------- mode hors ligne : images (jaquettes, badges, icônes RA) gardées sur disque ----------
+// Les images des hôtes connus passent par ce cache : servies tout de suite si déjà vues, et toujours disponibles sans internet.
+const IMG_HOSTS = /^(media\.retroachievements\.org|raw\.githubusercontent\.com|art\.gametdb\.com)$/;
+const imgCacheDir = () => path.join(app.getPath('userData'), 'img-cache');
+function imgType(b) {
+  if (b[0] === 0x89 && b[1] === 0x50) return 'image/png';
+  if (b[0] === 0xff && b[1] === 0xd8) return 'image/jpeg';
+  if (b[0] === 0x47 && b[1] === 0x49) return 'image/gif';
+  if (b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57) return 'image/webp';
+  return 'application/octet-stream';
+}
+function cacheImages() {
+  try {
+    protocol.handle('https', async (req) => {
+      let u;
+      try { u = new URL(req.url); } catch { u = null; }
+      if (!u || req.method !== 'GET' || !IMG_HOSTS.test(u.hostname)) return net.fetch(req, { bypassCustomProtocolHandlers: true });
+      const file = path.join(imgCacheDir(), crypto.createHash('sha1').update(req.url).digest('hex'));
+      const fromDisk = () => { try { const b = fs.readFileSync(file); return new Response(b, { headers: { 'content-type': imgType(b) } }); } catch { return null; } };
+      const fresh = /^\/UserPic\//.test(u.pathname);   // avatars : ils peuvent changer, on retente le réseau d'abord
+      if (!fresh || !net.isOnline()) { const hit = fromDisk(); if (hit) return hit; }
+      try {
+        const res = await net.fetch(req.url, { bypassCustomProtocolHandlers: true, signal: AbortSignal.timeout(20000) });
+        if (!res.ok) return fromDisk() || res;
+        const b = Buffer.from(await res.arrayBuffer());
+        if (b.length < 16 * 1024 * 1024 && imgType(b).startsWith('image/')) {
+          fs.mkdir(imgCacheDir(), { recursive: true }, () => fs.writeFile(file, b, () => {}));
+        }
+        return new Response(b, { status: res.status, headers: { 'content-type': res.headers.get('content-type') || imgType(b) } });
+      } catch {
+        return fromDisk() || new Response(null, { status: 504 });   // hors ligne et jamais vue : l'image est simplement masquée
+      }
+    });
+  } catch (e) { embedLog('cache images : ' + e.message); }
+}
+
+app.whenReady().then(() => {
+  cacheImages();
+  createWindow();
+  // module d'intégration prêt dès le démarrage : au 1er lancement d'un jeu, il cache la fenêtre de l'émulateur dès sa création
+  if ((process.platform === 'win32' || process.env.EMUGLOB_FAKE_EMBED) && readCfg().embedGames !== false) setTimeout(() => getHelper().catch((e) => embedLog('module : ' + e.message)), 4000);
+});
 app.on('window-all-closed', () => app.quit());
 
 let saveLockedUntil = 0;   // empêche l'ancienne configuration en mémoire d'écraser une restauration / un import
@@ -151,14 +192,34 @@ ipcMain.handle('dialog:exe', async () => {
   return r.canceled ? '' : r.filePaths[0];
 });
 
+// images choisies par l'utilisateur (fond d'écran, jaquette, icône) : formats d'image standard et GIF uniquement.
+// On vérifie l'extension ET la signature du fichier (un fichier renommé en .png est refusé), puis on le copie sous un nom neutre.
+const IMG_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+function imageKind(file) {
+  const fd = fs.openSync(file, 'r'), b = Buffer.alloc(12);
+  try { fs.readSync(fd, b, 0, 12, 0); } finally { fs.closeSync(fd); }
+  if (b[0] === 0x89 && b.toString('latin1', 1, 4) === 'PNG') return 'png';
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg';
+  if (b.toString('latin1', 0, 4) === 'GIF8') return 'gif';
+  if (b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return 'webp';
+  if (b.toString('latin1', 0, 2) === 'BM') return 'bmp';
+  return null;
+}
 async function pickImage(title, prefix) {
   const r = await dialog.showOpenDialog(win, {
-    title, properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }],
+    title, properties: ['openFile'], filters: [{ name: 'Images (PNG, JPG, WEBP, BMP, GIF)', extensions: IMG_EXT }],
   });
-  if (r.canceled) return '';
+  if (r.canceled || !r.filePaths[0]) return '';
+  const src = r.filePaths[0], ext = path.extname(src).slice(1).toLowerCase();
+  let kind = null;
+  try { if (fs.statSync(src).size <= 50 * 1024 * 1024) kind = imageKind(src); } catch { /* illisible */ }
+  if (!IMG_EXT.includes(ext) || !kind) {
+    dialog.showMessageBox(win, { type: 'warning', title: 'Fichier refusé', message: "Ce fichier n'est pas une image valide.", detail: 'Formats acceptés : PNG, JPG, WEBP, BMP et GIF (50 Mo maximum).' });
+    return '';
+  }
   fs.mkdirSync(coverDir(), { recursive: true });
-  const dest = path.join(coverDir(), `${prefix}-${Date.now()}${path.extname(r.filePaths[0]).toLowerCase()}`);
-  fs.copyFileSync(r.filePaths[0], dest);
+  const dest = path.join(coverDir(), `${String(prefix).replace(/[^a-z0-9_-]/gi, '')}-${Date.now()}.${kind}`);
+  fs.copyFileSync(src, dest);
   return dest;
 }
 ipcMain.handle('dialog:cover', (_e, id) => pickImage('Choisir une jaquette', id));
@@ -293,11 +354,43 @@ function killTree(pid) {
 // Dans les deux cas Emuglob revient tout seul quand l'émulateur se ferme.
 const RECOVER = 'CommandOrControl+Shift+E';
 let current = null;   // { child, gameId, embedded }
+// écran de chargement posé AU-DESSUS de la zone de jeu pendant que l'émulateur démarre (fenêtre blanche, liste de jeux d'Azahar…)
+let cover = null, coverRect = null, coverAt = 0;
+const COVER_DELAY = { azahar: 2500, cemu: 3000, dolphin: 1500, pcsx2: 2000 };   // temps laissé après l'intégration avant de montrer le jeu
+function coverBounds(r) {
+  const cb = win.getContentBounds(), k = screen.getDisplayMatching(cb).scaleFactor || 1;
+  return { x: Math.round(cb.x + r.x / k), y: Math.round(cb.y + r.y / k), width: Math.max(1, Math.round(r.w / k)), height: Math.max(1, Math.round(r.h / k)) };
+}
+function showCover(r, info) {
+  hideCover(true);
+  if (!win || win.isDestroyed() || !r || process.env.EMUGLOB_NO_COVER) return;
+  coverRect = r;
+  cover = new BrowserWindow({ ...coverBounds(r), parent: win, frame: false, show: false, focusable: false, skipTaskbar: true, resizable: false, movable: false,
+    minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false, backgroundColor: '#000000',
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+  cover.setAlwaysOnTop(true, 'pop-up-menu');   // au-dessus de la fenêtre de l'émulateur, quelle que soit la façon dont elle est intégrée
+  const query = { t: info.title || '', e: info.emu || '', k: info.k === 'disc' ? 'disc' : 'cart', f: String(info.f || '').replace(/[^a-z0-9]/g, '').slice(0, 12), c: String(info.c || '').slice(0, 40) };
+  coverAt = Date.now();
+  if (info.img && /^(file:|https:)/.test(info.img)) query.img = info.img;
+  cover.loadFile(path.join(__dirname, 'loading.html'), { query });
+  cover.once('ready-to-show', () => { if (cover && !cover.isDestroyed()) cover.showInactive(); });
+  cover.on('closed', () => { cover = null; });
+  setTimeout(() => hideCover(), 45000);   // sécurité : jamais d'écran de chargement bloqué
+}
+function hideCover(now) {
+  const c = cover;
+  if (!c || c.isDestroyed()) { cover = null; return; }
+  cover = null;
+  if (now) { c.destroy(); return; }
+  c.webContents.executeJavaScript("document.body.classList.add('out')").catch(() => {});
+  setTimeout(() => { if (!c.isDestroyed()) c.destroy(); }, 280);
+}
+function moveCover(r) { coverRect = r; if (cover && !cover.isDestroyed() && win && !win.isDestroyed()) cover.setBounds(coverBounds(r)); }
 function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
 }
-ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync }) =>
+ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, cover: coverInfo }) =>
   new Promise((resolve) => {
     if (!exe || !fs.existsSync(exe)) return resolve({ ok: false, error: 'Exécutable introuvable : ' + exe });
     if (!Array.isArray(args) || !args.every((a) => typeof a === 'string')) return resolve({ ok: false, error: 'Arguments invalides.' });
@@ -324,6 +417,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
         };
         child.once('exit', (code) => {
           const seconds = Math.round((Date.now() - t0) / 1000);
+          hideCover(true);
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
@@ -341,6 +435,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           if (win && !win.isDestroyed()) win.webContents.send('game:exit', { id: gameId, seconds, short: seconds < 4, code, saved });
         });
         if (embed && rect) {
+          showCover(rect, coverInfo || {});
           (async () => {
             try {
               const helper = await getHelper();
@@ -348,7 +443,10 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
               if (!r.ok) throw new Error(r.reason);
               if (current && current.child === child) current.embedded = true;
               if (win && !win.isDestroyed()) win.webContents.send('game:embedded', { ok: true });
+              const emuId = sync && sync.emu && sync.emu.id || (coverInfo && coverInfo.id) || '';
+              setTimeout(() => hideCover(), Math.max(COVER_DELAY[emuId] || 1200, 2000 - (Date.now() - coverAt)));   // l'animation de la cartouche a le temps de finir
             } catch (err) {
+              hideCover(true);
               embedLog("échec de l'intégration : " + err.message);
               if (win && !win.isDestroyed()) win.webContents.send('game:embedded', { ok: false, reason: err.message });
               legacyHide();
@@ -420,10 +518,26 @@ async function latestCemu() {
   if (!asset) throw new Error(`pas d'archive Windows x64 dans la version ${rel.tag_name} (fichiers : ${(rel.assets || []).map((x) => x.name).join(', ') || 'aucun'})`);
   return fromGithubRelease(rel, asset);
 }
+// Dolphin : pas de Releases GitHub ; la page officielle de téléchargement liste les versions (la première = la plus récente)
+async function latestDolphin() {
+  const page = process.env.EMUGLOB_DOLPHIN_PAGE || 'https://dolphin-emu.org/download/';
+  const r = await fetch(page, { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error('dolphin-emu.org a répondu ' + r.status);
+  const html = await r.text();
+  const pick = (re) => { const m = html.match(re); return m ? m[0] : null; };
+  const url = pick(/https:\/\/dl\.dolphin-emu\.org\/releases\/[^"'\s<>]+?-x64\.(?:7z|zip)/i) || pick(/https:\/\/dl\.dolphin-emu\.org\/builds\/[^"'\s<>]+?-x64\.(?:7z|zip)/i);
+  if (!url) throw new Error('aucun lien Windows x64 trouvé sur dolphin-emu.org');
+  const name = url.split('/').pop();
+  const v = (/dolphin-(?:master-)?([\d.]+(?:-\d+)?)-x64/i.exec(name) || [])[1] || name;
+  let size = 0;
+  try { const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(15000) }); size = Number(h.headers.get('content-length')) || 0; } catch { /* taille inconnue */ }
+  return { tag: v, latest: v, date: '', size, asset: { name, browser_download_url: url, size } };
+}
 const INSTALLERS = {
   ralibretro: { name: 'RALibretro', dir: 'RALibretro', exes: ['ralibretro.exe'], latest: latestRalib },
   pcsx2: { name: 'PCSX2', dir: 'PCSX2', exes: ['pcsx2-qt.exe', 'pcsx2.exe'], latest: latestPcsx2 },
   cemu: { name: 'Cemu', dir: 'Cemu', exes: ['cemu.exe'], latest: latestCemu },
+  dolphin: { name: 'Dolphin', dir: 'Dolphin', exes: ['dolphin.exe'], latest: latestDolphin },
 };
 const releases = {};
 const instDefaultDir = (id) => path.join(emuBase(), 'emulators', INSTALLERS[id].dir);
@@ -519,7 +633,7 @@ ipcMain.handle('emucfg:save', (_e, { exe, changes }) => {
   embedLog(`contrôles ${exe} : ${r.ok ? 'enregistrés (' + r.files.join(', ') + ')' : r.error}`);
   return r;
 });
-ipcMain.handle('game:move', (_e, r) => { if (helperObj && current && current.embedded) helperObj.send(`move ${r.x} ${r.y} ${r.w} ${r.h}`); });
+ipcMain.handle('game:move', (_e, r) => { moveCover(r); if (helperObj && current && current.embedded) helperObj.send(`move ${r.x} ${r.y} ${r.w} ${r.h}`); });
 // volume de l'émulateur en cours (mélangeur de Windows), à chaud
 ipcMain.handle('game:vol', (_e, { level, mute }) => new Promise((resolve) => {
   if (!helperObj || !current || !current.child) return resolve({ ok: false, error: 'aucun jeu intégré' });
@@ -631,6 +745,12 @@ ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   if (hit && Date.now() - hit.t < ttl * 1000) return { ok: true, data: hit.data };
 
   const diskFile = endpoint === 'GetGameList' ? path.join(raCacheDir(), `list-${params.i}-${params.h ? 'h' : 'n'}.json`) : null;
+  // mode hors ligne : chaque réponse est gardée sur disque ; sans réseau, on renvoie la dernière connue (sans erreur)
+  const staleFile = diskFile || path.join(raCacheDir(), 'api', crypto.createHash('sha1').update(id).digest('hex') + '.json');
+  const stale = () => {
+    try { const data = JSON.parse(fs.readFileSync(staleFile, 'utf-8')); mem.set(id, { t: Date.now(), data }); return { ok: true, data, stale: true }; } catch { return null; }
+  };
+  if (!net.isOnline()) { const st = stale(); if (st) return st; }
   if (diskFile && ttl > 0) {
     try {
       const st = fs.statSync(diskFile);
@@ -648,16 +768,16 @@ ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
       headers: { 'User-Agent': 'Emuglob-Launcher/1.0' },
     });
     if (res.status === 401 || res.status === 403) return { ok: false, error: 'Pseudo ou clé API refusés' };
-    if (!res.ok) return { ok: false, error: 'HTTP ' + res.status };
+    if (!res.ok) return stale() || { ok: false, error: 'HTTP ' + res.status };
     const data = await res.json();
     mem.set(id, { t: Date.now(), data });
-    if (diskFile) {
-      fs.mkdirSync(raCacheDir(), { recursive: true });
-      fs.writeFileSync(diskFile, JSON.stringify(data));
-    }
+    try {
+      fs.mkdirSync(path.dirname(staleFile), { recursive: true });
+      fs.writeFileSync(staleFile, JSON.stringify(data));
+    } catch { /* cache facultatif */ }
     return { ok: true, data };
   } catch (err) {
-    return { ok: false, error: err.name === 'TimeoutError' ? 'Délai dépassé' : err.message };
+    return stale() || { ok: false, error: err.name === 'TimeoutError' ? 'Délai dépassé' : err.message };
   }
 });
 
@@ -679,7 +799,7 @@ ipcMain.handle('thumbs:list', async (_e, folder) => {
       signal: AbortSignal.timeout(40000),
       headers: { 'User-Agent': 'Emuglob-Launcher/1.0', Accept: 'application/vnd.github+json' },
     });
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     const names = (d.tree || []).filter((x) => x.path.startsWith('Named_Boxarts/') && x.path.endsWith('.png')).map((x) => x.path.slice(14, -4));
     if (!names.length) return null;
@@ -687,10 +807,29 @@ ipcMain.handle('thumbs:list', async (_e, folder) => {
     fs.writeFileSync(file, JSON.stringify(names));
     return names;
   } catch {
-    return null;
+    try { return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { return null; }   // hors ligne : ancienne liste
   }
 });
 
+// rogne les bords transparents d'une jaquette (rendus de boîte avec marges) pour qu'elle remplisse sa place dans la roue
+function trimCover(buf) {
+  try {
+    const img = nativeImage.createFromBuffer(buf);
+    const { width: w, height: h } = img.getSize();
+    if (!w || !h) return buf;
+    const px = img.toBitmap();   // BGRA
+    if (px.length < w * h * 4) return buf;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (px[(y * w + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return buf;
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+    if (cw >= w - 2 && ch >= h - 2) return buf;            // rien à rogner
+    if (cw < w * 0.3 || ch < h * 0.3) return buf;          // image presque vide : on n'y touche pas
+    return img.crop({ x: x0, y: y0, width: cw, height: ch }).toPNG();
+  } catch { return buf; }
+}
 // télécharge une jaquette dans le dossier de l'app (hôtes autorisés uniquement)
 ipcMain.handle('cover:download', async (_e, { url, id }) => {
   if (!/^https:\/\/(raw\.githubusercontent\.com\/(libretro-thumbnails|xlenore)\/|media\.retroachievements\.org\/|art\.gametdb\.com\/)/.test(url)) return '';
@@ -701,7 +840,7 @@ ipcMain.handle('cover:download', async (_e, { url, id }) => {
     if (buf.length > 8 * 1024 * 1024) return '';
     fs.mkdirSync(coverDir(), { recursive: true });
     const dest = path.join(coverDir(), `${String(id).replace(/[^a-z0-9]/gi, '')}-auto.png`);
-    fs.writeFileSync(dest, buf);
+    fs.writeFileSync(dest, trimCover(buf));
     return dest;
   } catch {
     return '';
