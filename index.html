@@ -2227,6 +2227,7 @@ const SET_ITEMS = [
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
   { g:'sys', ic:'expand', t:'Plein écran', s:'Touche F11', act:() => api.fullscreen(), keep:true },
+  { g:'sys', ic:'refresh', t:'Relancer Emuglob', s:'Fermer puis rouvrir l\'application', act:() => api.relaunch() },
   { g:'sys', ic:'power', t:'Quitter', s:'Fermer Emuglob', act:() => api.quit() },
 ];
 function openSettingsPanel() {
