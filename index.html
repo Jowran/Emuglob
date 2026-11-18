@@ -17,7 +17,7 @@
   ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.32); }
   html, body { height:100%; margin:0; overflow:hidden; }
   body { display:flex; flex-direction:column; color:#fff; font:15px/1.4 "Segoe UI",system-ui,sans-serif;
-    background:var(--wall,none) center/cover, linear-gradient(180deg,var(--th1) 0%,var(--th2) 40%,var(--th3) 72%,var(--th4) 100%);
+    background:var(--wall,none) center/cover, var(--amb-bg), linear-gradient(180deg,var(--th1) 0%,var(--th2) 40%,var(--th3) 72%,var(--th4) 100%);
     transition:--th1 .9s ease, --th2 .9s ease, --th3 .9s ease, --th4 .9s ease; }
   /* thème : couleurs du fond selon la console (Paramètres › Thèmes et sons), animées en douceur */
   @property --th1 { syntax:'<color>'; inherits:true; initial-value:#140e3a; }
@@ -61,6 +61,14 @@
   .t3 { display:flex; gap:14px; font-size:15px; margin-top:4px; }
   .overlay { position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; padding:100px 56px 26px; background:linear-gradient(180deg,#0f0b2c 0%,#1a1040 55%,#2a1442 100%); }
   .overlay[hidden] { display:none; }
+  /* fond ambiant : halos doux aux couleurs du thème (accent + console), sous le contenu des pages */
+  body { --amb2:var(--acc); --amb-k:1;
+    --amb-a:color-mix(in srgb, var(--acc) calc(var(--amb-k) * 26%), transparent);
+    --amb-b:color-mix(in srgb, var(--amb2) calc(var(--amb-k) * 20%), transparent);
+    --amb-c:color-mix(in srgb, var(--acc) calc(var(--amb-k) * 7%), transparent);
+    --amb-bg:radial-gradient(55% 50% at 92% 0%, var(--amb-a), transparent 70%), radial-gradient(50% 55% at 0% 100%, var(--amb-b), transparent 70%); }
+  .overlay::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(60% 55% at 90% -5%, var(--amb-a), transparent 70%), radial-gradient(55% 60% at -5% 105%, var(--amb-b), transparent 70%), radial-gradient(45% 40% at 55% 50%, var(--amb-c), transparent 75%); }
   .ovh { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
   .ovh h2 { margin:0; flex:1; font-size:24px; }
   .ovb { overflow:auto; flex:1; padding-right:8px; }
@@ -487,7 +495,7 @@
   body[data-th] .ovh button:hover, body[data-th] dialog button:hover { border-color:var(--acc); }
   body[data-th] #m-list button.sel, body[data-th] #btn-sort.act { box-shadow:inset 0 0 0 2px var(--acc); }
   /* Néon : nuit profonde, contours lumineux */
-  body[data-th=neon] { --acc:#d946ef; --glow:rgba(34,211,238,.8); --glass:rgba(10,6,28,.7); --muted:#9fb3c8; }
+  body[data-th=neon] { --amb2:#22d3ee; --acc:#d946ef; --glow:rgba(34,211,238,.8); --glass:rgba(10,6,28,.7); --muted:#9fb3c8; }
   body[data-th=neon]::before { background:radial-gradient(ellipse at 50% 120%, rgba(217,70,239,.25), transparent 60%), linear-gradient(0deg,rgba(0,0,0,.6),transparent 45%); }
   body[data-th=neon] .brand { color:#22d3ee; text-shadow:0 0 12px rgba(34,211,238,.8); border-color:rgba(34,211,238,.35); }
   body[data-th=neon] .tab.on { color:#fff; text-shadow:0 0 10px var(--acc); box-shadow:0 6px 12px -8px var(--acc); }
@@ -498,6 +506,7 @@
   /* OLED : noir pur, sobre */
   body[data-th=oled] { --acc:#e5e7eb; --glow:rgba(255,255,255,.5); --glass:rgba(255,255,255,.06); --muted:#8b8b8b; }
   body[data-th=oled]::before, body[data-th=oled] #tint { display:none; }
+  body[data-th=oled] { --amb-k:.35; }
   body[data-th=oled] .floor { background:none; border-top-color:rgba(255,255,255,.07); }
   body[data-th=oled] .overlay, body[data-th=oled] dialog, body[data-th=oled] #q-res { background:#000; border-color:#222; }
   body[data-th=oled] .ovh button, body[data-th=oled] dialog button, body[data-th=oled] dialog input, body[data-th=oled] dialog select, body[data-th=oled] .ovh input { background:#0d0d0d; border-color:#262626; }
@@ -505,7 +514,7 @@
   body[data-th=oled] .ftab { background:transparent; border-color:#2a2a2a; }
   body[data-th=oled] .ftab.on { background:#fff; color:#000; }
   /* Phosphore : écran cathodique ambre, lignes de balayage */
-  body[data-th=crt] { --acc:#ffb000; --glow:rgba(255,176,0,.7); --glass:rgba(20,12,0,.6); --muted:#c9a35a; font-family:"Cascadia Mono","Consolas",ui-monospace,monospace; }
+  body[data-th=crt] { --amb2:#ff5a00; --acc:#ffb000; --glow:rgba(255,176,0,.7); --glass:rgba(20,12,0,.6); --muted:#c9a35a; font-family:"Cascadia Mono","Consolas",ui-monospace,monospace; }
   body[data-th=crt]::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:60; background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode:multiply; }
   body[data-th=crt]::before { background:radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.65) 100%); }
   body[data-th=crt] .brand, body[data-th=crt] .tab.on, body[data-th=crt] #f-title, body[data-th=crt] #clock { color:#ffb000; text-shadow:0 0 8px rgba(255,176,0,.6); }
@@ -516,7 +525,7 @@
   body[data-th=crt] .ovh button, body[data-th=crt] dialog button, body[data-th=crt] dialog input, body[data-th=crt] dialog select { background:#171003; border-color:#3a2a08; color:#ffd27a; }
   body[data-th=crt] [style*="#5b46d6"], body[data-th=crt] .ovh .on { color:#1a0f00 !important; }
   /* thèmes clairs (Clair, Pastel) : texte sombre, surfaces blanches */
-  body.light { color:#1f2433; --muted:#5b6275; --glass:rgba(255,255,255,.72); --glow:rgba(79,70,229,.45); }
+  body.light { --amb-k:.7; color:#1f2433; --muted:#5b6275; --glass:rgba(255,255,255,.72); --glow:rgba(79,70,229,.45); }
   body.light::before { background:linear-gradient(0deg,rgba(255,255,255,.55),transparent 45%); }
   body.light #tint { opacity:.35; }
   body.light .brand { border-color:rgba(0,0,0,.15); }
@@ -1459,12 +1468,12 @@ const consColorHex = (t) => mixHex(consColor(t), '#000', 0);
 let lastConsKey = null;
 // thèmes globaux : dégradé du fond, accent, et clair / sombre ; tint = teinté par la couleur de la console
 const THEMES = {
-  aurore:  { n: 'Aurore', th: TH_DEF, acc: '#5B46D6', tint: 'dark' },
+  aurore:  { n: 'Aurore', th: TH_DEF, acc: '#5B46D6', tint: 'dark', amb2: '#e0785a' },
   neon:    { n: 'Néon', th: ['#03020a', '#080418', '#120626', '#24073a'], acc: '#d946ef', tint: 'deep' },
   oled:    { n: 'OLED', th: ['#000000', '#000000', '#000000', '#000000'], acc: '#e5e7eb' },
   crt:     { n: 'Phosphore', th: ['#050300', '#0b0700', '#140c00', '#1f1300'], acc: '#ffb000' },
-  clair:   { n: 'Clair', th: ['#f8fafc', '#eef2f7', '#e3e8f0', '#d9e0eb'], acc: '#4f46e5', light: true, tint: 'light' },
-  pastel:  { n: 'Pastel', th: ['#fdf0f7', '#f3eaff', '#e7efff', '#e3f8f0'], acc: '#c026d3', light: true },
+  clair:   { n: 'Clair', th: ['#f8fafc', '#eef2f7', '#e3e8f0', '#d9e0eb'], acc: '#4f46e5', light: true, tint: 'light', amb2: '#06b6d4' },
+  pastel:  { n: 'Pastel', th: ['#fdf0f7', '#f3eaff', '#e7efff', '#e3f8f0'], acc: '#c026d3', light: true, amb2: '#60a5fa' },
 };
 const themeOf = () => THEMES[cfg.theme] || THEMES.aurore;
 function applyTheme() {
@@ -1479,6 +1488,9 @@ function applyTheme() {
     else th = [mixHex(c, '#fff', 0.96), mixHex(c, '#fff', 0.92), mixHex(c, '#fff', 0.86), mixHex(c, '#fff', 0.78)];
   }
   th.forEach((v, i) => b.style.setProperty(`--th${i + 1}`, v));
+  // halo secondaire du fond ambiant : couleur de la console si le thème est teinté, sinon celle du thème
+  const amb2 = T.tint && cfg.consoleTheme !== false && fcons[fci] ? consColor(fcons[fci]) : T.amb2;
+  if (amb2) b.style.setProperty('--amb2', amb2); else b.style.removeProperty('--amb2');
 }
 
 /* ---------- sons de navigation (générés, aucun fichier audio) ---------- */
