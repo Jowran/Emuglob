@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('api', {
   savesOpen: (id) => ipcRenderer.invoke('saves:open', id),
   savesFind: (q) => ipcRenderer.invoke('saves:find', q),
   savesImport: (items) => ipcRenderer.invoke('saves:import', items),
+  savesPickFiles: () => ipcRenderer.invoke('saves:pickfiles'),
   savesPickDir: () => ipcRenderer.invoke('saves:pickdir'),
   discord: (on, activity, legacyId) => ipcRenderer.invoke('discord:set', { on, activity, legacyId }),
   discordStatus: () => ipcRenderer.invoke('discord:status'),

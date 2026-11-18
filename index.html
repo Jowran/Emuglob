@@ -129,6 +129,7 @@
   .fsr { display:flex; gap:10px; align-items:center; font-size:13px; padding:3px 0; color:var(--muted); }
   dialog label.fsr { display:flex; margin:0; font-size:13px; cursor:pointer; }
   dialog .fsr input { flex:none; width:auto; padding:0; accent-color:#8f7dff; } .fsr .fp { flex:1; min-width:0; word-break:break-all; color:#e8e5ff; }
+  .fsr select { width:auto; max-width:340px; padding:4px 8px; }
   .fsr .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.08); white-space:nowrap; }
   .fsr .tag.warn { background:rgba(255,200,61,.18); color:#ffc83d; }
   #dlg-cores { width:min(1000px, 94vw); }
@@ -440,7 +441,7 @@
   <div id="fs-state" style="color:var(--muted)"></div>
   <div id="fs-list"></div>
   <div id="fs-note" style="color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5">Les fichiers trouvés sont <b>copiés</b> dans les sauvegardes d'Emuglob : l'original n'est ni déplacé ni modifié, et une sauvegarde déjà présente dans Emuglob part d'abord dans l'historique du jeu. Au prochain lancement, Emuglob la donne à l'émulateur si elle est plus récente que la sienne.<br>Les cartes mémoire communes à tous les jeux (PCSX2, Dolphin) restent dans leur émulateur.</div>
-  <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
+  <div class="row"><button id="fs-ok" style="margin-right:auto">Fermer</button><button id="fs-files">Importer des fichiers…</button><button id="fs-dir">Chercher dans un autre dossier…</button><button id="fs-go" style="background:#5b46d6">Importer</button></div>
 </dialog>
 
 <dialog id="dlg-core">
@@ -2404,18 +2405,20 @@ async function openInstall(id) {
   d.showModal(); show();
 }
 /* ---------- sauvegardes déjà présentes sur le PC : recherche puis import (copie) après confirmation ---------- */
-async function findSaves(dirs) {
+async function findSaves(dirs, files) {
   const games = cfg.games.filter((g) => !g.missing).map((g) => ({ id: g.id, title: g.title, path: g.path }));
-  return api.savesFind({ games, emus: cfg.emulators.filter((e) => e.exe).map((e) => ({ name: e.name, exe: e.exe })), dirs: dirs || cfg.saveDirs || [] });
+  return api.savesFind({ games, emus: cfg.emulators.filter((e) => e.exe).map((e) => ({ name: e.name, exe: e.exe })), dirs: dirs || cfg.saveDirs || [], files: files || [] });
 }
 async function openFindSaves(pre) {
   const d = $('#dlg-fsav');
-  let items = [];
+  let items = [], files = [];
   const fmt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
   const kb = (n) => (n < 1024 ? n + ' o' : (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' Ko');
   const draw = () => {
     const by = new Map();
-    items.forEach((c, i) => { if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
+    items.forEach((c, i) => { if (!c.gameId) return; if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
+    const orphan = items.map((c, i) => (c.gameId ? -1 : i)).filter((i) => i >= 0);
+    const gameOpts = cfg.games.slice().sort((a, b) => a.title.localeCompare(b.title)).map((g) => `<option value="${esc(g.id)}">${esc(g.title)} (${esc(labelOf(g))})</option>`).join('');
     const todo = items.filter((c) => c.newer).length;
     $('#fs-state').textContent = !items.length ? 'Aucune sauvegarde trouvée pour les jeux de ta bibliothèque.'
       : `${items.length} sauvegarde${items.length > 1 ? 's' : ''} trouvée${items.length > 1 ? 's' : ''} pour ${by.size} jeu${by.size > 1 ? 'x' : ''}. Choisis celle à importer pour chaque jeu.`;
@@ -2425,27 +2428,33 @@ async function openFindSaves(pre) {
       return `<div class="fsg"><b>${esc(items[ix[0]].title)}</b>${v ? `<div class="fsr">Déjà dans Emuglob : sauvegarde du ${fmt(v.mtime)}</div>` : ''}`
         + ix.map((i) => { const c = items[i];
           return `<label class="fsr"><input type="radio" name="fs-${esc(c.gameId)}" value="${i}" ${i === first ? 'checked' : ''} ${c.same ? 'disabled' : ''}>`
-            + `<span class="fp">${esc(c.file)}</span><span>${fmt(c.mtime)} · ${kb(c.size)}</span><span class="tag">${esc(c.where)}</span>`
+            + `<span class="fp">${esc(c.file)}</span><span>${c.wiiu ? 'dossier' : fmt(c.mtime) + ' · ' + kb(c.size)}</span><span class="tag">${esc(c.where)}</span>`
             + (c.same ? '<span class="tag">déjà importée</span>' : !c.newer ? '<span class="tag warn">plus ancienne</span>' : '')
             + (c.match === 'proche' ? '<span class="tag warn">nom proche</span>' : '') + '</label>'; }).join('')
         + `<label class="fsr"><input type="radio" name="fs-${esc(items[ix[0]].gameId)}" value="-1" ${first === undefined ? 'checked' : ''}><span class="fp">Ne rien importer</span></label></div>`;
-    }).join('');
+    }).join('') + (orphan.length ? '<div class="fsg"><b>Fichiers à associer à un jeu</b>' + orphan.map((i) => { const c = items[i];
+      return `<div class="fsr"><span class="fp">${esc(c.file)}</span><span>${fmt(c.mtime)} · ${kb(c.size)}</span><select class="fs-game" data-i="${i}"><option value="">Ne pas importer</option>${gameOpts}</select></div>`; }).join('') + '</div>' : '');
     $('#fs-go').disabled = !items.length;
     $('#fs-go').textContent = todo ? 'Importer la sélection' : 'Importer';
   };
   const run = async () => {
     $('#fs-state').textContent = 'Recherche en cours…'; $('#fs-list').innerHTML = ''; $('#fs-go').disabled = true;
-    const r = pre || await findSaves(); pre = null;
+    const r = pre || await findSaves(null, files); pre = null;
     if (r.ok) r.items = r.items.concat(await findWiiuSaves());
     if (!r.ok) { $('#fs-state').textContent = 'Erreur : ' + r.error; return; }
     items = r.items; draw();
+  };
+  $('#fs-files').onclick = async () => {
+    const f = await api.savesPickFiles(); if (!f.length) return;
+    files = [...new Set([...files, ...f])]; run();
   };
   $('#fs-dir').onclick = async () => {
     const dir = await api.savesPickDir(); if (!dir) return;
     cfg.saveDirs = [...new Set([...(cfg.saveDirs || []), dir])]; save(); run();
   };
   $('#fs-go').onclick = async () => {
-    const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }));
+    const pick = [...d.querySelectorAll('#fs-list input:checked')].map((x) => +x.value).filter((i) => i >= 0).map((i) => ({ gameId: items[i].gameId, file: items[i].file }))
+      .concat([...d.querySelectorAll('#fs-list select.fs-game')].filter((s) => s.value).map((s) => ({ gameId: s.value, file: items[+s.dataset.i].file })));
     if (!pick.length) { toast('Rien de coché.'); return; }
     $('#fs-go').disabled = true;
     const wu = pick.filter((x) => items.find((c) => c.gameId === x.gameId && c.file === x.file && c.wiiu));

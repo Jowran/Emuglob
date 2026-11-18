@@ -543,10 +543,15 @@ ipcMain.handle('game:stop', () => {
   else killTree(c.pid);
 });
 // recherche des sauvegardes existantes (dossiers des ROMs, des émulateurs, dossiers habituels, + dossiers choisis)
-ipcMain.handle('saves:find', (_e, { games, emus, dirs }) => {
-  try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
+ipcMain.handle('saves:find', (_e, { games, emus, dirs, files }) => {
+  try { return { ok: true, items: findExisting({ games, emus, extraDirs: (dirs || []).filter((d) => typeof d === 'string'), files: (files || []).filter((f) => typeof f === 'string'), vaultBase: path.join(app.getPath('userData'), 'saves') }) }; } catch (err) { return { ok: false, error: err.message, items: [] }; }
 });
 ipcMain.handle('saves:import', (_e, items) => importExisting(path.join(app.getPath('userData'), 'saves'), items));
+ipcMain.handle('saves:pickfiles', async () => {
+  const exts = [...require('./saves').SAVE_EXT].map((e) => e.slice(1));
+  const r = await dialog.showOpenDialog(win, { title: 'Fichiers de sauvegarde', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Sauvegardes', extensions: exts }, { name: 'Tous', extensions: ['*'] }] });
+  return r.canceled ? [] : r.filePaths;
+});
 ipcMain.handle('saves:pickdir', async () => { const r = await dialog.showOpenDialog(win, { title: 'Dossier contenant des sauvegardes', properties: ['openDirectory'] }); return r.canceled ? '' : r.filePaths[0]; });
 ipcMain.handle('wiiusave:list', (_e, { gameId, exe, rom, tid, title }) => {
   let loc = { dir: null, tid: tid || '' };

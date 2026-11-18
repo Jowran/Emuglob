@@ -154,7 +154,7 @@ function defaultSaveDirs(env) {
 }
 
 // renvoie [{ gameId, title, file, size, mtime, where, match: 'exact'|'proche', vault: { mtime } | null, same, newer }]
-function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.env }) {
+function findExisting({ games, emus, extraDirs = [], files = [], vaultBase, env = process.env }) {
   const exact = new Map(), loose = new Map();
   const add = (m, k, g) => { if (!k) return; if (!m.has(k)) m.set(k, []); if (!m.get(k).includes(g)) m.get(k).push(g); };
   for (const g of games || []) {
@@ -173,6 +173,16 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
   for (const d of extraDirs) dirs.push([d, 5, 'dossier choisi']);
   const vaultAbs = vaultBase ? path.resolve(vaultBase) : null;
   const seen = new Set(), out = [];
+  // fichiers choisis un par un : gardés même sans jeu reconnu (l'utilisateur choisira le jeu)
+  for (const p of files) {
+    const st = statOf(p); if (!st || st.size > MAX_SAVE) continue;
+    seen.add(low(path.resolve(p)));
+    const ks = saveKeys(path.basename(p));
+    let gs = ks.map((k) => exact.get(k)).find(Boolean), match = 'exact';
+    if (!gs) { gs = ks.map((k) => loose.get(looseOf(k))).find(Boolean); match = 'proche'; }
+    const g = gs && gs.length === 1 ? gs[0] : null;
+    out.push({ gameId: g ? g.id : null, title: g ? g.title || stemOf(g.path) : '', file: p, size: st.size, mtime: st.mtimeMs, where: 'fichier choisi', match: g ? match : 'aucun', picked: true });
+  }
   for (const [dir, depth, where] of dirs) {
     if (!dir) continue;
     walk(dir, depth, (p) => {
@@ -192,6 +202,7 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
   if (vaultBase) {
     const v = new SaveVault(vaultBase);
     for (const c of out) {
+      if (!c.gameId) { c.vault = null; c.same = false; c.newer = true; continue; }
       const vs = statOf(v.file(c.gameId));
       c.vault = vs ? { mtime: vs.mtimeMs } : null;
       c.same = !!vs && same(v.file(c.gameId), c.file);
@@ -199,7 +210,7 @@ function findExisting({ games, emus, extraDirs = [], vaultBase, env = process.en
     }
   }
   // pour un même jeu, la plus récente d'abord
-  return out.sort((a, b) => a.title.localeCompare(b.title) || b.mtime - a.mtime);
+  return out.sort((a, b) => (a.gameId ? 0 : 1) - (b.gameId ? 0 : 1) || a.title.localeCompare(b.title) || b.mtime - a.mtime);
 }
 
 // copie les sauvegardes choisies dans le coffre ; l'ancienne du coffre part dans l'historique ; l'original reste en place
@@ -315,4 +326,4 @@ SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
   fs.renameSync(tmp, dst);
 };
 
-module.exports = { SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };
+module.exports = { SAVE_EXT, SaveVault, locate, zipInnerName, findExisting, importExisting, saveKeys, looseOf, cemuSaveDir, cemuMlcRoots, wiiuTitleId, cemuTitleNames };
