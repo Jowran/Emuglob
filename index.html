@@ -3275,10 +3275,9 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs(); loadConsoleIcons();
   checkFiles();
   setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
-  setTimeout(async () => {   // recherche de mise à jour au lancement : propose une seule fois chaque nouvelle version
+  setTimeout(async () => {   // recherche de mise à jour à chaque lancement : propose de l'installer tant qu'elle n'est pas faite
     const u = await api.updateCheck();
-    if (!u.ok || !u.available || cfg.updateSeen === u.latest) return;
-    cfg.updateSeen = u.latest; save();
+    if (!u.ok || !u.available) return;
     if (!playing) openUpdate(); else toast(`Emuglob ${u.latest} est disponible (Paramètres › Mettre à jour Emuglob).`);
   }, 6000);
   const net = () => { $('#offline').hidden = navigator.onLine; };
