@@ -1,0 +1,7 @@
+xdelta3.exe (Xdelta 3.1.0, x86_64, avec LZMA)
+Copyright (C) Joshua MacDonald
+Licence : GNU GPL v2 ou ultérieure. Code source : https://github.com/jmacd/xdelta-gpl
+Binaire repris tel quel de la release officielle v3.1.0 (xdelta3-3.1.0-x86_64.exe.zip),
+SHA-256 6855c01cf4a1662ba421e6f95370cf9afa2b3ab6c148473c63efe60d634dfb9a.
+Emuglob s'en sert uniquement pour appliquer les patchs .xdelta des subsets RetroAchievements
+(l'ISO d'origine n'est jamais modifiée, une nouvelle ISO patchée est créée à côté).

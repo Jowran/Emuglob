@@ -1,21 +1,23 @@
 {
- "built": "2026-11-18T21:36:11Z",
+ "built": "2026-11-18T23:59:05Z",
  "sha256": {
   "discid.js": "c1b71f187f4624d9c97c878ae19f93f3445eae40e1c19bf35d4d4e72e01b729d",
   "discord.js": "2f4c2026480238e527b72fffbfe07f3cb8abc7a3e7acc299944e478f24505d5a",
   "emucfg.js": "e915c63056a45bfcf0b5979004f8cad35d71ff53f75f0395f9fda9f2bbff1df9",
-  "i18n.js": "50a1c9aa8397e5c67e42056387ec64ffda5a321ecac99f6a35d13b73404bd56c",
-  "index.html": "4aaa38098f3205a06221751f10dd775827b38234084401b760199bd3e35355ff",
-  "main.js": "5f4709597f2507f324f4cdf6938885d45fca2a6bb5ba4e059eb4f250c60d2c5c",
-  "package.json": "7fcaf3f88a4336d5a78242936331f698c859bed7e4d24b6d3cd65d3a54a17e2d",
-  "preload.js": "1a2218b6aba2505670821a2791ccbd7411a5d622af669769740b4faa6cab3b6c",
+  "i18n.js": "9c17eab5a103f695cd999b1e51dbf859583a13f170830fc28b8a87cefb59df11",
+  "index.html": "d01d0a7a224e1d1007e1c387958371d4afc13a74ae2d294de8a70b7b1b947edf",
+  "main.js": "e8d236a825abed70191df74e1caa5fdf719dcf491fade029b1e2911a4a5d098c",
+  "package.json": "bee1e19b3d79bce9d8e45a5a3e87108e8e2aaf158fe3f8d9c2a76a49cc836c57",
+  "preload.js": "0e65ba12e017e949a97b5bbeef00faf9595229a823cc0252af893f42612d970c",
   "romhash.js": "af402044c0425a8abe68d8e6451c63edfd30754c63d96d00af9d37bc319a6ed2",
   "saves.js": "c86e4dbda35df84a90e71c663748b717843c0c9146e4c347bab48dfaa94611e6",
   "tools/7za-LICENSE.txt": "32528769744dd3765216a3fc471d909b44fbfbde7359c223f78fb4958e6125a6",
   "tools/7za.exe": "b0cfdeaf429f5cc53f85123dd8f5a5feb92c19d31aa34df257edf9a26be05f95",
-  "tools/EmbedHelper.cs": "09e619727e5ae1a77412b94af49f81de4d9e20bfb29c2d60fadb38f4f3bb779b",
+  "tools/EmbedHelper.cs": "5fd3bafb564793693c27456e887cdc06707dc4b155c28eb12de71fc4b0ced61d",
   "tools/apply-update.js": "0921485b4239ad60c0823ed4d417659515fc4ce0304447c880910ca5dba7e42c",
   "tools/fake-embed.js": "fc02d2ff39d1a09eb55d4f346060914e124d6290834360f5ba531c47c8fad24f",
-  "tools/make-build-info.js": "b1bf6df664768a310b8b8f235df56c757440f76c0df06c8958ccb08a494de842"
+  "tools/make-build-info.js": "b1bf6df664768a310b8b8f235df56c757440f76c0df06c8958ccb08a494de842",
+  "tools/xdelta3-LICENSE.txt": "b4e648224e005c575bc9aa3323d1e8b8c36732d6c0eb09e68ead70b0e804b995",
+  "tools/xdelta3.exe": "6855c01cf4a1662ba421e6f95370cf9afa2b3ab6c148473c63efe60d634dfb9a"
  }
 }

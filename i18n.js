@@ -12,6 +12,12 @@
   document.documentElement.lang = 'en';
 
   const D = {
+    // choisir une version
+    'Choisir une version': 'Choose a version', 'Installer une version publiée, même plus ancienne': 'Install any published version, even an older one',
+    'préversion': 'pre-release', 'installée': 'installed', 'sans app.asar': 'no app.asar', 'Aucune version publiée.': 'No published version.',
+    "Installe n'importe quelle version publiée, même plus ancienne. Emuglob se ferme, la remplace et se relance ; la version actuelle est gardée pour revenir en arrière. Une version antérieure à 1.3.0 n'a pas ce choix : pour revenir, accepte la mise à jour proposée au lancement.":
+      'Install any published version, even an older one. Emuglob closes, replaces it and restarts; the current version is kept so you can go back. Versions before 1.3.0 do not have this choice: to come back, accept the update offered at startup.',
+    "Cette version n'a pas le choix de version : pour revenir, accepte la mise à jour proposée au lancement.": 'This version has no version picker: to come back, accept the update offered at startup.',
     // barre du haut, accueil
     'Jeux': 'Games', 'Amis': 'Friends', 'Paramètres': 'Settings', 'Succès': 'Achievements', 'Hors ligne': 'Offline', 'Jouer': 'Play', '▶ Jouer': '▶ Play',
     'Bibliothèque': 'Library', 'Tout réduire': 'Collapse all', 'Tout ouvrir': 'Expand all', 'Fermer': 'Close', 'Réglages': 'Settings', 'Plein écran': 'Full screen',
@@ -85,6 +91,8 @@
     'Passer le tuto': 'Skip tutorial', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
     // contrôles
     'Contrôles': 'Controls', 'Zone morte': 'Dead zone', 'Branche une manette et appuie sur ses boutons : la manette s\'allume et l\'action réglée s\'affiche ici.': 'Plug in a controller and press its buttons: the controller lights up and the assigned action shows here.',
+    'Appliquer et relancer le jeu': 'Apply and restart game', 'Au prochain lancement': 'On next launch', "Changer les touches de l'émulateur sans quitter le jeu": "Change the emulator's buttons without leaving the game",
+    'Fermeture du jeu pour appliquer les contrôles…': 'Closing the game to apply the controls…',
     'Enregistrer': 'Save', 'Changer d\'émulateur sans enregistrer les modifications ?': 'Switch emulator without saving changes?', 'Appuie sur une touche…': 'Press a key…',
     'Croix ↑': 'D-pad ↑', 'Croix ↓': 'D-pad ↓', 'Croix ←': 'D-pad ←', 'Croix →': 'D-pad →', 'rien de réglé dans cet onglet': 'nothing set in this tab',
     'Branche une manette pour voir le stick.': 'Plug in a controller to see the stick.', 'Pointillés : 12,5 % minimum imposés par RALibretro.': 'Dotted line: 12.5% minimum enforced by RALibretro.',
@@ -159,7 +167,7 @@
     'Fiche du jeu': 'Game sheet', 'Voir la fiche du jeu': 'View game sheet', 'Recherche du résumé…': 'Looking for a summary…', 'Lire la suite': 'Read more',
     'Résumé indisponible hors ligne.': 'Summary unavailable offline.', 'Résumé indisponible pour le moment.': 'Summary unavailable right now.', 'Pas de résumé trouvé.': 'No summary found.',
     'Histoire principale': 'Main story', 'Tous les succès (softcore)': 'All achievements (softcore)', 'Maîtrise (hardcore)': 'Mastery (hardcore)',
-    'Pas dans ta bibliothèque': 'Not in your library', 'Ma partie': 'My game', 'Parties': 'Sessions', 'Jamais': 'Never', 'Dernière fois': 'Last time', 'Ajouté le': 'Added on',
+    'Pas dans ta bibliothèque': 'Not in your library', 'Dans ta bibliothèque': 'In your library', 'Chargement du catalogue RetroAchievements…': 'Loading the RetroAchievements catalog…', 'Hash supportés': 'Supported hashes', 'Liste indisponible pour le moment.': 'List unavailable right now.', 'Aucun hash enregistré.': 'No hash registered.', 'Patch requis': 'Patch required', 'Seules ces versions débloquent les succès. Clic sur un MD5 pour le copier.': 'Only these versions unlock achievements. Click an MD5 to copy it.', 'MD5 copié.': 'MD5 copied.', 'Copier': 'Copy', 'Infos': 'Info', 'Filtrer les jeux…': 'Filter games…', 'Jeu de base': 'Base game', 'Un subset est un set de succès en plus (défis, bonus…). Il se joue avec une ROM patchée ou, pour les subsets bonus, avec le jeu de base (émulateurs récents). Clic pour ouvrir sa fiche et voir ses hash.': 'A subset is an extra achievement set (challenges, bonus…). It is played with a patched ROM or, for bonus subsets, with the base game (recent emulators). Click to open its sheet and see its hashes.', 'Ma partie': 'My game', 'Parties': 'Sessions', 'Jamais': 'Never', 'Dernière fois': 'Last time', 'Ajouté le': 'Added on',
     'Durée de vie : temps médian des joueurs RetroAchievements': 'Length: median time of RetroAchievements players', 'Captures : RetroAchievements': 'Screenshots: RetroAchievements',
     'Lie ton compte RetroAchievements (Paramètres) pour voir les succès, la durée de vie et les infos du jeu.': 'Link your RetroAchievements account (Settings) to see achievements, game length and game info.',
     'Pas de succès RetroAchievements pour cette console.': 'No RetroAchievements for this console.',
@@ -189,6 +197,8 @@
     'Tu ne suis encore personne sur RetroAchievements. Suis des joueurs sur le site : leur activité apparaîtra ici.': "You don't follow anyone on RetroAchievements yet. Follow players on the site: their activity will show here.",
     'Aucun succès débloqué par toi ou tes amis ces 14 derniers jours.': 'No achievements unlocked by you or your friends in the last 14 days.',
     'Tu': 'You', 'as débloqué': 'unlocked',
+    'Détail du succès': 'Achievement details', 'points réels': 'true points', 'Hardcore': 'Hardcore', 'Softcore': 'Softcore', 'Condition de victoire': 'Win condition', 'Ratable': 'Missable',
+    'Joueur': 'Player', 'Obtenu': 'Unlocked', 'Rareté': 'Rarity', '(hardcore)': '(hardcore)', '(tous modes)': '(all modes)', 'inconnue': 'unknown',
     // bibliothèque, entretien
     'Aucun jeu.': 'No games.', 'hors ligne': 'offline', 'Aucun nouveau jeu.': 'No new games.', 'Aucun dossier surveillé : utilise « Scanner un dossier ».': 'No watched folder: use "Scan a folder".',
     'Retirer': 'Remove', 'Aucun dossier surveillé. « Scanner un dossier » en ajoute un.': 'No watched folders. "Scan a folder" adds one.', 'Tous les fichiers sont présents.': 'All files are present.',
@@ -241,9 +251,10 @@
 
   // modèles : {} = trou, traduit à son tour ; {1} {2}… pour changer l'ordre en anglais
   const P = [
+    ['Installer la version {} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.', 'Install version {}? Emuglob will close and restart. The current version is kept.'],
     ['il y a {} min', '{} min ago'], ['il y a {} h', '{} h ago'], ['il y a {} j', '{} d ago'], ['Vu {}', 'Seen {}'],
     ['{} h {} min', '{} h {} min'], ['{} {}/{} succès · {} pts', '{} {}/{} achievements · {} pts'], ['{}/{} succès', '{}/{} achievements'], ['{} succès', '{} achievements'],
-    ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
+    ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Hash supportés ({})', 'Supported hashes ({})'], ['Subsets ({})', 'Subsets ({})'], ['{} jeux RetroAchievements', '{} RetroAchievements games'], ['{} jeu RetroAchievements', '{} RetroAchievements game'], ['{} jeux · {} dans ta bibliothèque', '{} games · {} in your library'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
     ['Fichier introuvable : {}. Disque débranché ?', 'File not found: {}. Drive unplugged?'], ['keys.txt importé ({} clés).', 'keys.txt imported ({} keys).'],
     ['keys.txt importé ({} clés) dans {}.', 'keys.txt imported ({} keys) to {}.'],
     ['Jeu Wii U incomplet : dossier {} absent à côté de code ({}). Recopie le jeu en entier.', 'Incomplete Wii U game: {} folder missing next to code ({}). Copy the whole game again.'],
@@ -264,7 +275,10 @@
     ['Range réglages, jaquettes et sauvegardes dans {}, à côté d\'Emuglob.exe, pour l\'emporter sur une clé USB ou un autre disque.', 'Stores settings, covers and saves in {}, next to Emuglob.exe, to carry it on a USB stick or another drive.'],
     ['{} jaquette(s) trouvée(s) sur {} jeu(x) testé(s).', '{} cover(s) found out of {} game(s) checked.'], ['{} jeu(x) reconnu(s) sur {}.', '{} game(s) recognized out of {}.'],
     ['Fichier(s) modifié(s) : {} (une copie .bak est gardée). Clique une case puis appuie sur une touche ou un bouton de manette.', 'File(s) changed: {} (a .bak copy is kept). Click a box then press a key or controller button.'],
-    ['{} réglage(s) enregistré(s) dans {}.', '{} setting(s) saved to {}.'], ['Manette détectée : {}. Appuie sur un bouton.', 'Controller detected: {}. Press a button.'],
+    ['{} réglage(s) enregistré(s) dans {}.', '{} setting(s) saved to {}.'],
+    ['{} lit ses contrôles au démarrage et les réécrit en quittant : Emuglob les enregistre juste après la fermeture du jeu, puis peut le relancer tout de suite.', '{} reads its controls at startup and rewrites them when quitting: Emuglob saves them right after the game closes, then can restart it right away.'],
+    ['{} contrôle(s) modifié(s) : ils seront enregistrés à la fermeture du jeu.', '{} control(s) changed: they will be saved when the game closes.'],
+    ['{} contrôle(s) enregistré(s) dans {}.', '{} control(s) saved to {}.'], ['Manette détectée : {}. Appuie sur un bouton.', 'Controller detected: {}. Press a button.'],
     ['Stick à {}', 'Stick at {}'], ['Lancement de {}…', 'Launching {}…'], ['Chargement de {}…', 'Loading {}…'],
     ['Intégration impossible : {}. L\'émulateur tourne dans sa propre fenêtre (journal : Paramètres).', "Embedding failed: {}. The emulator runs in its own window (log: Settings)."],
     ['S\'applique au prochain lancement : {} réécrit ses réglages en quittant, Emuglob les enregistre donc juste après la fermeture du jeu.', 'Applies on next launch: {} rewrites its settings when quitting, so Emuglob saves them right after the game closes.'],
@@ -289,11 +303,11 @@
   ];
   // préfixes « Libellé : suite » (la suite est traduite si possible)
   const PRE = ['Erreur :', 'Impossible :', 'Échec :', 'Connecté :', 'Fichier refusé :', 'Export impossible :', 'Import impossible :', 'Restauration impossible :', 'Recherche impossible :',
-    'Mise à jour impossible :', 'Version installée :', 'keys.txt non importé :', 'Sauvegardes non synchronisées :', 'Réglages non enregistrés :', 'Sauvegardes de', 'Déjà dans Emuglob : sauvegarde du',
+    'Mise à jour impossible :', 'Version installée :', 'keys.txt non importé :', 'Sauvegardes non synchronisées :', 'Réglages non enregistrés :', 'Contrôles non enregistrés :', 'Sauvegardes de', 'Déjà dans Emuglob : sauvegarde du',
     'Membre depuis le', 'Débloqué le', 'Ajouté le'];
   const PREEN = { 'Erreur :': 'Error:', 'Impossible :': 'Failed:', 'Échec :': 'Failed:', 'Connecté :': 'Connected:', 'Fichier refusé :': 'File rejected:', 'Export impossible :': 'Export failed:',
     'Import impossible :': 'Import failed:', 'Restauration impossible :': 'Restore failed:', 'Recherche impossible :': 'Check failed:', 'Mise à jour impossible :': 'Update failed:',
-    'Version installée :': 'Installed version:', 'keys.txt non importé :': 'keys.txt not imported:', 'Sauvegardes non synchronisées :': 'Saves not synced:', 'Réglages non enregistrés :': 'Settings not saved:',
+    'Version installée :': 'Installed version:', 'keys.txt non importé :': 'keys.txt not imported:', 'Sauvegardes non synchronisées :': 'Saves not synced:', 'Réglages non enregistrés :': 'Settings not saved:', 'Contrôles non enregistrés :': 'Controls not saved:',
     'Sauvegardes de': 'Saves of', 'Déjà dans Emuglob : sauvegarde du': 'Already in Emuglob: save from', 'Membre depuis le': 'Member since', 'Débloqué le': 'Unlocked on', 'Ajouté le': 'Added on' };
 
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

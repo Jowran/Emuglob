@@ -80,11 +80,13 @@ function saveWinState() {
   if (!win || win.isDestroyed() || win.isFullScreen() || win.isMinimized()) return;
   try { fs.writeFileSync(winStatePath(), JSON.stringify({ ...win.getNormalBounds(), maximized: win.isMaximized() })); } catch { /* ignoré */ }
 }
+// fond de la fenêtre avant le premier affichage, assorti au thème (évite un flash sombre en thème clair)
+const START_BG = { neon: '#080418', oled: '#000000', crt: '#0b0700', clair: '#eef2f7', pastel: '#f3eaff' };
 function createWindow() {
   let st = null;
   try { st = readJson(winStatePath()); } catch { /* première ouverture */ }
   const opts = {
-    width: 1400, height: 820, backgroundColor: '#140e3a', autoHideMenuBar: true,
+    width: 1400, height: 820, backgroundColor: START_BG[(() => { try { return readCfg().theme; } catch { return ''; } })()] || '#140e3a', autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'logo.ico' : 'logo.png'),   // logo Emuglob (barre des tâches, fenêtre)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   };
@@ -100,8 +102,11 @@ function createWindow() {
   const later = () => { clearTimeout(t); t = setTimeout(saveWinState, 500); };
   win.on('resize', later); win.on('move', later); win.on('close', saveWinState);
   // l'écran de chargement (fenêtre séparée) suit la fenêtre quand on la déplace ou la redimensionne
-  const follow = () => { if (cover && coverRect) moveCover(coverRect); };
-  for (const ev of ['move', 'moved', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
+  // (regroupé, seulement une fois l'écran affiché et seulement si la position change vraiment : sous Windows, des
+  //  setBounds pendant le démarrage empêchaient l'animation de s'afficher)
+  let ft = null;
+  const follow = () => { if (!ft) ft = setTimeout(() => { ft = null; if (cover && coverRect) moveCover(coverRect); }, 30); };
+  for (const ev of ['move', 'resize', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, follow);
   win.loadFile('index.html');
 }
 
@@ -433,7 +438,7 @@ function showCover(r, info) {
   coverAt = Date.now();
   if (info.img && /^(file:|https:)/.test(info.img)) query.img = info.img;
   cover.loadFile(path.join(__dirname, 'loading.html'), { query });
-  cover.once('ready-to-show', () => { if (cover && !cover.isDestroyed()) cover.showInactive(); });
+  cover.once('ready-to-show', () => { if (cover && !cover.isDestroyed()) { cover.showInactive(); moveCover(coverRect); } });
   cover.on('closed', () => { cover = null; });
   setTimeout(() => hideCover(), 45000);   // sécurité : jamais d'écran de chargement bloqué
 }
@@ -445,10 +450,27 @@ function hideCover(now) {
   c.webContents.executeJavaScript("document.body.classList.add('out')").catch(() => {});
   setTimeout(() => { if (!c.isDestroyed()) c.destroy(); }, 280);
 }
-function moveCover(r) { coverRect = r; if (cover && !cover.isDestroyed() && win && !win.isDestroyed()) cover.setBounds(coverBounds(r)); }
+function moveCover(r) {
+  coverRect = r;
+  if (!cover || cover.isDestroyed() || !cover.isVisible() || !win || win.isDestroyed()) return;   // pas encore affiché : il sera posé au bon endroit à l'affichage
+  const b = coverBounds(r), o = cover.getBounds();
+  if (b.x !== o.x || b.y !== o.y || b.width !== o.width || b.height !== o.height) cover.setBounds(b);
+}
 function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
+}
+// Mise à l'échelle Windows (125 %, 150 %…) : RALibretro n'est pas « DPI-aware », Windows lui ment sur la taille de sa fenêtre
+// et l'image OpenGL est dessinée trop grande puis coupée (on ne voit qu'un bout de l'écran du haut d'un jeu DS).
+// On le lance avec la couche de compatibilité HighDpiAware (= Propriétés > Compatibilité > « Remplacer… : Application »),
+// uniquement pour ce processus : rien n'est écrit dans le registre.
+function emuEnv(exe) {
+  if (process.platform !== 'win32' || !/ralibretro/i.test(path.basename(exe))) return process.env;
+  const cur = String(process.env.__COMPAT_LAYER || '');
+  if (/highdpiaware/i.test(cur)) return process.env;
+  const k = screen.getPrimaryDisplay().scaleFactor || 1;
+  embedLog(`RALibretro lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
+  return { ...process.env, __COMPAT_LAYER: (cur.replace(/\b(dpiunaware|gdidpiscaling)\b/ig, '').trim() + ' HighDpiAware').trim() };
 }
 ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
   new Promise((resolve) => {
@@ -465,7 +487,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
     }
     try {
       embedLog(`lancement : ${exe} ${args.join(' ')} (intégration : ${embed ? 'oui, mode ' + (mode || 'overlay') : 'non'})`);
-      const child = spawn(exe, args, { cwd: path.dirname(exe), detached: true, stdio: 'ignore' });
+      const child = spawn(exe, args, { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
       child.once('error', (err) => resolve({ ok: false, error: err.message }));
       child.once('spawn', () => {
         child.unref();
@@ -720,6 +742,13 @@ ipcMain.handle('game:vol', (_e, { level, mute }) => new Promise((resolve) => {
 ipcMain.handle('quick:get', (_e, exe) => { try { return emucfg.quick(exe); } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('quick:save', (_e, { exe, values }) => { try { return { ok: true, n: emucfg.quickSave(exe, values) }; } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('game:focus', () => { if (helperObj && current && current.embedded) helperObj.send('focus'); });
+// cache / remontre la fenêtre de l'émulateur, le temps d'un panneau d'Emuglob par-dessus le jeu (contrôles)
+ipcMain.handle('game:park', (_e, on) => {
+  if (!helperObj || !current || !current.embedded) return false;
+  helperObj.send(on ? 'hide' : 'show');
+  if (on && win && !win.isDestroyed()) win.focus();   // Emuglob reprend le clavier
+  return true;
+});
 ipcMain.handle('game:stop', () => {
   if (!current) return;
   const c = current.child;
@@ -799,7 +828,7 @@ ipcMain.handle('app:quit', () => app.quit());
 ipcMain.handle('app:relaunch', () => { app.relaunch(); app.quit(); });
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
+const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs', 'GetGameHashes']);
 const mem = new Map();
 
 // ---------- résumé Wikipédia pour la fiche de jeu (français, sinon anglais), gardé sur disque pour le mode hors ligne ----------
@@ -839,8 +868,139 @@ ipcMain.handle('wiki:summary', async (_e, { title, console: consoleName, lang })
     return { ok: true, ...data };
   } catch (e) { return { ok: false, error: e.message }; }
 });
+ipcMain.handle('ra:gamepage', (_e, id) => { const n = Number(id); if (Number.isInteger(n) && n > 0) shell.openExternal('https://retroachievements.org/game/' + n); });
+// noms des subsets RetroAchievements d'après les patchs rangés à côté de la ROM (« Jeu [Subset - Nom].xdelta », dossiers compris)
+ipcMain.handle('subset:patches', async (_e, dir) => {
+  const out = [];
+  const walk = async (d, depth) => {
+    let ents = [];
+    try { ents = await fs.promises.readdir(d, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.isDirectory() && depth < 2) await walk(path.join(d, e.name), depth + 1);
+      else if (e.isFile() && /\.(xdelta|vcdiff|bps|ips|ups|ppf)$/i.test(e.name)) {
+        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name);
+        if (m) out.push(m[1]);
+      }
+    }
+  };
+  if (typeof dir === 'string' && dir) await walk(dir, 0);
+  return [...new Set(out)];
+});
+// patchs .xdelta des subsets : liste (nom + fichier) puis création d'une ISO patchée à côté de l'originale, jamais modifiée
+const PATCH_RX = /\.(xdelta|vcdiff|bps|ips)$/i;
+// CRC32 (BPS)
+const CRC_T = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
+const crc32 = (b) => { let c = -1; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+// patchs de cartouche (ROM chargée en mémoire, 512 Mo max) : IPS et BPS ; la BPS vérifie la CRC de la ROM de base et du résultat
+function applyIps(src, p) {
+  if (p.toString('latin1', 0, 5) !== 'PATCH') throw new Error('Fichier IPS invalide.');
+  let out = Buffer.from(src), i = 5;
+  const grow = (n) => { if (n > out.length) { const b = Buffer.alloc(n); out.copy(b); out = b; } };
+  while (i + 3 <= p.length) {
+    if (p.toString('latin1', i, i + 3) === 'EOF') { i += 3; if (i + 3 <= p.length) { const t = p.readUIntBE(i, 3); out = out.subarray(0, t); } return out; }
+    const off = p.readUIntBE(i, 3), len = p.readUInt16BE(i + 3); i += 5;
+    if (len) { grow(off + len); p.copy(out, off, i, i + len); i += len; }
+    else { const n = p.readUInt16BE(i), v = p[i + 2]; i += 3; grow(off + n); out.fill(v, off, off + n); }
+  }
+  throw new Error('Fichier IPS tronqué.');
+}
+function applyBps(src, p) {
+  if (p.toString('latin1', 0, 4) !== 'BPS1') throw new Error('Fichier BPS invalide.');
+  let i = 4;
+  const num = () => { let d = 0, s = 1; for (;;) { const x = p[i++]; d += (x & 0x7f) * s; if (x & 0x80) break; s *= 128; d += s; } return d; };
+  const srcSize = num(), tgtSize = num(), meta = num(); i += meta;
+  const end = p.length - 12, srcCrc = p.readUInt32LE(end), tgtCrc = p.readUInt32LE(end + 4);
+  if (src.length !== srcSize || crc32(src) !== srcCrc) throw new Error('BADBASE');
+  const out = Buffer.alloc(tgtSize);
+  let o = 0, sRel = 0, tRel = 0;
+  while (i < end) {
+    const d = num(), cmd = d & 3, len = Math.floor(d / 4) + 1;
+    if (cmd === 0) { src.copy(out, o, o, o + len); o += len; }
+    else if (cmd === 1) { p.copy(out, o, i, i + len); i += len; o += len; }
+    else { const x = num(), off = (x & 1 ? -1 : 1) * Math.floor(x / 2);
+      if (cmd === 2) { sRel += off; src.copy(out, o, sRel, sRel + len); sRel += len; o += len; }
+      else { tRel += off; for (let k = 0; k < len; k++) out[o++] = out[tRel++]; } }
+  }
+  if (crc32(out) !== tgtCrc) throw new Error('Résultat incorrect (CRC).');
+  return out;
+}
+ipcMain.handle('subset:patchFiles', async (_e, dir) => {
+  const out = [];
+  const walk = async (d, depth) => {
+    let ents = [];
+    try { ents = await fs.promises.readdir(d, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (e.isDirectory() && depth < 2) await walk(path.join(d, e.name), depth + 1);
+      else if (e.isFile() && PATCH_RX.test(e.name)) {
+        const m = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i.exec(e.name), f = path.join(d, e.name);
+        if (m && !out.some((o) => o.file === f)) out.push({ name: m[1], file: f });
+      }
+    }
+  };
+  if (typeof dir === 'string' && dir) {
+    await walk(dir, 0);
+    const up = path.dirname(dir);   // ROM rangée dans son propre dossier : le patch peut être dans le dossier de la console (ex. NDS\Jeu [Subset - X].xdelta)
+    if (up && up !== dir) await walk(up, 99);
+  }
+  return out;
+});
+function bundledXdelta() {
+  if (process.env.EMUGLOB_XDELTA) return process.env.EMUGLOB_XDELTA;
+  if (process.platform !== 'win32') return null;
+  try {
+    const src = path.join(__dirname, 'tools', 'xdelta3.exe'), out = path.join(app.getPath('userData'), 'tools', 'xdelta3.exe');
+    const buf = fs.readFileSync(src);
+    if (!fs.existsSync(out) || fs.statSync(out).size !== buf.length) { fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, buf); }
+    return out;
+  } catch { return null; }
+}
+let patching = null;
+ipcMain.handle('subset:apply', async (_e, { src, patch, name }) => {
+  if (patching) return { ok: false, error: 'Un patch est déjà en cours.' };
+  if (typeof src !== 'string' || typeof patch !== 'string' || !PATCH_RX.test(patch)) return { ok: false, error: 'Patch invalide.' };
+  if (/\.(zip|7z|rar)$/i.test(src)) return { ok: false, error: 'ROM compressée (.zip/.7z) : décompresse-la pour appliquer le patch.' };
+  const ext = path.extname(src), safe = String(name || 'Subset').replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim() || 'Subset';
+  const out = path.join(path.dirname(src), path.basename(src, ext) + ` [Subset - ${safe}]` + ext), part = out + '.part';
+  if (path.resolve(out) === path.resolve(src)) return { ok: false, error: 'Nom de sortie identique à la ROM.' };
+  if (fs.existsSync(out)) return { ok: true, out, existed: true };
+  let size = 0;
+  try { size = (await fs.promises.stat(src)).size; } catch { return { ok: false, error: 'ROM de base introuvable : ' + src }; }
+  const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('subset:progress', p); };
+  if (/\.(ips|bps)$/i.test(patch)) {
+    if (size > 512 * 1048576) return { ok: false, error: 'ROM trop grosse pour un patch IPS/BPS.' };
+    try {
+      const [s, p] = await Promise.all([fs.promises.readFile(src), fs.promises.readFile(patch)]);
+      const outBuf = /\.bps$/i.test(patch) ? applyBps(s, p) : applyIps(s, p);
+      await fs.promises.writeFile(part, outBuf); await fs.promises.rename(part, out);
+      return { ok: true, out };
+    } catch (e) {
+      fs.rm(part, { force: true }, () => {});
+      return { ok: false, error: e.message === 'BADBASE' ? 'Ce patch ne correspond pas à ta ROM de base (mauvaise version/région ou ROM déjà modifiée).' : e.message };
+    }
+  }
+  const xd = bundledXdelta();
+  if (!xd) return { ok: false, error: 'xdelta3 introuvable.' };
+  return new Promise((resolve) => {
+    // -d décode, -s source (lue seulement) ; les sommes adler32 du patch font échouer xdelta si la ROM de base n'est pas la bonne
+    const c = spawn(xd, ['-d', '-f', '-s', src, patch, part], { windowsHide: true });
+    patching = c;
+    let err = '';
+    c.stderr.on('data', (d) => { err += d; });
+    const t = setInterval(() => { fs.stat(part, (e2, st) => { if (!e2 && size) send({ pct: Math.min(99, Math.floor((100 * st.size) / size)) }); }); }, 500);
+    const done = (r) => { clearInterval(t); patching = null; if (!r.ok) fs.rm(part, { force: true }, () => {}); resolve(r); };
+    c.on('error', (e) => done({ ok: false, error: e.message }));
+    c.on('close', (code) => {
+      if (code !== 0) {
+        const bad = /checksum|adler|source file too short|invalid|source/i.test(err);
+        return done({ ok: false, error: bad ? "Ce patch ne correspond pas à ta ROM de base (mauvaise version/région ou ROM déjà modifiée)." : 'xdelta3 a échoué : ' + (err.trim().split('\n').pop() || 'code ' + code) });
+      }
+      fs.rename(part, out, (e3) => (e3 ? done({ ok: false, error: e3.message }) : done({ ok: true, out })));
+    });
+  });
+});
 ipcMain.handle('wiki:open', (_e, url) => { if (typeof url === 'string' && /^https:\/\/[a-z]{2}\.wikipedia\.org\/wiki\//.test(url)) shell.openExternal(url); });
-ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
+ipcMain.handle('ra:call', (_e, a) => raCall(a));
+async function raCall({ endpoint, params = {}, ttl = 60 }) {
   if (!RA_ALLOWED.has(endpoint)) return { ok: false, error: 'Endpoint non autorisé' };
   const ra = readCfg().ra || {};
   if (!ra.user || !ra.key) return { ok: false, error: 'RetroAchievements non configuré' };
@@ -889,6 +1049,50 @@ ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   } catch (err) {
     return stale() || { ok: false, error: err.name === 'TimeoutError' ? 'Délai dépassé' : err.message };
   }
+}
+
+// catalogue complet RetroAchievements ([id, titre, console, icône, succès, points]) (tous les jeux avec succès, toutes consoles) pour la barre de recherche.
+// Construit une fois depuis GetGameList (sans les hash, plus léger) puis gardé 7 jours dans ra-cache/catalog.json.
+let catalogJob = null;
+ipcMain.handle('ra:catalog', (_e, force) => {
+  const file = path.join(raCacheDir(), 'catalog-v2.json');
+  let old = null;
+  try { old = JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { /* pas encore construit */ }
+  if (old && !force && (!net.isOnline() || Date.now() - old.t < 7 * 864e5)) return { ok: true, games: old.games };
+  if (!net.isOnline()) return old ? { ok: true, games: old.games } : { ok: false, error: 'hors ligne' };
+  if (catalogJob) return catalogJob;
+  catalogJob = (async () => {
+    const cons = await raCall({ endpoint: 'GetConsoleIDs', params: { a: 1, g: 1 }, ttl: 604800 });
+    if (!cons.ok || !Array.isArray(cons.data)) return old ? { ok: true, games: old.games } : { ok: false, error: cons.error || 'consoles' };
+    const list = cons.data.filter((c) => c.ID && c.Active !== false && c.IsGameSystem !== false);
+    const games = [];
+    let i = 0, fails = 0;
+    const worker = async () => {
+      while (i < list.length) {
+        const c = list[i++];
+        // liste avec hash déjà en cache (reconnaissance de la bibliothèque) ? on la réutilise
+        let rows = null;
+        try { rows = JSON.parse(fs.readFileSync(path.join(raCacheDir(), `list-${c.ID}-h.json`), 'utf-8')); } catch { /* absente */ }
+        if (!Array.isArray(rows)) {
+          const r = await raCall({ endpoint: 'GetGameList', params: { i: c.ID, f: 1 }, ttl: 604800 });
+          rows = r.ok && Array.isArray(r.data) ? r.data : null;
+        }
+        if (!rows) { fails++; continue; }
+        for (const x of rows) {
+          const title = x.Title || x.title;
+          if (title) games.push([x.ID || x.id, title, c.Name, x.ImageIcon || x.imageIcon || '', x.NumAchievements || 0, x.Points || 0]);
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (!games.length) return old ? { ok: true, games: old.games } : { ok: false, error: 'catalogue vide' };
+    if (!fails) try {
+      fs.mkdirSync(raCacheDir(), { recursive: true });
+      fs.writeFileSync(file, JSON.stringify({ t: Date.now(), games }));
+    } catch { /* cache facultatif */ }
+    return { ok: true, games };
+  })().finally(() => { catalogJob = null; });
+  return catalogJob;
 });
 
 /* ---------- reconnaissance des jeux et jaquettes ---------- */
@@ -1098,9 +1302,8 @@ ipcMain.handle('update:check', async () => {
     };
   } catch (e) { return { ok: false, error: e.message }; }
 });
-ipcMain.handle('update:download', async () => {
+async function installRelease(rel) {
   if (!canUpdate()) return { ok: false, error: "disponible seulement dans l'application installée" };
-  const rel = lastRelease;
   const asset = rel && (rel.assets || []).find((a) => a.name === 'app.asar');
   if (!asset) return { ok: false, error: "cette version n'a pas de fichier app.asar : télécharge-la à la main" };
   try {
@@ -1118,6 +1321,29 @@ ipcMain.handle('update:download', async () => {
     launchUpdater(file);
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
+}
+ipcMain.handle('update:download', () => installRelease(lastRelease));
+// toutes les versions publiées (pour en choisir une, même plus ancienne)
+let allReleases = [];
+ipcMain.handle('update:list', async () => {
+  try {
+    const list = await (await ghFetch(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=50`)).json();
+    allReleases = (Array.isArray(list) ? list : []).filter((r) => !r.draft);
+    const cur = app.getVersion();
+    return {
+      ok: true, current: cur, packaged: canUpdate(),
+      list: allReleases.map((r) => {
+        const asar = (r.assets || []).find((a) => a.name === 'app.asar');
+        const v = String(r.tag_name || '').replace(/^v/i, '');
+        return { tag: r.tag_name, version: v, date: r.published_at || '', pre: !!r.prerelease, notes: r.body || '', hasAsar: !!asar, size: asar ? asar.size : 0,
+          current: !newerThan(v, cur) && !newerThan(cur, v) };
+      }),
+    };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('update:installTag', (_e, tag) => {
+  const rel = allReleases.find((r) => r.tag_name === tag);
+  return rel ? installRelease(rel) : { ok: false, error: 'version introuvable, actualise la liste' };
 });
 ipcMain.handle('update:page', () => { if (lastRelease && /^https:\/\/github\.com\//.test(lastRelease.html_url)) shell.openExternal(lastRelease.html_url); });
 ipcMain.handle('update:rollback', () => {
