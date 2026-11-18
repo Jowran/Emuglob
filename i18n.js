@@ -200,7 +200,7 @@
     'Discord': 'Discord', 'Statut de jeu activé': 'Game status on', 'Statut de jeu désactivé': 'Game status off', 'Rechercher des sauvegardes': 'Find saves',
     'Retrouver tes anciennes saves de jeux': 'Find your old game saves', 'Restaurer, exporter, importer': 'Restore, export, import', 'Aide et tuto': 'Help and tutorial',
     'Comment marche chaque fonction': 'How each feature works', 'Mettre à jour': 'Update', 'En ligne ou fichier app.asar': 'Online or app.asar file', 'Touche F11': 'F11 key',
-    'Quitter': 'Quit', 'Fermer Emuglob': 'Close Emuglob',
+    'Quitter': 'Quit', 'Fermer Emuglob': 'Close Emuglob', 'Relancer Emuglob': 'Restart Emuglob', 'Fermer puis rouvrir l\'application': 'Close and reopen the app',
     'Rendre Emuglob portable ?': 'Make Emuglob portable?', 'Tes données sont copiées dans le dossier data à côté d\'Emuglob.exe (celles de %APPDATA% restent intactes), puis Emuglob redémarre.':
       'Your data is copied to the data folder next to Emuglob.exe (the copy in %APPDATA% stays untouched), then Emuglob restarts.',
     'Mode portable activé : redémarrage…': 'Portable mode on: restarting…', 'réponse invalide': 'invalid response', 'Recherche des jaquettes…': 'Looking for covers…',

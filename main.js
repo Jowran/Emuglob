@@ -788,6 +788,8 @@ ipcMain.handle('win:fullscreen', (_e, force) => {
   return next;
 });
 ipcMain.handle('app:quit', () => app.quit());
+// relance : app.quit() (et non app.exit) pour garder le nettoyage de before-quit (Discord, émulateur intégré)
+ipcMain.handle('app:relaunch', () => { app.relaunch(); app.quit(); });
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
 const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
