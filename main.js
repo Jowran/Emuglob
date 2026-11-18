@@ -520,6 +520,21 @@ ipcMain.handle('emucfg:save', (_e, { exe, changes }) => {
   return r;
 });
 ipcMain.handle('game:move', (_e, r) => { if (helperObj && current && current.embedded) helperObj.send(`move ${r.x} ${r.y} ${r.w} ${r.h}`); });
+// volume de l'émulateur en cours (mélangeur de Windows), à chaud
+ipcMain.handle('game:vol', (_e, { level, mute }) => new Promise((resolve) => {
+  if (!helperObj || !current || !current.child) return resolve({ ok: false, error: 'aucun jeu intégré' });
+  let t;
+  const off = helperObj.on((line) => {
+    if (!line.startsWith('vol ')) return;
+    off(); clearTimeout(t);
+    const [, l, m, n] = line.split(' ').map(Number);
+    resolve({ ok: true, level: l, mute: m === 1, sessions: n });
+  });
+  t = setTimeout(() => { off(); resolve({ ok: false, error: 'pas de réponse' }); }, 3000);
+  helperObj.send(`vol ${current.child.pid} ${Number.isFinite(level) ? Math.round(level) : -1} ${mute === undefined || mute === null ? -1 : mute ? 1 : 0}`);
+}));
+ipcMain.handle('quick:get', (_e, exe) => { try { return emucfg.quick(exe); } catch (e) { return { ok: false, error: e.message }; } });
+ipcMain.handle('quick:save', (_e, { exe, values }) => { try { return { ok: true, n: emucfg.quickSave(exe, values) }; } catch (e) { return { ok: false, error: e.message }; } });
 ipcMain.handle('game:focus', () => { if (helperObj && current && current.embedded) helperObj.send('focus'); });
 ipcMain.handle('game:stop', () => {
   if (!current) return;
