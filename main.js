@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker, protocol, net, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, globalShortcut, shell, screen, powerSaveBlocker, protocol, net, nativeImage, desktopCapturer, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, execFile } = require('child_process');
@@ -21,14 +21,24 @@ const raCacheDir = () => path.join(app.getPath('userData'), 'ra-cache');
 const backupDir = () => path.join(app.getPath('userData'), 'backups');
 const winStatePath = () => path.join(app.getPath('userData'), 'window.json');
 const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf-8'));
+// ---------- mode portable : données dans data\ à côté de l'exe, chemins du même disque enregistrés en relatif ----------
+const PORT_BASE = app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
+const isPortable = () => fs.existsSync(path.join(PORT_BASE, 'portable.txt'));
+const PTOKEN = '$EMUGLOB$';   // préfixe d'un chemin relatif au dossier d'Emuglob (survit à un changement de lettre de lecteur)
+const mapStrings = (v, fn) => (typeof v === 'string' ? fn(v) : Array.isArray(v) ? v.map((x) => mapStrings(x, fn)) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, mapStrings(x, fn)])) : v);
+const sameDrive = (p) => /^[a-z]:[\\/]/i.test(p) && /^[a-z]:/i.test(PORT_BASE) && p[0].toLowerCase() === PORT_BASE[0].toLowerCase();
+const compactPath = (s) => (sameDrive(s) ? PTOKEN + path.win32.relative(PORT_BASE, s) : s);
+const expandPath = (s) => (s.startsWith(PTOKEN) ? path.resolve(PORT_BASE, s.slice(PTOKEN.length) || '.') : s);
+const cfgIn = (d) => mapStrings(d, expandPath);
+const cfgOut = (d) => (isPortable() ? mapStrings(d, compactPath) : mapStrings(d, expandPath));
 const listBackupFiles = () => { try { return fs.readdirSync(backupDir()).filter((f) => /^config-.*\.json$/.test(f)).sort(); } catch { return []; } };
 
 // lecture : si le fichier est présent mais illisible, on reprend la dernière sauvegarde valable plutôt que de repartir d'une bibliothèque vide
 const readCfg = () => {
-  try { return readJson(cfgPath()); } catch (err) {
+  try { return cfgIn(readJson(cfgPath())); } catch (err) {
     if (fs.existsSync(cfgPath())) {
       for (const f of listBackupFiles().reverse()) {
-        try { const d = readJson(path.join(backupDir(), f)); embedLog(`config illisible (${err.message}) : reprise de ${f}`); return d; } catch { /* sauvegarde suivante */ }
+        try { const d = cfgIn(readJson(path.join(backupDir(), f))); embedLog(`config illisible (${err.message}) : reprise de ${f}`); return d; } catch { /* sauvegarde suivante */ }
       }
     }
     return { ralibretro: '', games: [] };
@@ -55,7 +65,7 @@ function maybeBackup() {   // une sauvegarde automatique au plus toutes les 6 he
 function writeConfig(data) {   // écriture atomique : un plantage en cours d'écriture ne peut plus corrompre la bibliothèque
   fs.mkdirSync(path.dirname(cfgPath()), { recursive: true });
   const tmp = cfgPath() + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.writeFileSync(tmp, JSON.stringify(cfgOut(data), null, 2), 'utf-8');
   fs.renameSync(tmp, cfgPath());
 }
 
@@ -128,6 +138,8 @@ function cacheImages() {
 
 app.whenReady().then(() => {
   cacheImages();
+  // getDisplayMedia() de la page = la fenêtre de l'émulateur en cours (mode stream), rien d'autre
+  session.defaultSession.setDisplayMediaRequestHandler((_req, cb) => { if (streamSource) cb({ video: streamSource }); else cb({}); });
   createWindow();
   // module d'intégration prêt dès le démarrage : au 1er lancement d'un jeu, il cache la fenêtre de l'émulateur dès sa création
   if ((process.platform === 'win32' || process.env.EMUGLOB_FAKE_EMBED) && readCfg().embedGames !== false) setTimeout(() => getHelper().catch((e) => embedLog('module : ' + e.message)), 4000);
@@ -143,6 +155,34 @@ ipcMain.handle('config:save', (_e, data) => {
   return true;
 });
 
+ipcMain.handle('portable:status', () => ({ portable: isPortable(), dir: isPortable() ? app.getPath('userData') : path.join(PORT_BASE, 'data'), data: app.getPath('userData') }));
+// « Rendre portable » : copie les données de %APPDATA% dans data\ (l'original reste en place), crée portable.txt et relance
+const PORT_KEEP = ['config.json', 'covers', 'saves', 'backups', 'ra-cache', 'img-cache', 'window.json'];
+ipcMain.handle('portable:make', () => {
+  if (isPortable()) return { ok: false, error: 'Emuglob est déjà en mode portable.' };
+  const from = app.getPath('userData'), to = path.join(PORT_BASE, 'data');
+  try {
+    const probe = path.join(PORT_BASE, '.ecriture-test');
+    fs.writeFileSync(probe, 'ok'); fs.unlinkSync(probe);
+  } catch (e) { return { ok: false, error: `Impossible d'écrire dans ${PORT_BASE} (${e.code || e.message}). Déplace Emuglob dans un dossier à toi (pas Program Files).` }; }
+  try {
+    fs.mkdirSync(to, { recursive: true });
+    for (const n of PORT_KEEP) {
+      const src = path.join(from, n);
+      if (fs.existsSync(src) && n !== 'config.json') fs.cpSync(src, path.join(to, n), { recursive: true, force: false, errorOnExist: false });
+    }
+    // la config pointe vers les jaquettes de %APPDATA% : on la réécrit vers data\ (comparaison sans tenir compte de la casse, comme Windows)
+    const low = from.toLowerCase();
+    const moved = mapStrings(readCfg(), (s) => (s.toLowerCase().startsWith(low + path.sep) ? to + s.slice(from.length) : s));
+    fs.writeFileSync(path.join(PORT_BASE, 'portable.txt'), 'Emuglob : mode portable. Les données sont dans le dossier data. Supprime ce fichier pour revenir à %APPDATA%.\r\n');
+    const cfgFile = path.join(to, 'config.json');
+    if (fs.existsSync(cfgFile)) fs.copyFileSync(cfgFile, cfgFile + '.avant-portable');
+    fs.writeFileSync(cfgFile, JSON.stringify(mapStrings(moved, compactPath), null, 2), 'utf-8');
+    embedLog(`mode portable activé : ${from} → ${to}`);
+    setTimeout(() => { app.relaunch(); app.exit(0); }, 600);
+    return { ok: true, dir: to };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
 ipcMain.handle('backups:list', () => listBackupFiles().reverse().map((f) => {
   const p = path.join(backupDir(), f);
   let games = null;
@@ -161,10 +201,11 @@ ipcMain.handle('backups:restore', (_e, name) => {
     return { ok: true, games: d.games.length };
   } catch (e) { return { ok: false, error: e.message }; }
 });
+// export : chemins complets, pour qu'il marche aussi hors mode portable
 ipcMain.handle('backups:export', async () => {
   const r = await dialog.showSaveDialog(win, { title: 'Exporter la configuration', defaultPath: 'emuglob-config.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
   if (r.canceled) return { ok: false, canceled: true };
-  try { fs.copyFileSync(cfgPath(), r.filePath); return { ok: true, path: r.filePath }; } catch (e) { return { ok: false, error: e.message }; }
+  try { fs.writeFileSync(r.filePath, JSON.stringify(readCfg(), null, 2), 'utf-8'); return { ok: true, path: r.filePath }; } catch (e) { return { ok: false, error: e.message }; }
 });
 ipcMain.handle('backups:import', async () => {
   const r = await dialog.showOpenDialog(win, { title: 'Importer une configuration', properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] });
@@ -332,17 +373,30 @@ async function getHelper() {
   return h;
 }
 
-function embedWindow(helper, pid, rect, mode) {
+// mode stream : la fenêtre de l'émulateur est recopiée dans Emuglob (<video>) pour que le partage de la fenêtre Emuglob sur Discord la montre
+let streamSource = null;
+async function findStreamSource(hwnd) {
+  for (let i = 0; i < 8; i++) {
+    try {
+      const list = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 } });
+      const s = list.find((x) => x.id.startsWith(`window:${hwnd}:`));
+      if (s) return s;
+    } catch (err) { embedLog('capture : ' + err.message); }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return null;
+}
+function embedWindow(helper, pid, rect, mode, stream) {
   return new Promise((resolve) => {
     const b = win.getNativeWindowHandle();
     const parent = (b.length >= 8 ? b.readBigUInt64LE(0) : BigInt(b.readUInt32LE(0))).toString();
     let t;
     const off = helper.on((line) => {
-      if (line.startsWith('embedded')) { off(); clearTimeout(t); resolve({ ok: true }); }
+      if (line.startsWith('embedded')) { off(); clearTimeout(t); resolve({ ok: true, hwnd: (line.split(' ')[1] || '').trim() }); }
       else if (line.startsWith('error')) { off(); clearTimeout(t); resolve({ ok: false, reason: line.slice(6) }); }
     });
     t = setTimeout(() => { off(); resolve({ ok: false, reason: 'délai dépassé' }); }, 26000);
-    helper.send(`embed ${pid} ${parent} ${rect.x} ${rect.y} ${rect.w} ${rect.h} 20000 ${mode === 'child' ? 'child' : 'overlay'}`);
+    helper.send(`embed ${pid} ${parent} ${rect.x} ${rect.y} ${rect.w} ${rect.h} 20000 ${mode === 'child' ? 'child' : 'overlay'}${stream && mode !== 'child' ? ' stream' : ''}`);
   });
 }
 
@@ -391,7 +445,7 @@ function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
 }
-ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, cover: coverInfo }) =>
+ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
   new Promise((resolve) => {
     if (!exe || !fs.existsSync(exe)) return resolve({ ok: false, error: 'Exécutable introuvable : ' + exe });
     if (!Array.isArray(args) || !args.every((a) => typeof a === 'string')) return resolve({ ok: false, error: 'Arguments invalides.' });
@@ -419,6 +473,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
         child.once('exit', (code) => {
           const seconds = Math.round((Date.now() - t0) / 1000);
           hideCover(true);
+          streamSource = null;
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
@@ -440,10 +495,15 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           (async () => {
             try {
               const helper = await getHelper();
-              const r = await embedWindow(helper, child.pid, rect, mode);
+              const r = await embedWindow(helper, child.pid, rect, mode, stream);
               if (!r.ok) throw new Error(r.reason);
               if (current && current.child === child) current.embedded = true;
-              if (win && !win.isDestroyed()) win.webContents.send('game:embedded', { ok: true });
+              streamSource = null;
+              if (stream && mode !== 'child' && /^\d+$/.test(r.hwnd || '')) {
+                streamSource = await findStreamSource(r.hwnd);
+                embedLog('mode stream : ' + (streamSource ? 'fenêtre trouvée (' + streamSource.name + ')' : 'fenêtre introuvable pour la capture'));
+              }
+              if (win && !win.isDestroyed()) win.webContents.send('game:embedded', { ok: true, stream: !!streamSource });
               const emuId = sync && sync.emu && sync.emu.id || (coverInfo && coverInfo.id) || '';
               setTimeout(() => hideCover(), Math.max(COVER_DELAY[emuId] || 1200, 2000 - (Date.now() - coverAt)));   // l'animation de la cartouche a le temps de finir
             } catch (err) {
@@ -728,9 +788,46 @@ ipcMain.handle('win:fullscreen', (_e, force) => {
 ipcMain.handle('app:quit', () => app.quit());
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
+const RA_ALLOWED = new Set(['GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs']);
 const mem = new Map();
 
+// ---------- résumé Wikipédia pour la fiche de jeu (français, sinon anglais), gardé sur disque pour le mode hors ligne ----------
+const WIKI_UA = { 'User-Agent': 'Emuglob/1.1 (https://github.com/Jowran/emuglob)', 'Api-User-Agent': 'Emuglob/1.1 (https://github.com/Jowran/emuglob)' };
+async function wikiJson(url) {
+  const res = await net.fetch(url, { headers: WIKI_UA, signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+async function wikiFind(lang, title, consoleName) {
+  const hint = lang === 'fr' ? 'jeu vidéo' : 'video game';
+  const q = new URLSearchParams({ action: 'query', list: 'search', format: 'json', srlimit: '5', srsearch: `${title} ${hint} ${consoleName || ''}`.trim() });
+  const r = await wikiJson(`https://${lang}.wikipedia.org/w/api.php?${q}`);
+  const norm = (x) => String(x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const want = norm(title).split(' ').filter((w) => w.length > 2);
+  // premier résultat qui parle de jeu vidéo et reprend les mots du titre
+  const hit = (r.query && r.query.search || []).find((x) => {
+    const t = norm(x.title), sn = norm(x.snippet);
+    return want.filter((w) => t.includes(w)).length >= Math.max(1, Math.ceil(want.length * 0.6)) && /jeu|video game|game/.test(sn + ' ' + t);
+  });
+  if (!hit) return null;
+  const sum = await wikiJson(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title.replace(/ /g, '_'))}`);
+  if (!sum || !sum.extract || sum.type === 'disambiguation') return null;
+  return { lang, title: sum.title, text: sum.extract, url: sum.content_urls && sum.content_urls.desktop && sum.content_urls.desktop.page };
+}
+ipcMain.handle('wiki:summary', async (_e, { title, console: consoleName }) => {
+  if (typeof title !== 'string' || !title.trim()) return { ok: false };
+  const file = path.join(raCacheDir(), 'wiki', crypto.createHash('sha1').update(title + '|' + (consoleName || '')).digest('hex') + '.json');
+  try { const c = JSON.parse(fs.readFileSync(file, 'utf-8')); if (!net.isOnline() || Date.now() - c.t < 30 * 864e5) return { ok: true, ...c.data }; } catch { /* pas en cache */ }
+  if (!net.isOnline()) return { ok: false, offline: true };
+  try {
+    const clean = title.replace(/\s*[([].*?[)\]]/g, '').trim();
+    const data = (await wikiFind('fr', clean, consoleName)) || (await wikiFind('en', clean, consoleName)) || { none: true };
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify({ t: Date.now(), data }));
+    return { ok: true, ...data };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+ipcMain.handle('wiki:open', (_e, url) => { if (typeof url === 'string' && /^https:\/\/[a-z]{2}\.wikipedia\.org\/wiki\//.test(url)) shell.openExternal(url); });
 ipcMain.handle('ra:call', async (_e, { endpoint, params = {}, ttl = 60 }) => {
   if (!RA_ALLOWED.has(endpoint)) return { ok: false, error: 'Endpoint non autorisé' };
   const ra = readCfg().ra || {};

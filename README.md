@@ -20,6 +20,7 @@ Windows 10 / 11 · 64 bits · en français
 - Roue de jaquettes en 3D avec reflet, à la souris (clic maintenu + glisser), au clavier ou à la manette.
 - Onglet par console, Favoris et Récents, tri (nom, temps de jeu, dernier lancement, date d'ajout) et filtre « jamais lancés ».
 - Jaquettes trouvées toutes seules (libretro-thumbnails, GameTDB, covers PS1/PS2, RetroAchievements), à plat et recadrées.
+- Fiche de jeu : résumé (Wikipédia), année, éditeur, genre, captures, durée de vie et succès RetroAchievements, ton temps de jeu.
 - Dossiers surveillés : les nouveaux jeux déposés apparaissent au démarrage.
 - Mode hors ligne : jaquettes, badges et infos déjà vus restent disponibles sans internet.
 
@@ -31,7 +32,7 @@ Windows 10 / 11 · 64 bits · en français
 
 ### Émulateurs
 - Installation et mise à jour en un clic depuis leur source officielle : **RALibretro**, **PCSX2**, **Cemu**, **Dolphin**, plus les cores RALibretro.
-- Contrôles et raccourcis modifiables depuis Emuglob (RALibretro, PCSX2, Dolphin, Azahar), au clavier ou à la manette.
+- Contrôles et raccourcis modifiables depuis Emuglob (RALibretro, PCSX2, Dolphin), au clavier ou à la manette.
 - Si un émulateur a disparu (disque débranché, dossier déplacé), Emuglob dit pourquoi et propose de le retrouver ou de le réinstaller.
 
 ### Sauvegardes
@@ -46,9 +47,9 @@ Windows 10 / 11 · 64 bits · en français
 |---|---|
 | ![Thème Néon](docs/theme-neon.jpg) | ![Thème Clair](docs/theme-clair.jpg) |
 
-| Écran de chargement | Paramètres |
-|---|---|
-| ![Écran de chargement](docs/chargement.png) | ![Paramètres](docs/parametres.png) |
+**Fiche de jeu**
+
+![Fiche de jeu](docs/fiche.png)
 
 ## Consoles
 
@@ -58,8 +59,6 @@ Windows 10 / 11 · 64 bits · en français
 | PCSX2 | PlayStation 2 |
 | Dolphin | Wii, GameCube |
 | Cemu | Wii U |
-| Azahar | Nintendo 3DS |
-| PPSSPP | PSP |
 
 D'autres émulateurs peuvent être ajoutés à la main (chemin et arguments dans Paramètres, Émulateurs).
 

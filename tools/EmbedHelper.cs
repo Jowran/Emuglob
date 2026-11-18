@@ -95,6 +95,7 @@ public static class EmbedHelper
     static IntPtr embedded = IntPtr.Zero;   // fenêtre de l'émulateur
     static IntPtr topWin = IntPtr.Zero;     // fenêtre principale d'Emuglob
     static string curMode = "child";
+    static bool streamMode = false;
     static int rx, ry, rw, rh;              // zone de jeu (pixels physiques, relative à la zone cliente d'Emuglob)
 
     // ---------- masquage : les fenêtres de l'émulateur sont envoyées hors de l'écran dès leur création, jusqu'à l'intégration ----------
@@ -198,6 +199,7 @@ public static class EmbedHelper
                 int x = int.Parse(p[3]), y = int.Parse(p[4]), w = int.Parse(p[5]), h = int.Parse(p[6]);
                 int timeout = p.Length > 7 ? int.Parse(p[7]) : 20000;
                 string mode = p.Length > 8 && p[8] == "overlay" ? "overlay" : "child";
+                streamMode = p.Length > 9 && p[9] == "stream";   // mode stream : la fenêtre doit rester « capturable » (pas de WS_EX_TOOLWINDOW)
                 HideStart(pid);   // tout de suite, avant que l'émulateur ait créé sa fenêtre
                 Thread t = new Thread(delegate () { DoEmbed(pid, parent, x, y, w, h, timeout, mode); });
                 t.IsBackground = true;
@@ -456,7 +458,9 @@ public static class EmbedHelper
         uint ex = (uint)(GetWindowLongPtr(win, GWL_EXSTYLE).ToInt64() & 0xFFFFFFFFL);
         // plus de cadre ni de barre de titre, mais on GARDE le menu natif (connexion RetroAchievements de RALibretro, par exemple)
         style = (style & ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CHILD)) | WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-        ex = (ex & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_APPWINDOW)) | WS_EX_TOOLWINDOW;   // pas de 2e icône dans la barre des tâches
+        ex = ex & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_APPWINDOW | WS_EX_TOOLWINDOW);
+        // pas de 2e icône dans la barre des tâches, sauf en mode stream : la capture de fenêtres ignore les fenêtres outils
+        ex |= streamMode ? WS_EX_APPWINDOW : WS_EX_TOOLWINDOW;
         SetWindowLongPtr(win, GWL_STYLE, new IntPtr((long)style));
         SetWindowLongPtr(win, GWL_EXSTYLE, new IntPtr((long)ex));
         SetWindowLongPtr(win, GWLP_HWNDPARENT, top);   // « propriétaire » : la fenêtre reste au-dessus d'Emuglob et suit sa pile de fenêtres

@@ -81,6 +81,8 @@ const SDL_KEY = { Enter: 'Return', Escape: 'Escape', Space: 'Space', Tab: 'Tab',
   Insert: 'Insert', Delete: 'Delete', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', PrintScreen: 'PrintScreen', ScrollLock: 'ScrollLock', Pause: 'Pause', CapsLock: 'CapsLock',
   ShiftLeft: 'Left Shift', ShiftRight: 'Right Shift', ControlLeft: 'Left Ctrl', ControlRight: 'Right Ctrl', AltLeft: 'Left Alt', AltRight: 'Right Alt',
   NumpadAdd: 'Keypad +', NumpadSubtract: 'Keypad -', NumpadMultiply: 'Keypad *', NumpadDivide: 'Keypad /', NumpadEnter: 'Keypad Enter', NumpadDecimal: 'Keypad .' };
+// zone morte d'un core (valeurs acceptées : multiples de 5 de 0 à max ; def = valeur par défaut du core)
+const RA_DZ = (max, def) => ({ num: true, min: 0, max, step: 5, unit: '%', sticks: [0], in: (r) => (r === undefined || r === '' ? def : Math.round(parseFloat(r) || 0)), out: (v) => String(Math.round(v / 5) * 5) });
 const RA = {
   id: 'ralibretro', name: 'RALibretro',
   match: (exe) => /ralibretro/i.test(path.basename(exe)),
@@ -95,7 +97,14 @@ const RA = {
       ['SAVE_SLOT', 'Sauvegarde rapide (emplacement actif)'], ['LOAD_SLOT', 'Chargement rapide (emplacement actif)'], ['NEXT_SLOT', 'Emplacement suivant'], ['PREV_SLOT', 'Emplacement précédent'],
       ...[1, 2, 3, 4].flatMap((n) => [[`SAVE${n}`, `Sauvegarder emplacement ${n}`], [`LOAD${n}`, `Charger emplacement ${n}`]]),
       ['DISK_NEXT', 'Disque suivant'], ['TRAY_OPEN', 'Ouvrir le plateau du disque']] },
+    // zone morte : RALibretro n'en a pas de réglable (fixée à 12,5 %) ; seuls certains cores en proposent une (option du core, Cores/<core>.json)
+    { id: 'dz', title: 'Zone morte', items: [
+      ['mupen64plus_next_libretro/mupen64plus-astick-deadzone', 'N64 : stick (Mupen64Plus-Next)', RA_DZ(30, 15)],
+      ['parallel_n64_libretro/parallel-n64-astick-deadzone', 'N64 : stick (ParaLLEl N64)', RA_DZ(30, 15)],
+      ['melondsds_libretro/melonds_joystick_cursor_deadzone', 'DS : curseur du stylet au stick (melonDS DS)', RA_DZ(35, 5)],
+      ['desmume_libretro/desmume_pointer_device_deadzone', 'DS : curseur du stylet au stick (DeSmuME)', RA_DZ(35, 15)]] },
   ],
+  coreFile: (exe, core) => path.join(path.dirname(exe), 'Cores', core + '.json'),
   encode(b, gid) {
     if (b.t === 'none') return 'none';
     const j = gid === 'J1' ? 'J1' : 'J0';
@@ -126,14 +135,31 @@ const RA = {
     if (txt === null) throw new Error(`fichier introuvable : ${f}. Lance RALibretro une fois pour le créer.`);
     const json = JSON.parse(txt);
     const vals = json.bindings || {};
-    return { files: [f], get: (gid, key) => vals[key] };
+    const coreOpt = (key) => {
+      const [core, opt] = key.split('/');
+      try { const t = readText(this.coreFile(exe, core)); return t === null ? undefined : (JSON.parse(t).core || {})[opt]; } catch { return undefined; }
+    };
+    return { files: [f], get: (gid, key) => (gid === 'dz' ? coreOpt(key) : vals[key]) };
   },
   save(exe, changes) {
-    const f = this.file(exe), json = JSON.parse(readText(f));
-    json.bindings = json.bindings || {};
-    for (const c of changes) json.bindings[c.key] = c.raw;
-    writeWithBackup(f, JSON.stringify(json));
-    return [f];
+    const f = this.file(exe), out = [];
+    const binds = changes.filter((c) => c.group !== 'dz');
+    if (binds.length) {
+      const json = JSON.parse(readText(f));
+      json.bindings = json.bindings || {};
+      for (const c of binds) json.bindings[c.key] = c.raw;
+      writeWithBackup(f, JSON.stringify(json));
+      out.push(f);
+    }
+    for (const c of changes.filter((x) => x.group === 'dz')) {   // option du core : le fichier est créé s'il n'existe pas encore (RALibretro complète le reste)
+      const [core, opt] = c.key.split('/'), cf = this.coreFile(exe, core), t = readText(cf);
+      const json = t === null ? {} : JSON.parse(t);
+      json.core = json.core || {};
+      json.core[opt] = c.raw;
+      if (t === null) { fs.mkdirSync(path.dirname(cf), { recursive: true }); fs.writeFileSync(cf, JSON.stringify(json)); } else writeWithBackup(cf, JSON.stringify(json));
+      out.push(cf);
+    }
+    return out;
   },
 };
 
@@ -492,7 +518,7 @@ function load(exe) {
         const raw = m.get(g.id, key) || '';
         if (opt && opt.num) {   // réglage chiffré (zone morte) : sticks physiques concernés pour l'aperçu
           const ref = opt.stickKey ? ad.decode(m.get(g.id, opt.stickKey)) : null;
-          return { key, label, num: true, min: opt.min, max: opt.max, unit: opt.unit, value: opt.in(raw), sticks: opt.sticks || (ref && ref.t === 'axis' ? [ref.a < 2 ? 0 : 2] : [0]) };
+          return { key, label, num: true, min: opt.min, max: opt.max, step: opt.step || 1, unit: opt.unit, value: opt.in(raw), sticks: opt.sticks || (ref && ref.t === 'axis' ? [ref.a < 2 ? 0 : 2] : [0]) };
         }
         return { key, label, raw, text: ad.text(raw, g.id), pad: ad.decode ? ad.decode(raw) : null };
       }) })),

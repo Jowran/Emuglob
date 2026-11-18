@@ -10,6 +10,9 @@ const HERE = __dirname;   // …\resources\app.asar
 const EXE_DIR = path.dirname(process.execPath);
 const ASAR_HINT = app.isPackaged ? path.join(process.resourcesPath, 'app.asar') : HERE;
 const REINSTALL = `Que faire : remets un app.asar sain dans « ${path.dirname(ASAR_HINT)} » (celui de la dernière version sur GitHub, ou renomme app.asar.bak en app.asar s'il existe).`;
+// mode portable : un fichier portable.txt à côté d'Emuglob.exe range toutes les données dans data\ (à faire avant que l'app soit prête)
+const PORT_BASE = app.isPackaged ? EXE_DIR : path.join(HERE, '..');
+if (fs.existsSync(path.join(PORT_BASE, 'portable.txt'))) { try { app.setPath('userData', path.join(PORT_BASE, 'data')); } catch { /* reste dans %APPDATA% */ } }
 const REDOWNLOAD = `Que faire : retélécharge Emuglob (fichier .zip de la dernière version sur GitHub), décompresse-le en entier, puis remets ce fichier dans « ${EXE_DIR} ».`;
 
 let started = false;
