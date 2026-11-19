@@ -1120,7 +1120,7 @@ function toast(msg) {
 /* ---------- identification des jeux (empreinte puis titre) ---------- */
 const ROMAN = new Map([['ii','2'],['iii','3'],['iv','4'],['vi','6'],['vii','7'],['viii','8'],['ix','9']]);
 const STOP = new Set(['the','a','an','of','and','disc','cd']);
-const toks = (s) => s.toLowerCase().replace(/\(.*?\)|\[.*?\]|~[^~]*~/g, ' ').replace(/&/g, ' and ').replace(/['’]/g, '')
+const toks = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\(.*?\)|\[.*?\]|~[^~]*~/g, ' ').replace(/&/g, ' and ').replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map((t) => ROMAN.get(t) || t).filter((t) => !STOP.has(t));
 const mkKey = (k) => ({ k, set: new Set(k), num: k.filter((t) => /^\d+$/.test(t)).sort().join(',') });
 function dice(a, b) {
