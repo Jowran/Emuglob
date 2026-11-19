@@ -1,5 +1,5 @@
 // Calcul des empreintes (MD5) utilisées par RetroAchievements pour reconnaître un jeu.
-// Couvre les consoles à cartouche ; PlayStation et DS (formats complexes) retombent sur la recherche par titre.
+// Couvre les consoles à cartouche et la DS ; PlayStation (format disque) retombe sur la recherche par titre.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -46,10 +46,31 @@ function n64Normalize(buf) {
   return out;
 }
 
+// DS (méthode rcheevos) : en-tête 0x160 + code ARM9 + code ARM7 + icône 0xA00, lus directement dans le fichier
+function ndsHash(read) {
+  let off = 0, h = read(0, 512);
+  if (h.length < 512) return '';
+  if (h[0] === 0x2E && h[1] === 0 && h[2] === 0 && h[3] === 0xEA && h[0xB0] === 0x44 && h[0xB1] === 0x46 && h[0xB2] === 0x96 && h[0xB3] === 0) { off = 512; h = read(off, 512); }   // en-tête SuperCard
+  const a9 = h.readUInt32LE(0x20), s9 = h.readUInt32LE(0x2C), a7 = h.readUInt32LE(0x30), s7 = h.readUInt32LE(0x3C), ic = h.readUInt32LE(0x68);
+  if (s9 + s7 > 16 * 1024 * 1024) return '';
+  const icon = Buffer.alloc(0xA00);
+  if (ic) read(off + ic, 0xA00).copy(icon);
+  return md5(Buffer.concat([h.subarray(0, 0x160), read(off + a9, s9), read(off + a7, s7), icon]));
+}
+function fileReader(file) {
+  const fd = fs.openSync(file, 'r');
+  return { close: () => fs.closeSync(fd), read: (pos, len) => { const b = Buffer.alloc(len); const n = fs.readSync(fd, b, 0, len, pos); return b.subarray(0, n); } };
+}
+
 // system = id de console RetroAchievements ; retourne '' si le système n'est pas géré
 function romHash(file, system) {
   const ext = path.extname(file).toLowerCase();
   if (system === 27) return md5(Buffer.from(path.basename(file, ext))); // arcade : nom du fichier sans extension
+  if (system === 18) {
+    if (ext === '.zip') { const z = readZip(file); return z ? ndsHash((p, n) => z.subarray(p, p + n)) : ''; }
+    const f = fileReader(file);
+    try { return ndsHash(f.read); } finally { f.close(); }
+  }
   let buf;
   if (ext === '.zip') buf = readZip(file);
   else if (fs.statSync(file).size <= MAX) buf = fs.readFileSync(file);

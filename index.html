@@ -1129,7 +1129,7 @@ function dice(a, b) {
   for (const t of a.set) if (b.set.has(t)) n++;
   return (2 * n) / (a.set.size + b.set.size);
 }
-const HASHABLE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14, 15, 25, 27]);
+const HASHABLE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14, 15, 18, 25, 27]);
 const tIdx = {};
 let thumbBusy = false;
 
@@ -1167,7 +1167,7 @@ function matchIn(g, L) {
   let m = g.hash && !g.raQuery ? L.byHash.get(g.hash) : null;
   g.raBy = m ? 'empreinte' : 'titre';
   if (!m) m = fuzzy(g, L.rows);
-  g.raV = 3;
+  g.raV = 4;   // 4 : empreinte DS ajoutée, les jeux non reconnus avant sont réessayés une fois
   g.raId = m ? m.id : -1;
   if (m) { g.raIcon = m.icon; g.raTitle = m.title; }
 }
@@ -1178,7 +1178,7 @@ async function matchGame(g) {
 }
 async function autoMatch() {
   if (!raOn()) return;
-  const todo = cfg.games.filter((g) => raSys(g) && !g.raManual && (g.raId === undefined || (g.raId === -1 && g.raV !== 3)));
+  const todo = cfg.games.filter((g) => raSys(g) && !g.raManual && (g.raId === undefined || (g.raId === -1 && g.raV !== 4)));
   if (!todo.length) return;
   for (const g of todo) await matchGame(g);
   save(); render(); findThumbs();
