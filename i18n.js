@@ -26,7 +26,7 @@
     'Fiche du jeu (touche I)': 'Game sheet (I key)', 'Jeu au hasard (touche R)': 'Random game (R key)', 'Options': 'Options', 'Trier / filtrer': 'Sort / filter',
     'Couper / remettre le son': 'Mute / unmute', "Volume de l'émulateur": 'Emulator volume', 'Manette': 'Controller', 'Favori': 'Favorite', 'Console': 'Console',
     'Gauche / Droite': 'Left / Right', 'Haut / Bas': 'Up / Down', 'Système ?': 'System?', "à l'instant": 'just now', 'moins d\'1 min': 'less than 1 min',
-    'Temps de jeu': 'Play time', 'Dernier lancement': 'Last played', "Date d'ajout": 'Date added', '· jamais lancés seulement': '· never played only',
+    'Nom (A → Z)': 'Name (A → Z)', 'Nom (Z → A)': 'Name (Z → A)', 'Tri : par défaut': 'Sort: default', 'Tri : nom (a → z)': 'Sort: name (a → z)', 'Tri : nom (z → a)': 'Sort: name (z → a)', 'Temps de jeu': 'Play time', 'Dernier lancement': 'Last played', "Date d'ajout": 'Date added', '· jamais lancés seulement': '· never played only',
     'Trier par': 'Sort by', 'Filtre': 'Filter', 'Jamais lancés seulement': 'Never played only', 'Tous': 'All', 'Récents': 'Recent', 'Favoris': 'Favorites', 'Consoles': 'Consoles',
     'Succès : jeu non reconnu sur RetroAchievements': 'Achievements: game not recognized on RetroAchievements', 'Succès : chargement…': 'Achievements: loading…',
     'Aucun jeu dans cet onglet': 'No games in this tab', 'Bienvenue dans Emuglob': 'Welcome to Emuglob', "Ajoute tes jeux dans l'onglet Paramètres": 'Add your games in the Settings tab',
