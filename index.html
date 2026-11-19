@@ -133,6 +133,19 @@
   .sh-hash .sh-tags { margin:6px 0 0; gap:5px; }
   .sh-hash .sh-tags span { padding:2px 8px; font-size:11px; }
   .sh-card .fb { margin-top:8px; font-size:12px; padding:5px 10px; }
+  .sh-ach[data-shach] { cursor:pointer; }
+  .sh-achf { display:flex; gap:6px; margin:14px 0 8px; flex-wrap:wrap; }
+  .sh-achf button { background:none; border:1px solid rgba(255,255,255,.18); color:inherit; font:inherit; font-size:13px; padding:4px 12px; border-radius:999px; cursor:pointer; }
+  .sh-achf button.on { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.4); }
+  .sh-achl { display:flex; flex-direction:column; gap:4px; max-width:860px; margin-bottom:12px; }
+  .sh-achr { display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:10px; cursor:pointer; }
+  .sh-achr:hover, .sh-achr:focus { background:rgba(255,255,255,.08); outline:none; }
+  .sh-achr img { width:48px; height:48px; border-radius:8px; flex:none; }
+  .sh-achr.lock img { opacity:.75; } .sh-achr.lock b { opacity:.8; }
+  .sh-achr > div { flex:1; min-width:0; } .sh-achr b { display:block; font-weight:600; } .sh-achr small { display:block; color:var(--muted); font-size:12.5px; line-height:1.4; }
+  .sh-achr .sh-achm { font-size:11.5px; margin-top:2px; opacity:.85; }
+  .sh-achp { font-size:13px; font-weight:600; white-space:nowrap; color:var(--acc); }
+  body.light .sh-achf button { border-color:rgba(0,0,0,.15); } body.light .sh-achf button.on { background:rgba(0,0,0,.08); } body.light .sh-achr:hover, body.light .sh-achr:focus { background:rgba(0,0,0,.05); }
   .sh-tabs { display:flex; gap:6px; margin:16px 0 4px; }
   .sh-tabs button { background:rgba(255,255,255,.08); border:1px solid transparent; color:inherit; font:inherit; font-size:14px; padding:6px 16px; border-radius:999px; cursor:pointer; }
   .sh-tabs button.on { background:color-mix(in srgb, var(--acc) 45%, transparent); border-color:var(--acc); }
@@ -263,6 +276,13 @@
   .corow button { padding:4px 10px; font-size:12px; }
   #dlg-tuto { width:min(760px, 94vw); }
   #dlg-cons { width:min(820px, 94vw); }
+  #dlg-achl { width:min(860px, 94vw); } #al-sub { font-size:13px; }
+  #al-body { height:min(66vh, 680px); overflow:auto; scrollbar-width:none; } #al-body::-webkit-scrollbar { display:none; }
+  #al-body .sh-achf { margin-top:0; position:sticky; top:0; background:inherit; padding-bottom:6px; z-index:1; }
+  .sh-h4b { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .sh-lnk { background:none; border:1px solid rgba(255,255,255,.3); color:inherit; font:inherit; font-size:11.5px; letter-spacing:0; text-transform:none; padding:3px 10px; border-radius:8px; cursor:pointer; }
+  .sh-lnk:hover, .sh-lnk:focus { border-color:var(--acc); background:color-mix(in srgb, var(--acc) 25%, transparent); outline:none; }
+  body.light .sh-lnk { border-color:rgba(0,0,0,.2); }
   .cs-h { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; } .cs-h h2 { margin:0 0 10px; } #cs-n { font-size:13px; }
   #cs-q { width:100%; box-sizing:border-box; margin-bottom:10px; }
   #cs-list { height:min(62vh, 640px); overflow:auto; display:flex; flex-direction:column; gap:4px; scrollbar-width:none; }
@@ -877,6 +897,11 @@
   <div class="row"><button id="co-ok" style="margin-right:auto">Fermer</button><button id="co-base" style="background:#5b46d6">Installer les cores de base</button></div>
 </dialog>
 
+<dialog id="dlg-achl">
+  <div class="cs-h"><h2 id="al-title" translate="no"></h2><span id="al-sub" class="muted"></span></div>
+  <div id="al-body"></div>
+  <div class="row"><button id="al-close">Fermer</button></div>
+</dialog>
 <dialog id="dlg-cons">
   <div class="cs-h"><h2 id="cs-title"></h2><span id="cs-n" class="muted"></span></div>
   <input id="cs-q" placeholder="Filtrer les jeux…" autocomplete="off" spellcheck="false">
@@ -2133,7 +2158,7 @@ async function openSheet(g = cur(), from = '') {
   closeOv();
   sheetFrom = from;
   if (from === 'friends') setTop('fr');
-  mode = 'sheet'; sheetGame = g; hashAll = false; sheetTab = 'info'; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
+  mode = 'sheet'; sheetGame = g; hashAll = false; sheetTab = 'info'; achFilter = 'all'; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
   renderSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
@@ -2207,7 +2232,7 @@ function renderSheet() {
     const last = [...s.got].sort((a, b) => date(b).localeCompare(date(a)))[0];
     const next = s.all.filter((a) => !date(a)).sort((a, b) => (b.NumAwarded || 0) - (a.NumAwarded || 0)).slice(0, last ? 4 : 5);
     const rare = (a) => (players ? ` · ${(Math.round((1000 * (a.NumAwarded || 0)) / players) / 10).toString().replace('.', LANG === 'en' ? '.' : ',')} % des joueurs` : '');
-    const row = (a, lock, sub) => `<div class="sh-ach"><img src="${RAM}/Badge/${esc(a.BadgeName)}${lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(a.Title)}</b><small>${esc(sub)}</small></div></div>`;
+    const row = (a, lock, sub) => `<div class="sh-ach" data-shach="${a.ID}" title="Détail du succès"><img src="${RAM}/Badge/${esc(a.BadgeName)}${lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'"><div><b>${esc(a.Title)}</b><small>${esc(sub)}</small></div></div>`;
     ach = (last ? row(last, false, 'Débloqué le ' + dayFr(date(last).replace(' ', 'T'))) : '') + next.map((a) => row(a, true, a.Description + rare(a))).join('');
   }
   const pc = s && s.total ? Math.round((100 * s.got.length) / s.total) : 0;
@@ -2243,11 +2268,30 @@ function renderSheet() {
       : !s ? '<div class="sh-card"><h4>Succès RetroAchievements</h4><div class="sh-load">Chargement…</div></div>'
       : `<div class="sh-card"><h4>${g.virtual ? 'Ta progression' : 'Succès RetroAchievements'}</h4><div class="sh-prog"><b>${s.got.length} / ${s.total}</b><span class="sh-sub">${s.pts} / ${totalPts} pts</span></div>
         <div class="sh-bar"><i style="width:${pc}%"></i></div>${players ? `<div class="sh-src">${players.toLocaleString(LOC)} joueurs sur RetroAchievements</div>` : ''}</div>
-        ${ach ? `<div class="sh-card"><h4>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</h4>${ach}</div>` : ''}`}
+        ${ach ? `<div class="sh-card"><h4 class="sh-h4b"><span>${s.got.length < s.total ? 'Prochains succès' : 'Dernier succès'}</span><button class="sh-lnk" data-achlist>Liste des succès</button></h4>${ach}</div>` : ''}`}
     ${g.virtual ? '' : subStats(g).map((x) => `<div class="sh-card"><h4>Subset · ${esc(x.name)}</h4><div class="sh-prog"><b>${x.s.got.length} / ${x.s.total}</b><span class="sh-sub">${x.s.pts} pts</span></div>
       <div class="sh-bar"><i style="width:${Math.round((100 * x.s.got.length) / x.s.total)}%"></i></div></div>`).join('')}
     ${g.virtual ? hashCard(x) : `<div class="sh-card"><h4>Fichier</h4><div class="sh-file">${esc(g.path.split(/[\\/]/).pop())}<br>${g.missing ? 'Fichier introuvable' : 'Format ' + esc(extOf(g.path).slice(1).toUpperCase())}${g.raId > 0 ? '<br>Reconnu par RetroAchievements ✓' : ''}</div></div>`}
   </div></div>`;
+}
+// tous les succès du jeu (onglet Succès de la fiche) : filtre, rareté, date ; clic = détail
+let achFilter = 'all';
+function achListHTML(s, players) {
+  const date = (a) => a.DateEarnedHardcore || a.DateEarned;
+  const pc = (k) => (Math.round((1000 * (k || 0)) / players) / 10).toString().replace('.', LANG === 'en' ? '.' : ',');
+  const ord = (a, b) => (a.DisplayOrder || 0) - (b.DisplayOrder || 0) || a.ID - b.ID;
+  const list = s.all.filter((a) => achFilter === 'all' || (achFilter === 'got' ? date(a) : !date(a))).sort(ord);
+  const typ = { progression: 'Progression', win_condition: 'Condition de victoire', missable: 'Ratable' };
+  const chip = (k, t) => `<button class="${achFilter === k ? 'on' : ''}" data-achf="${k}">${t}</button>`;
+  return `<div class="sh-achf">${chip('all', `Tous (${s.total})`)}${chip('got', `Débloqués (${s.got.length})`)}${chip('left', `Restants (${s.total - s.got.length})`)}</div>
+  <div class="sh-achl">${list.length ? list.map((a) => {
+    const d = date(a), t = typ[a.type || a.Type];
+    return `<div class="sh-achr ${d ? '' : 'lock'}" data-shach="${a.ID}" tabindex="0" title="Détail du succès">
+      <img src="${RAM}/Badge/${esc(a.BadgeName)}${d ? '' : '_lock'}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div><b translate="no">${esc(a.Title)}</b><small translate="no">${esc(a.Description || '')}</small>
+      <small class="sh-achm">${d ? `<span>${a.DateEarnedHardcore ? 'Hardcore' : 'Softcore'}</span> · <span>${esc(dayFr(d.replace(' ', 'T')))}</span>` : '<span>Pas encore débloqué</span>'}${players ? ` · <span>${pc(a.NumAwardedHardcore)} % des joueurs</span>` : ''}${t ? ` · <span>${t}</span>` : ''}</small></div>
+      <span class="sh-achp">${a.Points || 0} pts</span></div>`;
+  }).join('') : '<div class="sh-load" style="padding:10px 0">Aucun succès ici.</div>'}</div>`;
 }
 // jeu absent de la bibliothèque : versions de ROM reconnues par RetroAchievements (clic sur un MD5 = copie)
 let hashAll = false;
@@ -2271,6 +2315,9 @@ $('#sh-body').onclick = (e) => {
   const md = e.target.closest('[data-md5]'); if (md) { navigator.clipboard.writeText(md.dataset.md5).then(() => toast('MD5 copié.'), () => {}); return; }
   if (e.target.closest('[data-hmore]')) { hashAll = !hashAll; return renderSheet(); }
   const tb = e.target.closest('[data-tab]'); if (tb) { sheetTab = tb.dataset.tab; return renderSheet(); }
+  if (e.target.closest('[data-achlist]')) return openAchList();
+  const sa = e.target.closest('[data-shach]');
+  if (sa) return openSheetAch(sa.dataset.shach);
   const sb = e.target.closest('[data-sub]');
   if (sb) {
     const y = ((sheetX[sheetGame.id] || {}).subs || [])[+sb.dataset.sub]; if (!y) return;
@@ -2283,6 +2330,30 @@ $('#sh-body').onclick = (e) => {
   else if (b.dataset.sh === 'fav') { toggleFav(g); renderSheet(); }
   else if (b.dataset.sh === 'menu') openMenu(g);
 };
+function openSheetAch(id) {
+  {
+    const p = prog[sheetGame.raId] && prog[sheetGame.raId].data, a = p && p.Achievements && p.Achievements[id];
+    if (!a) return;
+    const d = a.DateEarnedHardcore || a.DateEarned;
+    return openAch({ ...a, AchievementID: a.ID, GameID: sheetGame.raId, GameTitle: p.Title, ConsoleName: p.ConsoleName, Type: a.type || a.Type,
+      HardcoreMode: !!a.DateEarnedHardcore, at: d ? d.replace(' ', 'T') + 'Z' : '', me: true, locked: !d, fromSheet: true });
+  }
+}
+// liste complète des succès (bouton « Liste des succès » de la fiche)
+function openAchList() {
+  const g = sheetGame, s = stats(g), p = g && prog[g.raId] && prog[g.raId].data;
+  if (!s || !p) return;
+  $('#al-title').textContent = p.Title || g.title;
+  $('#al-sub').textContent = `${s.got.length} / ${s.total} succès · ${s.pts} pts`;
+  $('#al-body').innerHTML = achListHTML(s, p.NumDistinctPlayers || p.NumDistinctPlayersCasual);
+  const d = $('#dlg-achl'); if (!d.open) { d.showModal(); $('#al-body').scrollTop = 0; }
+}
+$('#al-body').onclick = (e) => {
+  const af = e.target.closest('[data-achf]'); if (af) { achFilter = af.dataset.achf; return openAchList(); }
+  const sa = e.target.closest('[data-shach]'); if (sa) openSheetAch(sa.dataset.shach);
+};
+$('#al-body').onkeydown = (e) => { const r = e.target.closest('[data-shach]'); if (r && e.key === 'Enter') { e.preventDefault(); openSheetAch(r.dataset.shach); } };
+$('#al-close').onclick = () => $('#dlg-achl').close();
 
 /* ---------- trophées = succès RetroAchievements ---------- */
 const achRow = (a) => `<div class="ach ${a.lock ? 'lock' : ''}"><img src="${RAM}/Badge/${esc(a.badge)}${a.lock ? '_lock' : ''}.png" alt="" onerror="this.style.visibility='hidden'">
@@ -3624,13 +3695,14 @@ async function openAch(a) {
   $('#ach-body').innerHTML = `<div class="ach-top"><img src="${RAM}/Badge/${esc(a.BadgeName)}.png" alt="" onerror="this.style.visibility='hidden'">
     <div><h2 translate="no">${esc(a.Title)}</h2><p class="ach-desc" translate="no">${esc(a.Description || '')}</p></div></div>
     <div class="ach-tags"><span class="pts">${a.Points || 0} pts</span>${a.TrueRatio ? `<span><span>${a.TrueRatio}</span> <span>points réels</span></span>` : ''}
-      <span class="${a.HardcoreMode ? 'hc' : ''}">${a.HardcoreMode ? 'Hardcore' : 'Softcore'}</span>${typ ? `<span>${typ}</span>` : ''}${subTag(a)}</div>
+      ${a.locked ? '' : `<span class="${a.HardcoreMode ? 'hc' : ''}">${a.HardcoreMode ? 'Hardcore' : 'Softcore'}</span>`}${typ ? `<span>${typ}</span>` : ''}${subTag(a)}</div>
     <div class="ach-meta">
       <div><small>Joueur</small><b translate="no">${a.me ? esc(cfg.ra.user) : esc(a.friend)}</b></div>
-      <div><small>Obtenu</small><b>${when ? esc(when.toLocaleString(LOC, { dateStyle: 'long', timeStyle: 'short' })) : '?'}</b></div>
+      <div><small>Obtenu</small><b>${when ? esc(when.toLocaleString(LOC, { dateStyle: 'long', timeStyle: 'short' })) : a.locked ? 'Pas encore' : '?'}</b></div>
       <div><small>Jeu</small><b translate="no">${esc(a.base || a.GameTitle || '')}</b><span class="muted">${esc(a.ConsoleName || '')}</span></div>
       <div><small>Rareté</small><div id="ach-rare"><b>…</b></div></div>
     </div>`;
+  $('#ach-game').hidden = !!a.fromSheet;
   if (!d.open) d.showModal();
   const r = await api.ra('GetGameInfoAndUserProgress', { g: a.GameID }, 60);
   if (achCur !== a) return;
