@@ -319,6 +319,17 @@ ipcMain.handle('wiiu:check', (_e, rpx) => {
 });
 ipcMain.handle('files:exist', (_e, paths) => Promise.all(paths.map((p) => fs.promises.access(p).then(() => true, () => false))));
 ipcMain.handle('shell:reveal', (_e, p) => { shell.showItemInFolder(p); });
+// ouvre un émulateur de la configuration, sans jeu (ex. pour se connecter à RetroAchievements dans ses réglages)
+ipcMain.handle('emu:open', (_e, id) => {
+  const emu = (readCfg().emulators || []).find((x) => x.id === id);
+  const exe = emu && emu.exe;
+  if (!exe || !/\.exe$/i.test(exe) || !fs.existsSync(exe)) return { ok: false, error: 'introuvable' };
+  return new Promise((resolve) => {
+    const child = spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
+    child.once('error', (err) => resolve({ ok: false, error: err.message }));
+    child.once('spawn', () => { child.unref(); resolve({ ok: true }); });
+  });
+});
 
 /* ---------- intégration de la fenêtre de l'émulateur dans Emuglob (Windows) ----------
    Un petit programme C# (tools/EmbedHelper.cs) est compilé au premier usage avec le csc.exe de Windows, puis piloté en texte (stdin/stdout). */

@@ -664,6 +664,9 @@
   body.light .lpv s { background:rgba(30,35,60,.28); } body.light .lpv-hero b { background:rgba(30,35,60,.55); }
   body.light .lpv u, body.light .lpv em { background:rgba(30,35,60,.18); }
   body.light .lpv s.c, body.light .lpv s.a, body.light .lpv-grid s:first-child, body.light .lpv-hero b.p { background:var(--acc); }
+  .raemu { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px; }
+  .raemu > div { flex:1; min-width:0; } .raemu small { color:var(--muted); } .raemu button { flex:none; }
+  body.light .raemu { border-color:rgba(0,0,0,.08); }
   /* ---------- dispositions de l'accueil (Paramètres › Apparence › Disposition de l'accueil) ---------- */
   #f-hero, #f-art { display:none; }
   #home.lg .floor, #home.lg .fi .rf, #home.lh .floor, #home.lh .fi .rf { display:none; }
@@ -944,6 +947,8 @@
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-covers">Rechercher les jaquettes manquantes</button></div>
   <label>Succès RetroAchievements (identification par empreinte du fichier, puis par titre)</label>
   <div class="row" style="margin-top:0;justify-content:flex-start"><button id="s-rematch">Relancer la détection des jeux</button></div>
+  <label>Débloquer des succès hors RALibretro : connecte-toi une fois dans l'émulateur</label>
+  <div id="s-raemu"></div>
   </div>
   <div data-sec="jeu">
   <label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;margin-top:14px"><input type="checkbox" id="s-embed" style="width:auto"> Intégrer l'émulateur dans la fenêtre Emuglob (expérimental, Windows)</label>
@@ -2957,6 +2962,13 @@ function openEmulators() {
   fill(); d.showModal();
 }
 
+// où activer RetroAchievements dans les émulateurs qui ne passent pas par RALibretro
+const RA_EMUS = [
+  { id:'pcsx2', n:'PCSX2', c:'PlayStation 2', w:'Paramètres › Succès : coche « Activer les succès », puis « Se connecter » avec ton compte RetroAchievements.' },
+  { id:'dolphin', n:'Dolphin', c:'GameCube / Wii', w:'Outils › Succès, onglet Paramètres : active les succès puis connecte-toi (version 2407 ou plus récente).' },
+  { id:'ppsspp', n:'PPSSPP', c:'PSP', w:'Paramètres › Outils › RetroAchievements : connecte-toi avec ton compte.' },
+];
+const RA_NONE = 'Sans succès RetroAchievements : Azahar (3DS), Cemu (Wii U), Eden (Switch) et Lichii (Switch 2). Ces consoles ne sont pas prises en charge par RetroAchievements.';
 const SET_SECS = { ra:'RetroAchievements', jeu:'Lancement des jeux', app:'Fond et démarrage', discord:'Discord' };
 function openSettings(sec) {
   const d = $('#dlg-set');
@@ -2989,6 +3001,9 @@ function openSettings(sec) {
   };
   const commit = () => { cfg.ra = { user: $('#s-user').value.trim(), key: $('#s-key').value.trim() }; cfg.hideWhilePlaying = $('#s-hide').checked; cfg.embedGames = $('#s-embed').checked; cfg.embedMode = $('#s-mode').value; cfg.streamMirror = $('#s-stream').checked; cfg.startFullscreen = $('#s-fs').checked; cfg.shareSaves = $('#s-saves').checked; cfg.discord = { ...(cfg.discord || {}), on: $('#s-dc').checked };
     if (autoInit !== null && $('#s-auto').checked !== autoInit) { autoInit = $('#s-auto').checked; api.autostart(autoInit); } save(); };
+  $('#s-raemu').innerHTML = RA_EMUS.map((x) => `<div class="raemu"><div><b>${x.n}</b> <span class="muted">${x.c}</span><br><small>${x.w}</small></div><button data-emu="${x.id}">Ouvrir ${x.n}</button></div>`).join('')
+    + `<p class="muted" style="font-size:12px;margin:8px 0 0">${RA_NONE}</p>`;
+  $('#s-raemu').onclick = async (e) => { const b = e.target.closest('[data-emu]'); if (!b) return; const r = await api.emuOpen(b.dataset.emu); if (!r.ok) toast('Émulateur introuvable : installe-le ou indique son chemin dans Paramètres, Émulateurs.'); };
   $('#s-test').onclick = async () => {
     commit();
     const r = await api.ra('GetUserProfile', {}, 0);
@@ -3999,7 +4014,9 @@ const TUTO = [
     <li>Paramètres, Système, <b>Sauvegardes</b> : exporter ou restaurer ta bibliothèque et tes réglages.</li></ul>` },
   { ic:'trophy', t:'Succès RetroAchievements', go:() => openSettings('ra'), h:`<ol><li>Crée un compte gratuit sur <b>retroachievements.org</b>.</li>
     <li>Dans Emuglob, Paramètres, Comptes, <b>RetroAchievements</b> : ton pseudo et ta <b>clé API Web</b> (sur le site : Paramètres, Clés). Emuglob affiche alors tes points, tes succès et ceux de chaque jeu.</li>
-    <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li></ol>
+    <li>Pour <b>débloquer</b> des succès, connecte-toi aussi une fois dans RALibretro (au premier lancement d'un jeu).</li>
+    <li>Les autres émulateurs ont leur propre connexion, à faire une fois : <b>PCSX2</b> (PS2) : Paramètres › Succès. <b>Dolphin</b> (GameCube / Wii) : Outils › Succès. <b>PPSSPP</b> (PSP) : Paramètres › Outils › RetroAchievements. Le bouton « Y aller » ouvre la page RetroAchievements d'Emuglob, avec un bouton pour ouvrir chaque émulateur.</li>
+    <li>Pas de succès sur 3DS, Wii U, Switch et Switch 2 (Azahar, Cemu, Eden, Lichii) : RetroAchievements ne prend pas ces consoles en charge.</li></ol>
     <ul><li><b>Hardcore</b> : pas de sauvegarde d'état, de retour arrière ni de ralenti, mais les points comptent pleinement. <b>Softcore</b> : tout est permis, les succès sont marqués à part.</li>
     <li>Seules les ROMs <b>reconnues</b> par RetroAchievements (bonne version, non modifiée) ont des succès.</li></ul>` },
   { ic:'search', t:'Rechercher et fiche de jeu', go:() => $('#q').focus(), h:`<ul><li>La <b>barre de recherche</b> (en haut) trouve tes jeux, puis <b>tous les jeux RetroAchievements</b>, même ceux que tu n'as pas. Tape un nom de <b>console</b> (ex. « snes ») pour voir tous ses jeux RetroAchievements. Flèches et Entrée pour choisir.</li>
@@ -4051,7 +4068,9 @@ const TUTO_EN = [
     <li>Settings, System, <b>Saves</b>: export or restore your library and settings.</li></ul>` },
   { t:'RetroAchievements', h:`<ol><li>Create a free account on <b>retroachievements.org</b>.</li>
     <li>In Emuglob, Settings, Accounts, <b>RetroAchievements</b>: your username and your <b>Web API key</b> (on the site: Settings, Keys). Emuglob then shows your points, your achievements and each game's.</li>
-    <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li></ol>
+    <li>To <b>unlock</b> achievements, also log in once in RALibretro (the first time you launch a game).</li>
+    <li>The other emulators have their own login, to do once: <b>PCSX2</b> (PS2): Settings › Achievements. <b>Dolphin</b> (GameCube / Wii): Tools › Achievements. <b>PPSSPP</b> (PSP): Settings › Tools › RetroAchievements. The "Go there" button opens Emuglob's RetroAchievements page, with a button to open each emulator.</li>
+    <li>No achievements on 3DS, Wii U, Switch and Switch 2 (Azahar, Cemu, Eden, Lichii): RetroAchievements doesn't support these consoles.</li></ol>
     <ul><li><b>Hardcore</b>: no save states, rewind or slow motion, but points count fully. <b>Softcore</b>: anything goes, achievements are marked separately.</li>
     <li>Only ROMs <b>recognized</b> by RetroAchievements (right version, unmodified) have achievements.</li></ul>` },
   { t:'Search and game sheet', h:`<ul><li>The <b>search bar</b> (at the top) finds your games, then <b>every RetroAchievements game</b>, even the ones you don't have. Type a <b>console</b> name (e.g. "snes") to see all its RetroAchievements games. Arrows and Enter to pick.</li>

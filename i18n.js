@@ -88,7 +88,13 @@
     'Sauvegarde restaurée dans Cemu.': 'Save restored to Cemu.', 'Déjà à jour : rien de nouveau.': 'Already up to date: nothing new.', 'Copie faite.': 'Copy made.',
     'avant une restauration': 'before a restore', 'Déjà dans Emuglob : sauvegarde du': 'Already in Emuglob: save from', 'Restaurer': 'Restore',
     // tuto
-    'Passer le tuto': 'Skip tutorial', 'Personnalisation': 'Customization', "Choisir l'interface": 'Choose the interface', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
+    'Passer le tuto': 'Skip tutorial',
+    "Débloquer des succès hors RALibretro : connecte-toi une fois dans l'émulateur": 'Unlock achievements outside RALibretro: log in once in the emulator',
+    'Paramètres › Succès : coche « Activer les succès », puis « Se connecter » avec ton compte RetroAchievements.': 'Settings › Achievements: tick "Enable Achievements", then "Login" with your RetroAchievements account.',
+    'Outils › Succès, onglet Paramètres : active les succès puis connecte-toi (version 2407 ou plus récente).': 'Tools › Achievements, Settings tab: enable achievements then log in (version 2407 or newer).',
+    'Paramètres › Outils › RetroAchievements : connecte-toi avec ton compte.': 'Settings › Tools › RetroAchievements: log in with your account.',
+    'Sans succès RetroAchievements : Azahar (3DS), Cemu (Wii U), Eden (Switch) et Lichii (Switch 2). Ces consoles ne sont pas prises en charge par RetroAchievements.': "No RetroAchievements: Azahar (3DS), Cemu (Wii U), Eden (Switch) and Lichii (Switch 2). RetroAchievements doesn't support these consoles.",
+    'Émulateur introuvable : installe-le ou indique son chemin dans Paramètres, Émulateurs.': 'Emulator not found: install it or set its path in Settings, Emulators.', 'Personnalisation': 'Customization', "Choisir l'interface": 'Choose the interface', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
     // contrôles
     'Contrôles': 'Controls', 'Zone morte': 'Dead zone', 'Branche une manette et appuie sur ses boutons : la manette s\'allume et l\'action réglée s\'affiche ici.': 'Plug in a controller and press its buttons: the controller lights up and the assigned action shows here.',
     'Appliquer et relancer le jeu': 'Apply and restart game', 'Au prochain lancement': 'On next launch', "Changer les touches de l'émulateur sans quitter le jeu": "Change the emulator's buttons without leaving the game",
@@ -258,7 +264,7 @@
     ['Installer la version {} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.', 'Install version {}? Emuglob will close and restart. The current version is kept.'],
     ['il y a {} min', '{} min ago'], ['il y a {} h', '{} h ago'], ['il y a {} j', '{} d ago'], ['Vu {}', 'Seen {}'],
     ['{} h {} min', '{} h {} min'], ['{} {}/{} succès · {} pts', '{} {}/{} achievements · {} pts'], ['{}/{} succès', '{}/{} achievements'], ['{} succès', '{} achievements'],
-    ['Actuelle : {}', 'Current: {}'], ['Disposition : {}', 'Layout: {}'],
+    ['Actuelle : {}', 'Current: {}'], ['Ouvrir {}', 'Open {}'], ['Disposition : {}', 'Layout: {}'],
     ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Hash supportés ({})', 'Supported hashes ({})'], ['Subsets ({})', 'Subsets ({})'], ['{} jeux RetroAchievements', '{} RetroAchievements games'], ['{} jeu RetroAchievements', '{} RetroAchievements game'], ['{} jeux · {} dans ta bibliothèque', '{} games · {} in your library'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
     ['Fichier introuvable : {}. Disque débranché ?', 'File not found: {}. Drive unplugged?'], ['keys.txt importé ({} clés).', 'keys.txt imported ({} keys).'],
     ['keys.txt importé ({} clés) dans {}.', 'keys.txt imported ({} keys) to {}.'],
