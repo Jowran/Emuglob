@@ -631,6 +631,72 @@
   .thc .pv i:last-child { transform:perspective(80px) rotateY(-40deg); }
   .thc .nm { display:block; padding:7px 10px; font-size:13px; font-weight:600; background:rgba(0,0,0,.25); }
   body.light .thc .nm { background:#f3f4f8; }
+  /* ---------- dispositions de l'accueil (Paramètres › Apparence › Disposition de l'accueil) ---------- */
+  #f-hero, #f-art { display:none; }
+  #home.lg .floor, #home.lg .fi .rf, #home.lh .floor, #home.lh .fi .rf { display:none; }
+  #home.lg .fi, #home.lh .fi { position:relative; left:auto; bottom:auto; margin:0; transform:none !important; filter:none !important; opacity:1 !important; z-index:auto !important; transition:none; }
+  #home.lg #f-items, #home.lh #f-items { position:relative; inset:auto; transform-style:flat; }
+  #home.lg .fi .case, #home.lh .fi .case { transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, opacity .2s; }
+  /* Étagère : toutes les jaquettes de la console en grille, posées sur des étagères */
+  #home.lg .fstage { perspective:none; overflow-x:hidden; overflow-y:auto; scrollbar-width:none; margin:10px 56px 0; padding:0 4px;
+    -webkit-mask-image:linear-gradient(transparent 0, #000 22px, #000 calc(100% - 22px), transparent); }
+  #home.lg .fstage::-webkit-scrollbar { display:none; }
+  #home.tv.lg .fstage { margin:14px 40px 0 18px; }
+  #home.lg #f-items { display:grid; grid-template-columns:repeat(auto-fill, minmax(var(--CW,180px), 1fr)); row-gap:24px; padding:26px 0 34px; }
+  #home.lg .fi { height:var(--CH,240px); display:flex; align-items:flex-end; justify-content:center; padding:0 12px 9px; }
+  #home.lg .fi::after { content:""; position:absolute; left:0; right:0; bottom:0; height:9px; pointer-events:none;
+    background:linear-gradient(rgba(255,255,255,.13), rgba(255,255,255,.02)); border-top:1px solid rgba(255,255,255,.2); box-shadow:0 10px 18px -8px rgba(0,0,0,.6); }
+  #home.lg .fi .case { height:var(--h); transform-origin:center bottom; }
+  #home.lg .fi:hover .case { transform:translateY(-4px); }
+  #home.lg .fi.cc .case { transform:translateY(-6px) scale(1.07); box-shadow:0 0 0 2px var(--acc), 0 0 22px color-mix(in srgb, var(--acc) 55%, transparent), 0 18px 30px rgba(0,0,0,.55); }
+  #home.lg .finfo { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"t a" "s a" "p a"; align-items:center; column-gap:32px; text-align:left; padding:10px 56px 22px; }
+  #home.tv.lg .finfo { padding:10px 40px 22px 22px; }
+  #home.lg #f-title { grid-area:t; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #home.lg #f-sub { grid-area:s; }
+  #home.lg #prog { grid-area:p; justify-content:flex-start; }
+  #home.lg #prog:empty { display:none; }
+  #home.lg .actions { grid-area:a; margin:0; }
+  #home.lg #bottom, #home.lh #bottom { display:none; }
+  /* Vitrine : grand visuel du jeu, rangée de jaquettes en bas, pensée pour la manette */
+  body.lh #f-hero { display:block; position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  #f-hero i { position:absolute; inset:-80px; background:center/cover no-repeat; filter:blur(60px) saturate(1.4) brightness(.8); opacity:.45; transition:opacity .5s;
+    -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,.35), #000 70%); }
+  body.light #f-hero i { opacity:.3; }
+  body[data-th=oled] #f-hero i { opacity:.28; }
+  #home.lh { display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto minmax(0,1fr) auto; }
+  #home.lh > .ftabs-wrap { grid-column:1 / -1; grid-row:1; }
+  #home.lh > .finfo { grid-column:1; grid-row:2; }
+  #home.lh > #f-art { grid-column:2; grid-row:2; }
+  #home.lh > .fstage { grid-column:1 / -1; grid-row:3; }
+  #home.tv.lh { grid-template-columns:270px minmax(0,1fr) auto; grid-template-rows:minmax(0,1fr) auto; }
+  #home.tv.tc.lh { grid-template-columns:76px minmax(0,1fr) auto; }
+  #home.tv.lh > .ftabs-wrap { grid-column:1; grid-row:1 / -1; }
+  #home.tv.lh > .finfo { grid-column:2; grid-row:1; }
+  #home.tv.lh > #f-art { grid-column:3; grid-row:1; }
+  #home.tv.lh > .fstage { grid-column:2 / -1; grid-row:2; }
+  #home.lh .finfo { align-self:center; text-align:left; padding:0 40px 0 72px; max-width:1100px; }
+  #home.tv.lh .finfo { padding-left:40px; }
+  #home.lh #f-title { font-size:clamp(34px, 3.2vw, 62px); font-weight:700; line-height:1.08; letter-spacing:-.5px; overflow-wrap:anywhere;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  #home.lh #f-sub { font-size:16px; margin-top:12px; }
+  #home.lh #prog { justify-content:flex-start; margin-top:14px; }
+  #home.lh .actions { justify-content:flex-start; margin-top:26px; }
+  #home.lh .btn { height:52px; font-size:19px; } #home.lh .btn.round { width:52px; }
+  #home.lh #btn-play { background:var(--acc); border-color:var(--acc); color:#fff; padding:0 64px; }
+  #home.lh #f-art { display:flex; align-items:center; justify-content:center; min-height:0; padding:18px 8vw 18px 0; }
+  #home.lh #f-art .case { box-shadow:0 30px 70px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.5); border-radius:8px; animation:fart .35s ease both; }
+  @keyframes fart { from { opacity:0; transform:translateX(18px); } }
+  #home.lh .fstage { perspective:none; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; height:calc(var(--RH,180px) * 1.18 + 46px); padding:0; }
+  #home.lh .fstage::-webkit-scrollbar { display:none; }
+  #home.lh #f-items { display:flex; align-items:flex-end; gap:18px; height:100%; padding:0 72px 22px; width:max-content; }
+  #home.tv.lh #f-items { padding-left:40px; }
+  #home.lh .fi { --h:var(--RH); height:var(--RH); flex:none; }
+  #home.lh .fi .case { transform-origin:left bottom; opacity:.72; }
+  #home.lh .fi:hover .case { opacity:1; }
+  #home.lh .fi.cc { margin-right:calc(var(--RH) * var(--r) * .18); }
+  #home.lh .fi.cc .case { opacity:1; transform:scale(1.18); box-shadow:0 0 0 3px var(--acc), 0 0 26px color-mix(in srgb, var(--acc) 55%, transparent), 0 18px 34px rgba(0,0,0,.6); }
+  body.light #home.lg .fi::after { background:linear-gradient(rgba(0,0,0,.06), rgba(0,0,0,0)); border-top-color:rgba(0,0,0,.12); box-shadow:none; }
+  @media (min-width:2400px) { #home.lh #f-sub { font-size:19px; } }
 </style>
 </head>
 <body>
@@ -654,6 +720,7 @@
 })();
 </script>
 <div id="tint"></div>
+<div id="f-hero"><i></i></div>
 <div id="top">
   <div class="brand"><img src="assets/logo.svg" alt="" onerror="this.remove()">EMUGLOB</div>
   <div><span class="tab on" id="tab-jeux">Jeux</span><span class="tab" id="tab-fr">Amis</span><span class="tab" id="tab-set">Paramètres</span><span class="tab" id="tab-tro">Succès</span></div>
@@ -667,6 +734,7 @@
 <div id="home">
   <div class="ftabs-wrap" id="f-tabs-wrap"><button class="farr l" id="f-tl" title="Précédent">‹</button><div class="ftabs" id="f-tabs"></div><button class="farr r" id="f-tr" title="Suivant">›</button></div>
   <div class="fstage" id="f-stage"><div class="floor"></div><div id="f-items"></div></div>
+  <div id="f-art" aria-hidden="true"></div>
   <div class="finfo">
     <div id="f-title" translate="no"></div>
     <div id="f-sub"></div>
@@ -1472,6 +1540,10 @@ function render() {
   $('#home').classList.toggle('tv', tm === 'vertical' || tm === 'compact');
   $('#home').classList.toggle('tc', tm === 'compact');
   $('#home').classList.toggle('th', tm === 'compact' && cfg.tabsHover !== false);
+  const lay = homeLayout();
+  $('#home').classList.toggle('lg', lay === 'grid');
+  $('#home').classList.toggle('lh', lay === 'hero');
+  document.body.classList.toggle('lh', lay === 'hero');
   $('#f-tabs').innerHTML = fcons.map((x, k) => (k === 0 ? '<div class="fcat">Bibliothèque</div>' : '')
     + (!x.key.startsWith('__') && (k === 0 || fcons[k - 1].key.startsWith('__')) ? '<div class="fcat">Consoles</div>' : '')
     + `<button class="ftab ${k === fci ? 'on' : ''}" data-i="${k}" title="${esc(x.label)} (${x.games.length})${hasNew(x) ? ' · nouveau jeu' : ''}">${tabBadge(x)}${hasNew(x) ? '<i class="fnew"></i>' : ''}<span class="nm">${esc(x.label)}</span><span class="ct">${x.games.length}</span></button>`).join('');
@@ -1499,6 +1571,7 @@ function updTabsFade() {
 function placeFlow() {
   const st = $('#f-stage'), cg = fgames[fi];
   if (!cg) return;
+  if (homeLayout() !== 'flow') return placeAlt(st);
   const Hc = Math.max(160, Math.min(st.clientHeight * 0.66, 540));
   st.style.setProperty('--FH', Hc + 'px');
   const Wc = Hc * (cg.ar || styleOf(cg).ar);
@@ -1515,6 +1588,58 @@ function placeFlow() {
     el.style.opacity = ah > 11 ? 0 : 1; el.style.pointerEvents = ah > 11 ? 'none' : '';
     el.classList.toggle('cc', !d);
   });
+}
+// dispositions de l'accueil : Roue (3D, par défaut), Étagère (grille de jaquettes), Vitrine (grand visuel + rangée, pensée manette)
+const LAYOUTS = { flow:'Roue', grid:'Étagère', hero:'Vitrine' };
+const LAYOUTS_HELP = { flow:'Jaquettes en 3D qui défilent (par défaut)', grid:'Toutes les jaquettes de la console en grille', hero:'Grand visuel du jeu et rangée de jaquettes, idéal à la manette' };
+const homeLayout = () => (LAYOUTS[cfg.homeLayout] ? cfg.homeLayout : 'flow');
+function openLayoutDlg() {
+  const d = $('#dlg-menu'), cur = homeLayout();
+  $('#m-list').innerHTML = '<div class="mcap">Disposition de l\'accueil</div>'
+    + Object.entries(LAYOUTS).map(([k, l]) => `<button data-l="${k}" class="${k === cur ? 'sel' : ''}" title="${LAYOUTS_HELP[k]}"><b>${l}</b><br><small class="muted">${LAYOUTS_HELP[k]}</small></button>`).join('')
+    + '<button data-a="x">Fermer</button>';
+  d.onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    d.close();
+    if (b.dataset.l && b.dataset.l !== cur) { cfg.homeLayout = b.dataset.l; save(); render(); if (mode === 'settings') drawSetPane(); toast('Disposition : ' + LAYOUTS[b.dataset.l]); }
+  };
+  d.showModal();
+}
+// colonnes de la grille (Étagère)
+const gridCols = () => Math.max(1, getComputedStyle($('#f-items')).gridTemplateColumns.split(' ').filter(Boolean).length);
+function placeAlt(st) {
+  const items = [...$('#f-items').children], hero = homeLayout() === 'hero';
+  if (hero) {
+    const RH = Math.round(Math.max(110, Math.min(230, innerHeight * 0.16)));
+    st.style.setProperty('--RH', RH + 'px');
+  } else {
+    // largeur des cases selon la forme habituelle des jaquettes de la console (DS presque carrées, GBA en hauteur…)
+    const rs = fgames.map((g) => g.ar || styleOf(g).ar).sort((x, y) => x - y), rm = rs[Math.floor(rs.length / 2)] || 0.72;
+    const CH = Math.round(Math.max(170, Math.min(320, innerHeight * 0.25))), CW = Math.round((CH - 30) * Math.min(1.1, rm) + 24);
+    st.style.setProperty('--CH', CH + 'px'); st.style.setProperty('--CW', CW + 'px');
+    items.forEach((el, i) => { const g = fgames[i]; if (g) el.style.setProperty('--h', Math.min(CH - 30, (CW - 24) / (g.ar || styleOf(g).ar)).toFixed(1) + 'px'); });
+  }
+  items.forEach((el, i) => el.classList.toggle('cc', i === fi));
+  const sel = items[fi];
+  if (!sel) return;
+  if (hero) {   // le jeu choisi reste à gauche de la rangée, comme sur une console de salon
+    const pad = parseFloat(getComputedStyle($('#f-items')).paddingLeft) || 0;
+    st.scrollTo({ left: Math.max(0, sel.offsetLeft - pad), behavior: 'smooth' });
+    const a = $('#f-art'), h = Math.max(160, Math.min(a.clientHeight - 36, 680));
+    a.style.setProperty('--h', h + 'px');
+  } else {
+    const top = sel.offsetTop, bot = top + sel.offsetHeight, m = 40;
+    if (top - m < st.scrollTop) st.scrollTo({ top: Math.max(0, top - m), behavior: 'smooth' });
+    else if (bot + m > st.scrollTop + st.clientHeight) st.scrollTo({ top: bot + m - st.clientHeight, behavior: 'smooth' });
+  }
+}
+// haut / bas : rangée suivante dans l'Étagère (console suivante au bord), console suivante ailleurs
+function homeVert(d) {
+  if (homeLayout() !== 'grid' || !fgames.length) return flowCons(d);
+  const c = gridCols(), t = fi + d * c;
+  if (t >= 0 && t < fgames.length) return flowSet(t);
+  if (d > 0 && Math.floor(fi / c) < Math.floor((fgames.length - 1) / c)) return flowSet(fgames.length - 1);
+  flowCons(d);
 }
 function flowSet(i) {
   if (!fgames.length) return;
@@ -1549,6 +1674,11 @@ function renderInfo() {
   const g = cur(), n = cfg.games.length;
   $('#btn-play').style.visibility = $('#btn-sheet').style.visibility = $('#btn-more').style.visibility = $('#btn-rand').style.visibility = g ? '' : 'hidden';
   $('#tint').style.setProperty('--fcc', g ? flowColor(g) : '#5b46d6');
+  if (homeLayout() === 'hero') {
+    const u = g && artUrl(g);
+    $('#f-hero i').style.backgroundImage = u ? `url("${u.replace(/["\\()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}")` : 'none';
+    $('#f-art').innerHTML = g ? `<div data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar};height:var(--h)">${caseHTML(g)}</div>` : '';
+  }
   if (!g) {
     $('#f-title').textContent = n ? 'Aucun jeu dans cet onglet' : 'Bienvenue dans Emuglob';
     $('#f-sub').textContent = n ? '' : 'Ajoute tes jeux dans l\'onglet Paramètres';
@@ -2542,6 +2672,7 @@ const SET_ITEMS = [
   { g:'inst', ic:'download', t:'Cores RALibretro', s:'Un core par console · installer, mettre à jour', act:() => openCores() },
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
+  { g:'look', ic:'flow', t:'Disposition de l\'accueil', get s() { return 'Actuelle : ' + LAYOUTS[homeLayout()]; }, act:() => openLayoutDlg() },
   { g:'look', ic:'list', t:'Barre des consoles', get s() { return TABS_MODES[cfg.tabsMode || 'horizontal'] + ', ordre, icônes'; }, act:() => openTabsDlg() },
   { g:'look', ic:'star', t:'Fond et démarrage', s:'Fond d\'écran, plein écran, Windows', act:() => openSettings('app') },
   { g:'acc', ic:'trophy', t:'RetroAchievements', s:'Compte, jaquettes, succès', act:() => openSettings('ra') },
@@ -3353,7 +3484,7 @@ $('#f-tabs').onclick = (e) => { const b = e.target.closest('.ftab'); if (b) { cf
 // roue à la souris : clic gauche maintenu + glisser = la roue tourne (un jeu par cran)
 let dragX = null, dragMoved = false;
 $('#f-stage').addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
+  if (e.button !== 0 || homeLayout() === 'grid') return;
   dragX = e.clientX; dragMoved = false;
 });
 window.addEventListener('pointermove', (e) => {
@@ -3386,6 +3517,7 @@ $('#f-tl').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: -el.cl
 $('#f-tr').onclick = () => { const el = $('#f-tabs'); el.scrollBy({ left: el.clientWidth * 0.7, behavior: 'smooth' }); };
 let wheelT = 0;
 $('#f-stage').addEventListener('wheel', (e) => {
+  if (homeLayout() === 'grid') return;   // Étagère : défilement normal de la grille
   e.preventDefault();
   const t = performance.now();
   if (t - wheelT < 70) return;
@@ -3491,8 +3623,10 @@ document.addEventListener('keydown', (e) => {
     const k = e.key, kl = k.toLowerCase();
     if (k === 'ArrowLeft') flowMove(-1);
     else if (k === 'ArrowRight') flowMove(1);
-    else if (k === 'ArrowUp' || k === 'PageUp') flowCons(-1);
-    else if (k === 'ArrowDown' || k === 'PageDown') flowCons(1);
+    else if (k === 'ArrowUp') homeVert(-1);
+    else if (k === 'ArrowDown') homeVert(1);
+    else if (k === 'PageUp') flowCons(-1);
+    else if (k === 'PageDown') flowCons(1);
     else if (k === 'Enter') launch(cur());
     else if (kl === 'f') toggleFav();
     else if (kl === 'm') openMenu();
@@ -3522,7 +3656,7 @@ function pad() {
     if (dlg) { if (b) dlg.close(); }
     else if (mode === 'home') {
       if (dx && t - lastMove > 140) { lastMove = t; flowMove(dx); }
-      else if (dy && t - lastMove > 260) { lastMove = t; flowCons(dy); }
+      else if (dy && t - lastMove > (homeLayout() === 'grid' ? 170 : 260)) { lastMove = t; homeVert(dy); }
       if (lb) flowCons(-1);
       if (rb) flowCons(1);
       if (a) launch(cur());

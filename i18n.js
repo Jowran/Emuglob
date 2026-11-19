@@ -140,6 +140,10 @@
     'Connecté à Discord.': 'Connected to Discord.', 'connecté': 'connected',
     'Entretien de la bibliothèque': 'Library maintenance', 'Dossiers surveillés (Emuglob y cherche de nouveaux jeux à chaque démarrage)': 'Watched folders (Emuglob looks for new games there at each startup)',
     'Chercher de nouveaux jeux maintenant': 'Look for new games now', 'Fichiers': 'Files', 'Vérifier les fichiers': 'Check files', 'Retirer les jeux introuvables': 'Remove missing games',
+    // dispositions de l'accueil
+    "Disposition de l'accueil": 'Home layout', 'Roue': 'Wheel', 'Étagère': 'Shelf', 'Vitrine': 'Showcase',
+    'Jaquettes en 3D qui défilent (par défaut)': '3D scrolling covers (default)', 'Toutes les jaquettes de la console en grille': "All of the console's covers in a grid",
+    'Grand visuel du jeu et rangée de jaquettes, idéal à la manette': 'Large game visual and a row of covers, great with a controller',
     'Doublons': 'Duplicates', 'Retirer les doublons': 'Remove duplicates', 'Barre des consoles': 'Console bar', 'Affichage': 'Display',
     'En mode « Icônes seules », afficher les noms au survol': 'In "Icons only" mode, show names on hover',
     'Consoles (glisser ou ↑ ↓ pour l\'ordre · « Icône » pour mettre ton propre logo)': 'Consoles (drag or ↑ ↓ to reorder · "Icon" to use your own logo)',
@@ -254,6 +258,7 @@
     ['Installer la version {} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.', 'Install version {}? Emuglob will close and restart. The current version is kept.'],
     ['il y a {} min', '{} min ago'], ['il y a {} h', '{} h ago'], ['il y a {} j', '{} d ago'], ['Vu {}', 'Seen {}'],
     ['{} h {} min', '{} h {} min'], ['{} {}/{} succès · {} pts', '{} {}/{} achievements · {} pts'], ['{}/{} succès', '{}/{} achievements'], ['{} succès', '{} achievements'],
+    ['Actuelle : {}', 'Current: {}'], ['Disposition : {}', 'Layout: {}'],
     ['Dernière partie {}', 'Last session {}'], ['{} partie(s)', '{} session(s)'], ['Tout afficher ({})', 'Show all ({})'], ['Hash supportés ({})', 'Supported hashes ({})'], ['Subsets ({})', 'Subsets ({})'], ['{} jeux RetroAchievements', '{} RetroAchievements games'], ['{} jeu RetroAchievements', '{} RetroAchievements game'], ['{} jeux · {} dans ta bibliothèque', '{} games · {} in your library'], ['Profil de {}', "{}'s profile"], ['{} parties', '{} sessions'], ['{} partie', '{} session'],
     ['Fichier introuvable : {}. Disque débranché ?', 'File not found: {}. Drive unplugged?'], ['keys.txt importé ({} clés).', 'keys.txt imported ({} keys).'],
     ['keys.txt importé ({} clés) dans {}.', 'keys.txt imported ({} keys) to {}.'],
