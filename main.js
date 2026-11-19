@@ -86,6 +86,7 @@ function createWindow() {
   let st = null;
   try { st = readJson(winStatePath()); } catch { /* première ouverture */ }
   const opts = {
+    title: 'Emuglob ' + app.getVersion(),   // version visible dans la barre de titre uniquement (Discord garde « Emuglob »)
     width: 1400, height: 820, backgroundColor: START_BG[(() => { try { return readCfg().theme; } catch { return ''; } })()] || '#140e3a', autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'logo.ico' : 'logo.png'),   // logo Emuglob (barre des tâches, fenêtre)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
@@ -95,6 +96,7 @@ function createWindow() {
     if (Number.isFinite(st.x) && Number.isFinite(st.y) && onScreen(st)) { opts.x = st.x; opts.y = st.y; }   // jamais hors écran (second écran débranché)
   }
   win = new BrowserWindow(opts);
+  win.on('page-title-updated', (e) => e.preventDefault());   // garde « Emuglob x.y.z » malgré le <title> de la page
   win.setMenuBarVisibility(false);
   if (st && st.maximized) win.maximize();
   if (readCfg().startFullscreen) win.setFullScreen(true);
