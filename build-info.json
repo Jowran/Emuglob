@@ -1,11 +1,11 @@
 {
- "built": "2026-11-19T00:33:23Z",
+ "built": "2026-11-19T00:37:21Z",
  "sha256": {
   "discid.js": "c1b71f187f4624d9c97c878ae19f93f3445eae40e1c19bf35d4d4e72e01b729d",
   "discord.js": "2f4c2026480238e527b72fffbfe07f3cb8abc7a3e7acc299944e478f24505d5a",
   "emucfg.js": "e915c63056a45bfcf0b5979004f8cad35d71ff53f75f0395f9fda9f2bbff1df9",
-  "i18n.js": "5e3a699ed3f18f73aadba3ab8f53ffb3cdc4e8a96c5a5128afc2bf97bb243022",
-  "index.html": "bf0b52b2a93088029506658acfde1e1d2f5c882d77b8fd02022a9c12bf816668",
+  "i18n.js": "46c63658fc29db9fb5baf2e06ca5ad69965c6226a94c77df6efef9df6198252e",
+  "index.html": "edfc75cdcb71c645f3d5524bffeb2291d9daadb735ebdee349654d38ed23c443",
   "main.js": "e8d236a825abed70191df74e1caa5fdf719dcf491fade029b1e2911a4a5d098c",
   "package.json": "bee1e19b3d79bce9d8e45a5a3e87108e8e2aaf158fe3f8d9c2a76a49cc836c57",
   "preload.js": "0e65ba12e017e949a97b5bbeef00faf9595229a823cc0252af893f42612d970c",

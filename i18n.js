@@ -88,7 +88,7 @@
     'Sauvegarde restaurée dans Cemu.': 'Save restored to Cemu.', 'Déjà à jour : rien de nouveau.': 'Already up to date: nothing new.', 'Copie faite.': 'Copy made.',
     'avant une restauration': 'before a restore', 'Déjà dans Emuglob : sauvegarde du': 'Already in Emuglob: save from', 'Restaurer': 'Restore',
     // tuto
-    'Passer le tuto': 'Skip tutorial', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
+    'Passer le tuto': 'Skip tutorial', 'Personnalisation': 'Customization', "Choisir l'interface": 'Choose the interface', 'Y aller': 'Go there', 'Précédent': 'Previous', 'Suivant': 'Next', 'Terminer': 'Finish',
     // contrôles
     'Contrôles': 'Controls', 'Zone morte': 'Dead zone', 'Branche une manette et appuie sur ses boutons : la manette s\'allume et l\'action réglée s\'affiche ici.': 'Plug in a controller and press its buttons: the controller lights up and the assigned action shows here.',
     'Appliquer et relancer le jeu': 'Apply and restart game', 'Au prochain lancement': 'On next launch', "Changer les touches de l'émulateur sans quitter le jeu": "Change the emulator's buttons without leaving the game",

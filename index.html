@@ -1758,7 +1758,7 @@ function applyTheme() {
 
 /* ---------- sons de navigation (générés, aucun fichier audio) ---------- */
 const snd = () => {
-  const d = { ui: true, uiVol: 0.5 };
+  const d = { ui: false, uiVol: 0.5 };   // sons des menus coupés par défaut
   cfg.sound = { ui: (cfg.sound || {}).ui ?? d.ui, uiVol: (cfg.sound || {}).uiVol ?? d.uiVol };
   return cfg.sound;
 };
@@ -3653,7 +3653,7 @@ function pad() {
     const a = edge(0), b = edge(1), x = edge(2), y = edge(3), st = edge(9), lb = edge(4), rb = edge(5), back = edge(8);
     const dlg = document.querySelector('dialog[open]');
     const step = (dx || dy) && t - lastMove > 170;
-    if (dlg) { if (b) dlg.close(); }
+    if (dlg) { if (b && !(tutoLock && dlg.id === 'dlg-tuto')) dlg.close(); }
     else if (mode === 'home') {
       if (dx && t - lastMove > 140) { lastMove = t; flowMove(dx); }
       else if (dy && t - lastMove > (homeLayout() === 'grid' ? 170 : 260)) { lastMove = t; homeVert(dy); }
@@ -3971,6 +3971,9 @@ const TUTO = [
   { ic:'user', t:'Profil, amis et Discord', go:() => openSettings('discord'), h:`<ul><li><b>Profil</b> (le rond en haut à droite) : temps de jeu, jeux les plus joués, puis tes stats RetroAchievements.</li>
     <li><b>Amis</b> : ce que jouent les gens que tu suis sur RetroAchievements.</li>
     <li><b>Discord</b> : affiche le jeu en cours sur ton profil Discord. Un simple interrupteur dans Paramètres, Comptes.</li></ul>` },
+  { ic:'flow', t:'Personnalisation', stay:true, go:() => openLayoutDlg(), h:`<ul><li><b>Disposition de l'accueil</b> : <b>Roue</b> (jaquettes en 3D qui défilent), <b>Étagère</b> (toutes les jaquettes en grille) ou <b>Vitrine</b> (grand visuel du jeu, idéale à la manette).</li>
+    <li><b>Choisir l'interface</b> l'ouvre tout de suite, le tuto reste ouvert derrière.</li>
+    <li>Tu peux la changer quand tu veux : Paramètres, Apparence, Disposition de l'accueil.</li></ul>` },
   { ic:'music', t:'Apparence et mises à jour', go:() => openAmbDlg(), h:`<ul><li><b>Thèmes et sons</b> : couleurs selon la console, sons de navigation.</li>
     <li><b>Barre des consoles</b> : horizontale, verticale ou en icônes, ordre et consoles cachées.</li>
     <li><b>Fond et démarrage</b> : fond d'écran, plein écran (F11), lancement avec Windows. <b>Langue</b> : français ou anglais.</li>
@@ -4020,30 +4023,39 @@ const TUTO_EN = [
   { t:'Profile, friends and Discord', h:`<ul><li><b>Profile</b> (the circle at the top right): play time, most played games, then your RetroAchievements stats.</li>
     <li><b>Friends</b>: what the people you follow on RetroAchievements are playing.</li>
     <li><b>Discord</b>: shows the current game on your Discord profile. A simple switch in Settings, Accounts.</li></ul>` },
+  { t:'Customization', h:`<ul><li><b>Home layout</b>: <b>Wheel</b> (3D scrolling covers), <b>Shelf</b> (all covers in a grid) or <b>Showcase</b> (large game visual, great with a controller).</li>
+    <li><b>Choose the interface</b> opens it right away, the tutorial stays open behind it.</li>
+    <li>Change it anytime: Settings, Appearance, Home layout.</li></ul>` },
   { t:'Appearance and updates', h:`<ul><li><b>Themes and sounds</b>: colors based on the console, navigation sounds.</li>
     <li><b>Console bar</b>: horizontal, vertical or icons, order and hidden consoles.</li>
     <li><b>Wallpaper and startup</b>: wallpaper, full screen (F11), launch with Windows. <b>Language</b>: French or English.</li>
     <li><b>Update</b>: Emuglob checks for the latest version online and updates in one click. The old version is kept.</li></ul>
     <div class="tip">That's all! Have fun.</div>` },
 ];
+let tutoLock = false;   // premier affichage : le tuto ne peut pas être passé
 function openTuto(first) {
   const d = $('#dlg-tuto');
-  let i = 0;
+  let i = 0, seen = 0;
+  tutoLock = !!first;
   const show = () => {
     const p = LANG === 'en' ? { ...TUTO[i], ...TUTO_EN[i] } : TUTO[i];
+    seen = Math.max(seen, i);
     $('#tu-dots').innerHTML = TUTO.map((_, k) => `<i class="${k <= i ? 'on' : ''}" data-k="${k}"></i>`).join('');
     $('#tu-body').innerHTML = `<div class="tuh">${ic(p.ic)}<div><div class="tun">${i + 1} / ${TUTO.length}</div><h2>${p.t}</h2></div></div>${p.h}`;
     $('#tu-prev').disabled = i === 0;
     $('#tu-next').textContent = i === TUTO.length - 1 ? 'Terminer' : 'Suivant';
-    $('#tu-go').hidden = !p.go;
-    $('#tu-skip').textContent = first ? 'Passer le tuto' : 'Fermer';
+    $('#tu-go').hidden = !p.go || (first && !p.stay);   // la 1re fois, seuls les boutons qui gardent le tuto ouvert
+    $('#tu-go').textContent = p.stay ? 'Choisir l\'interface' : 'Y aller';
+    $('#tu-skip').textContent = 'Fermer';
+    $('#tu-skip').hidden = first;
   };
-  const done = () => { if (!cfg.tutoSeen) { cfg.tutoSeen = true; save(); } d.close(); };
-  $('#tu-dots').onclick = (e) => { const k = e.target.dataset.k; if (k !== undefined) { i = +k; show(); } };
+  const done = () => { tutoLock = false; if (!cfg.tutoSeen) { cfg.tutoSeen = true; save(); } d.close(); };
+  $('#tu-dots').onclick = (e) => { const k = e.target.dataset.k; if (k !== undefined && (!first || +k <= seen)) { i = +k; show(); } };
+  d.oncancel = (e) => { if (tutoLock) e.preventDefault(); };   // Échap bloqué la 1re fois
   $('#tu-prev').onclick = () => { if (i) { i--; show(); } };
   $('#tu-next').onclick = () => { if (i < TUTO.length - 1) { i++; show(); } else done(); };
   $('#tu-skip').onclick = done;
-  $('#tu-go').onclick = () => { const go = TUTO[i].go; done(); go(); };
+  $('#tu-go').onclick = () => { const p = TUTO[i]; if (p.stay) return p.go(); done(); p.go(); };
   d.onkeydown = (e) => { if (e.key === 'ArrowRight') $('#tu-next').click(); else if (e.key === 'ArrowLeft') $('#tu-prev').click(); };
   show(); d.showModal(); $('#tu-next').focus();
 }
