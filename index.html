@@ -1487,7 +1487,11 @@ const FLOWC = { 1:'#2563eb', 2:'#16a34a', 3:'#7c3aed', 4:'#84a526', 5:'#4f46e5',
 const FLOW_HINTS = [['A','Jouer'], ['X','Options'], ['Y','Favori'], ['LB / RB','Console'], ['Gauche / Droite','Jeux'], ['Haut / Bas','Console']];
 let fcons = [], fci = 0, fgames = [], fi = 0;
 const fpos = {};
-const alpha = (a, b) => a.title.localeCompare(b.title);
+// tri alphabétique « humain » : sans accents ni casse, articles de tête ignorés (The, Le, La, Les, L'), nombres dans l'ordre (2 avant 10)
+const ALPHA_ART = /^(?:(?:the|a|an|le|la|les|un|une|der|die|das|el|los|las)\s+|l['’]\s*)(?=\S)/i;
+const alphaKey = (t) => String(t || '').trim().replace(ALPHA_ART, '');
+const ALPHA_COL = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true, ignorePunctuation: true });
+const alpha = (a, b) => ALPHA_COL.compare(alphaKey(a.title), alphaKey(b.title)) || ALPHA_COL.compare(a.title, b.title);
 function fmtDur(sec) {
   const m = Math.round(sec / 60);
   if (m < 1) return "moins d'1 min";
@@ -1545,16 +1549,17 @@ function tabBadge(t) {
   const ab = TAB_ABBR[t.label] || t.label.split(/[\s/-]+/).filter(Boolean).map((w) => (/\d/.test(w) ? w : w[0])).join('').slice(0, 4).toUpperCase();
   return `<span class="cbadge" style="--cc:${consColor(t)}">${esc(ab)}</span>`;
 }
-// tri des jeux dans les onglets Favoris et consoles (Récents garde son ordre)
-const SORTS = { name: 'Nom', time: 'Temps de jeu', last: 'Dernier lancement', added: "Date d'ajout" };
+// tri des jeux dans les onglets Favoris et consoles (« Par défaut » : Récents garde son ordre, consoles en A → Z)
+const SORTS = { name: 'Par défaut', az: 'Nom (A → Z)', za: 'Nom (Z → A)', time: 'Temps de jeu', last: 'Dernier lancement', added: "Date d'ajout" };
 function sortFn() {
   const k = cfg.sortBy;
+  if (k === 'za') return (a, b) => alpha(b, a);
   if (k === 'time') return (a, b) => (b.playSeconds || 0) - (a.playSeconds || 0) || alpha(a, b);
   if (k === 'last') return (a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0) || alpha(a, b);
   if (k === 'added') { const pos = new Map(cfg.games.map((g, i) => [g, i])); return (a, b) => pos.get(b) - pos.get(a); }   // ordre d'ajout réel (les anciens jeux n'ont pas de date)
   return alpha;
 }
-const sortLabel = () => 'Tri : ' + (SORTS[cfg.sortBy] || 'Nom').toLowerCase() + (cfg.onlyUnplayed ? ' · jamais lancés seulement' : '');
+const sortLabel = () => 'Tri : ' + (SORTS[cfg.sortBy] || SORTS.name).toLowerCase() + (cfg.onlyUnplayed ? ' · jamais lancés seulement' : '');
 function openSort() {
   const d = $('#dlg-menu'), cur = SORTS[cfg.sortBy] ? cfg.sortBy : 'name';
   $('#m-list').innerHTML = '<div class="mcap">Trier par</div>' + Object.entries(SORTS).map(([k, l]) => `<button data-s="${k}" class="${k === cur ? 'sel' : ''}">${l}</button>`).join('')
@@ -1616,7 +1621,7 @@ function render() {
   if (lastConsKey !== null && ck !== lastConsKey) sfx('cons');
   lastConsKey = ck;
   applyTheme();
-  $('#btn-sort').classList.toggle('act', (cfg.sortBy && cfg.sortBy !== 'name') || !!cfg.onlyUnplayed);
+  $('#btn-sort').classList.toggle('act', (SORTS[cfg.sortBy] && cfg.sortBy !== 'name') || !!cfg.onlyUnplayed);
 }
 
 // barre des consoles : fondu + flèches selon ce qui reste à faire défiler
@@ -2100,7 +2105,7 @@ function renderLib() {
   $('#lib-body').innerHTML = groups.length ? groups.map(([k, gs], idx) => {
     const open = q ? true : (k in cfg.open ? cfg.open[k] : idx === 0);
     return `<div class="lhead" tabindex="0" data-k="${esc(k)}" data-open="${open ? 1 : 0}"><span class="ch">${ic(open ? 'down' : 'right')}</span>${esc(k)} <small>${gs.length} jeu(x)</small></div>` +
-      (open ? '<div class="lgrid">' + gs.sort((a, b) => a.title.localeCompare(b.title)).map((g) =>
+      (open ? '<div class="lgrid">' + gs.sort(alpha).map((g) =>
         `<div class="lcard" tabindex="0" data-id="${g.id}" data-gid="${g.id}" style="--r:${g.ar || styleOf(g).ar}">${caseHTML(g)}<div class="lt" translate="no">${esc(g.title)}</div></div>`).join('') + '</div>' : '');
   }).join('') : '<p class="muted">Aucun jeu.</p>';
 }
@@ -3850,7 +3855,7 @@ async function openFindSaves(pre) {
     const by = new Map();
     items.forEach((c, i) => { if (!c.gameId) return; if (!by.has(c.gameId)) by.set(c.gameId, []); by.get(c.gameId).push(i); });
     const orphan = items.map((c, i) => (c.gameId ? -1 : i)).filter((i) => i >= 0);
-    const gameOpts = cfg.games.slice().sort((a, b) => a.title.localeCompare(b.title)).map((g) => `<option value="${esc(g.id)}">${esc(g.title)} (${esc(labelOf(g))})</option>`).join('');
+    const gameOpts = cfg.games.slice().sort(alpha).map((g) => `<option value="${esc(g.id)}">${esc(g.title)} (${esc(labelOf(g))})</option>`).join('');
     const todo = items.filter((c) => c.newer).length;
     $('#fs-state').textContent = !items.length ? 'Aucune sauvegarde trouvée pour les jeux de ta bibliothèque.'
       : `${items.length} sauvegarde${items.length > 1 ? 's' : ''} trouvée${items.length > 1 ? 's' : ''} pour ${by.size} jeu${by.size > 1 ? 'x' : ''}. Choisis celle à importer pour chaque jeu.`;
