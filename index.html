@@ -1309,6 +1309,15 @@ const subRA = {};   // raId du jeu de base → [{ id, name }]
 // titre RA comparé sans accents/ponctuation ; « Jeu A | Jeu B » (versions jumelles) compte pour chacune
 const raParts = (t) => String(t || '').replace(/\[[^\]]*\]/g, ' ').split('|').map((x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()).filter(Boolean);
 const sameRaGame = (a, b) => { const A = raParts(a); return raParts(b).some((x) => A.includes(x)); };
+// jeu RA jumelé (« HeartGold | SoulSilver ») : un subset d'une seule des versions ne va qu'avec la ROM de cette version
+function fitsRom(g, subTitle, base) {
+  const parts = raParts(base), sp = raParts(subTitle);
+  if (parts.length < 2 || sp.length !== 1) return true;
+  const others = new Set(parts.filter((x) => x !== sp[0]).join(' ').split(' '));
+  const own = sp[0].split(' ').filter((w) => !others.has(w));
+  const rom = raParts(`${g.title || ''} ${fileOf(g.path || '')}`).join(' ');
+  return !own.length || own.some((w) => rom.includes(w));
+}
 const SUB_TITLE = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i;
 async function subsetIdsOf(g) {
   if (subRA[g.raId]) return subRA[g.raId];
@@ -1328,7 +1337,7 @@ async function subsetIdsOf(g) {
   }
   // 2) autres subsets du jeu dans la liste RA de la console (par le titre)
   const L = base ? await raList(raSys(g)) : null;
-  if (L) for (const r of L.rows) { const m = SUB_TITLE.exec(r.title); if (m && sameRaGame(r.title, base)) add(r.id, m[1]); }
+  if (L) for (const r of L.rows) { const m = SUB_TITLE.exec(r.title); if (m && sameRaGame(r.title, base) && fitsRom(g, r.title, base)) add(r.id, m[1]); }
   return (subRA[g.raId] = out);
 }
 async function loadSubProg(g) {
@@ -1977,18 +1986,21 @@ async function loadSubsets(g, x) {
   const r = await api.ra('GetGameList', { i: cid, f: 1 }, 604800);
   if (!r.ok || !Array.isArray(r.data)) return;
   const base = title.replace(SUBSET_RX, ' ').trim().toLowerCase();
+  // mêmes subsets que l'accueil : ID parent RA (subsets joués), ROM patchées, titres « A | B » ; + leur progression
+  const ids = g.virtual ? new Set() : new Set((await subsetIdsOf(g).catch(() => [])).map((y) => y.id));
+  if (!g.virtual) await loadSubProg(g).catch(() => {});
   x.subs = r.data.map((y) => ({ id: +(y.ID || y.id), title: y.Title || y.title || '', icon: y.ImageIcon || y.imageIcon || '', ach: y.NumAchievements || 0, pts: y.Points || 0, cons: y.ConsoleName || (p && p.ConsoleName) || '' }))
-    .filter((y) => y.id !== +g.raId && y.title.replace(SUBSET_RX, ' ').trim().toLowerCase() === base)
+    .filter((y) => y.id !== +g.raId && (ids.has(y.id) || y.title.replace(SUBSET_RX, ' ').trim().toLowerCase() === base || (SUBSET_RX.test(y.title) && sameRaGame(y.title, title) && (g.virtual || fitsRom(g, y.title, title)))))
     .map((y) => { const m = SUBSET_RX.exec(y.title); return { ...y, name: m ? m[1] : '', base: !m }; })
     .sort((a, b) => b.base - a.base || a.name.localeCompare(b.name));
 }
 function subsetsHTML(x) {
   return `<div class="sh-subs">${x.subs.map((y, k) => {
-    const own = cfg.games.find((z) => z.raId === y.id);
+    const own = cfg.games.find((z) => z.raId === y.id), st = stats({ raId: y.id });
     return `<div class="sh-sub-r" data-sub="${k}" tabindex="0">
       <img src="${RAM}${esc(y.icon)}" alt="" onerror="this.style.visibility='hidden'">
       <div><b translate="no">${esc(y.base ? y.title : y.name || y.title)}</b>
-      <small>${y.base ? '<span>Jeu de base</span> · ' : ''}<span>${y.ach} succès</span> · ${y.pts} pts</small></div>
+      <small>${y.base ? '<span>Jeu de base</span> · ' : ''}<span>${st && st.got.length ? `${st.got.length}/${st.total}` : y.ach} succès</span> · ${st && st.got.length ? `${st.pts}/` : ''}${y.pts} pts</small></div>
       <span class="sh-own ${own ? 'on' : ''}">${own ? 'Dans ta bibliothèque' : 'Pas dans ta bibliothèque'}</span></div>`;
   }).join('')}</div>
   <div class="sh-src">Un subset est un set de succès en plus (défis, bonus…). Il se joue avec une ROM patchée ou, pour les subsets bonus, avec le jeu de base (émulateurs récents). Clic pour ouvrir sa fiche et voir ses hash.</div>`;
