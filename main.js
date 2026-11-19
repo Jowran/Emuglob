@@ -86,6 +86,7 @@ function createWindow() {
   let st = null;
   try { st = readJson(winStatePath()); } catch { /* première ouverture */ }
   const opts = {
+    title: 'Emuglob ' + app.getVersion(),   // version visible dans la barre de titre uniquement (Discord garde « Emuglob »)
     width: 1400, height: 820, backgroundColor: START_BG[(() => { try { return readCfg().theme; } catch { return ''; } })()] || '#140e3a', autoHideMenuBar: true,
     icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'logo.ico' : 'logo.png'),   // logo Emuglob (barre des tâches, fenêtre)
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
@@ -95,6 +96,7 @@ function createWindow() {
     if (Number.isFinite(st.x) && Number.isFinite(st.y) && onScreen(st)) { opts.x = st.x; opts.y = st.y; }   // jamais hors écran (second écran débranché)
   }
   win = new BrowserWindow(opts);
+  win.on('page-title-updated', (e) => e.preventDefault());   // garde « Emuglob x.y.z » malgré le <title> de la page
   win.setMenuBarVisibility(false);
   if (st && st.maximized) win.maximize();
   if (readCfg().startFullscreen) win.setFullScreen(true);
@@ -319,6 +321,17 @@ ipcMain.handle('wiiu:check', (_e, rpx) => {
 });
 ipcMain.handle('files:exist', (_e, paths) => Promise.all(paths.map((p) => fs.promises.access(p).then(() => true, () => false))));
 ipcMain.handle('shell:reveal', (_e, p) => { shell.showItemInFolder(p); });
+// ouvre un émulateur de la configuration, sans jeu (ex. pour se connecter à RetroAchievements dans ses réglages)
+ipcMain.handle('emu:open', (_e, id) => {
+  const emu = (readCfg().emulators || []).find((x) => x.id === id);
+  const exe = emu && emu.exe;
+  if (!exe || !/\.exe$/i.test(exe) || !fs.existsSync(exe)) return { ok: false, error: 'introuvable' };
+  return new Promise((resolve) => {
+    const child = spawn(exe, [], { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
+    child.once('error', (err) => resolve({ ok: false, error: err.message }));
+    child.once('spawn', () => { child.unref(); resolve({ ok: true }); });
+  });
+});
 
 /* ---------- intégration de la fenêtre de l'émulateur dans Emuglob (Windows) ----------
    Un petit programme C# (tools/EmbedHelper.cs) est compilé au premier usage avec le csc.exe de Windows, puis piloté en texte (stdin/stdout). */
@@ -460,16 +473,17 @@ function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
 }
-// Mise à l'échelle Windows (125 %, 150 %…) : RALibretro n'est pas « DPI-aware », Windows lui ment sur la taille de sa fenêtre
-// et l'image OpenGL est dessinée trop grande puis coupée (on ne voit qu'un bout de l'écran du haut d'un jeu DS).
-// On le lance avec la couche de compatibilité HighDpiAware (= Propriétés > Compatibilité > « Remplacer… : Application »),
-// uniquement pour ce processus : rien n'est écrit dans le registre.
+// Mise à l'échelle Windows (125 %, 150 %…) : RALibretro et DeSmuME ne sont pas « DPI-aware », Windows leur ment sur la taille
+// de leur fenêtre et l'image OpenGL/Direct3D est dessinée trop grande puis coupée (on ne voit qu'un bout de l'écran du haut d'un jeu DS).
+// On les lance avec la couche de compatibilité HighDpiAware (= Propriétés > Compatibilité > « Remplacer… : Application »),
+// uniquement pour ce processus : rien n'est écrit dans le registre. Les autres émulateurs gèrent déjà la mise à l'échelle.
+const DPI_FIX = /^(ralibretro|desmume)/i;
 function emuEnv(exe) {
-  if (process.platform !== 'win32' || !/ralibretro/i.test(path.basename(exe))) return process.env;
+  if (process.platform !== 'win32' || !DPI_FIX.test(path.basename(exe))) return process.env;
   const cur = String(process.env.__COMPAT_LAYER || '');
   if (/highdpiaware/i.test(cur)) return process.env;
   const k = screen.getPrimaryDisplay().scaleFactor || 1;
-  embedLog(`RALibretro lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
+  embedLog(`${path.basename(exe)} lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
   return { ...process.env, __COMPAT_LAYER: (cur.replace(/\b(dpiunaware|gdidpiscaling)\b/ig, '').trim() + ' HighDpiAware').trim() };
 }
 ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
@@ -828,7 +842,7 @@ ipcMain.handle('app:quit', () => app.quit());
 ipcMain.handle('app:relaunch', () => { app.relaunch(); app.quit(); });
 
 /* ---------- RetroAchievements (appels faits ici : la clé ne quitte jamais ce processus) ---------- */
-const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs', 'GetGameHashes']);
+const RA_ALLOWED = new Set(['GetUserSummary', 'GetGameProgression', 'GetUserProfile', 'GetUserRecentAchievements', 'GetGameInfoAndUserProgress', 'GetGameList', 'GetUsersIFollow', 'GetGame', 'GetUserAwards', 'GetUserCompletionProgress', 'GetConsoleIDs', 'GetGameHashes', 'GetGameExtended']);
 const mem = new Map();
 
 // ---------- résumé Wikipédia pour la fiche de jeu (français, sinon anglais), gardé sur disque pour le mode hors ligne ----------
