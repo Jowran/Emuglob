@@ -1306,17 +1306,29 @@ function stats(g) {
 }
 // subsets RetroAchievements du jeu (« Titre [Subset - Nom] » dans la liste RA de la console + ROM patchées rangées dessous) et leur progression
 const subRA = {};   // raId du jeu de base → [{ id, name }]
+// titre RA comparé sans accents/ponctuation ; « Jeu A | Jeu B » (versions jumelles) compte pour chacune
+const raParts = (t) => String(t || '').replace(/\[[^\]]*\]/g, ' ').split('|').map((x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()).filter(Boolean);
+const sameRaGame = (a, b) => { const A = raParts(a); return raParts(b).some((x) => A.includes(x)); };
+const SUB_TITLE = /\[\s*subset\s*-\s*([^\]]+?)\s*\]/i;
 async function subsetIdsOf(g) {
   if (subRA[g.raId]) return subRA[g.raId];
   const out = [], seen = new Set([+g.raId]);
   const add = (id, name) => { id = +id; if (id > 0 && !seen.has(id)) { seen.add(id); out.push({ id, name }); } };
   for (const v of subsetsOf(g)) if (v.raId > 0) add(v.raId, v.subName || subTagOf(v.raTitle) || v.title);
-  const p = prog[g.raId] && prog[g.raId].data, base = String((p && p.Title) || g.raTitle || '').trim().toLowerCase();
-  const L = base ? await raList(raSys(g)) : null;
-  if (L) for (const r of L.rows) {
-    const m = /^(.*?)\s*\[\s*subset\s*-\s*([^\]]+?)\s*\]\s*$/i.exec(r.title);
-    if (m && m[1].trim().toLowerCase() === base) add(r.id, m[2]);
+  const p = prog[g.raId] && prog[g.raId].data, base = (p && p.Title) || g.raTitle || '', cons = (p && p.ConsoleID) || raSys(g);
+  // 1) subsets auxquels tu as joué (ton compte RA) : rattachés au jeu par l'ID parent donné par RetroAchievements, sinon par le titre
+  const cp = await api.ra('GetUserCompletionProgress', { c: 500, o: 0 }, 600).catch(() => null);
+  const played = cp && cp.ok && cp.data ? cp.data.Results || cp.data.results || [] : [];
+  for (const x of played) {
+    const t = x.Title || x.title || '', id = +(x.GameID || x.gameId), m = SUB_TITLE.exec(t);
+    if (!m || seen.has(id) || (cons && +(x.ConsoleID || x.consoleId) !== +cons)) continue;
+    const e = await api.ra('GetGameExtended', { i: id }, 2592000).catch(() => null);
+    const par = e && e.ok && e.data ? e.data.ParentGameID ?? e.data.parentGameId : undefined;
+    if (par ? +par === +g.raId : sameRaGame(t, base)) add(id, m[1]);
   }
+  // 2) autres subsets du jeu dans la liste RA de la console (par le titre)
+  const L = base ? await raList(raSys(g)) : null;
+  if (L) for (const r of L.rows) { const m = SUB_TITLE.exec(r.title); if (m && sameRaGame(r.title, base)) add(r.id, m[1]); }
   return (subRA[g.raId] = out);
 }
 async function loadSubProg(g) {
