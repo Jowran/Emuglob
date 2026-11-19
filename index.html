@@ -1226,7 +1226,7 @@ function toast(msg) {
 /* ---------- identification des jeux (empreinte puis titre) ---------- */
 const ROMAN = new Map([['ii','2'],['iii','3'],['iv','4'],['vi','6'],['vii','7'],['viii','8'],['ix','9']]);
 const STOP = new Set(['the','a','an','of','and','disc','cd']);
-const toks = (s) => s.toLowerCase().replace(/\(.*?\)|\[.*?\]|~[^~]*~/g, ' ').replace(/&/g, ' and ').replace(/['’]/g, '')
+const toks = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\(.*?\)|\[.*?\]|~[^~]*~/g, ' ').replace(/&/g, ' and ').replace(/['’]/g, '')
   .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map((t) => ROMAN.get(t) || t).filter((t) => !STOP.has(t));
 const mkKey = (k) => ({ k, set: new Set(k), num: k.filter((t) => /^\d+$/.test(t)).sort().join(',') });
 function dice(a, b) {
@@ -1235,7 +1235,7 @@ function dice(a, b) {
   for (const t of a.set) if (b.set.has(t)) n++;
   return (2 * n) / (a.set.size + b.set.size);
 }
-const HASHABLE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14, 15, 25, 27]);
+const HASHABLE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14, 15, 18, 25, 27]);
 const tIdx = {};
 let thumbBusy = false;
 
@@ -1273,7 +1273,7 @@ function matchIn(g, L) {
   let m = g.hash && !g.raQuery ? L.byHash.get(g.hash) : null;
   g.raBy = m ? 'empreinte' : 'titre';
   if (!m) m = fuzzy(g, L.rows);
-  g.raV = 3;
+  g.raV = 4;   // 4 : empreinte DS ajoutée, les jeux non reconnus avant sont réessayés une fois
   g.raId = m ? m.id : -1;
   if (m) { g.raIcon = m.icon; g.raTitle = m.title; }
 }
@@ -1284,7 +1284,7 @@ async function matchGame(g) {
 }
 async function autoMatch() {
   if (!raOn()) return;
-  const todo = cfg.games.filter((g) => raSys(g) && !g.raManual && (g.raId === undefined || (g.raId === -1 && g.raV !== 3)));
+  const todo = cfg.games.filter((g) => raSys(g) && !g.raManual && (g.raId === undefined || (g.raId === -1 && g.raV !== 4)));
   if (!todo.length) return;
   for (const g of todo) await matchGame(g);
   save(); render(); findThumbs();
