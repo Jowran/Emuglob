@@ -473,16 +473,17 @@ function backToApp() {
   globalShortcut.unregister(RECOVER);
   if (win && !win.isDestroyed()) { win.show(); win.focus(); }
 }
-// Mise à l'échelle Windows (125 %, 150 %…) : RALibretro n'est pas « DPI-aware », Windows lui ment sur la taille de sa fenêtre
-// et l'image OpenGL est dessinée trop grande puis coupée (on ne voit qu'un bout de l'écran du haut d'un jeu DS).
-// On le lance avec la couche de compatibilité HighDpiAware (= Propriétés > Compatibilité > « Remplacer… : Application »),
-// uniquement pour ce processus : rien n'est écrit dans le registre.
+// Mise à l'échelle Windows (125 %, 150 %…) : RALibretro et DeSmuME ne sont pas « DPI-aware », Windows leur ment sur la taille
+// de leur fenêtre et l'image OpenGL/Direct3D est dessinée trop grande puis coupée (on ne voit qu'un bout de l'écran du haut d'un jeu DS).
+// On les lance avec la couche de compatibilité HighDpiAware (= Propriétés > Compatibilité > « Remplacer… : Application »),
+// uniquement pour ce processus : rien n'est écrit dans le registre. Les autres émulateurs gèrent déjà la mise à l'échelle.
+const DPI_FIX = /^(ralibretro|desmume)/i;
 function emuEnv(exe) {
-  if (process.platform !== 'win32' || !/ralibretro/i.test(path.basename(exe))) return process.env;
+  if (process.platform !== 'win32' || !DPI_FIX.test(path.basename(exe))) return process.env;
   const cur = String(process.env.__COMPAT_LAYER || '');
   if (/highdpiaware/i.test(cur)) return process.env;
   const k = screen.getPrimaryDisplay().scaleFactor || 1;
-  embedLog(`RALibretro lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
+  embedLog(`${path.basename(exe)} lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
   return { ...process.env, __COMPAT_LAYER: (cur.replace(/\b(dpiunaware|gdidpiscaling)\b/ig, '').trim() + ' HighDpiAware').trim() };
 }
 ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
