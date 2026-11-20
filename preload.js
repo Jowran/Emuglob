@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('api', {
   subsetApply: (o) => ipcRenderer.invoke('subset:apply', o),
   onSubsetProgress: (cb) => ipcRenderer.on('subset:progress', (_e, p) => cb(p)),
   reveal: (p) => ipcRenderer.invoke('shell:reveal', p),
+  romFiles: (p) => ipcRenderer.invoke('rom:files', p),
+  romDelete: (p) => ipcRenderer.invoke('rom:delete', p),
   emuOpen: (id) => ipcRenderer.invoke('emu:open', id),
   gameStatus: () => ipcRenderer.invoke('game:status'),
   appInfo: () => ipcRenderer.invoke('app:info'),
