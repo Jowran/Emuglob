@@ -1,103 +1,117 @@
 <div align="center">
 
-<img src="assets/logo.svg" width="110" alt="Logo Emuglob">
+<img src="assets/logo.svg" width="110" alt="Emuglob logo">
 
 # EMUGLOB
 
-**Ta bibliothèque de jeux rétro, dans un seul lanceur.**
+**Your retro game library, in a single launcher.**
 
-Une roue de jaquettes, tes émulateurs intégrés dans la fenêtre, tes succès RetroAchievements et tes sauvegardes au même endroit.
+A cover library, your emulators embedded in the window, your RetroAchievements and your saves in one place.
 
-Windows 10 / 11 · 64 bits · en français
+Windows 10 / 11 · 64-bit · English and French
+
+**English** · [Français](README.fr.md)
 
 </div>
 
-![Écran d'accueil d'Emuglob](docs/accueil.jpg)
+![Emuglob home screen](docs/accueil.jpg)
 
-## Ce que fait Emuglob
+## What Emuglob does
 
-### Bibliothèque
-- Roue de jaquettes en 3D avec reflet, à la souris (clic maintenu + glisser), au clavier ou à la manette.
-- Onglet par console, Favoris et Récents, tri (nom, temps de jeu, dernier lancement, date d'ajout) et filtre « jamais lancés ».
-- Jaquettes trouvées toutes seules (libretro-thumbnails, GameTDB, covers PS1/PS2, RetroAchievements), à plat et recadrées.
-- Fiche de jeu : résumé (Wikipédia), année, éditeur, genre, captures, durée de vie et succès RetroAchievements, ton temps de jeu.
-- Dossiers surveillés : les nouveaux jeux déposés apparaissent au démarrage.
-- Mode hors ligne : jaquettes, badges et infos déjà vus restent disponibles sans internet.
+### Library
+- Three home layouts: **Wheel** (3D cover flow with reflection), **Shelf** and **Showcase**. Mouse, keyboard or gamepad.
+- One tab per console, Favorites and Recent, sorting (A→Z, play time, last played, date added) and a "never played" filter.
+- Covers found automatically (libretro-thumbnails, GameTDB, PS1/PS2 covers, RetroAchievements), flat and cropped.
+- Game page: summary (Wikipedia), year, publisher, genre, screenshots, length, RetroAchievements and your play time.
+- Watched folders: new games show up at startup.
+- Offline mode: covers, badges and info already seen stay available without internet.
 
-### Jouer
-- L'émulateur s'ouvre **dans** la fenêtre d'Emuglob, avec une barre en jeu : volume de l'émulateur, réglages rapides (Dolphin, PCSX2), plein écran.
-- Écran de chargement animé : la cartouche ou le disque entre dans une console assortie.
-- Temps de jeu, nombre de parties et statistiques dans ton profil.
-- Rich Presence Discord (simple on/off).
+### Playing
+- The emulator opens **inside** the Emuglob window, with an in-game bar: emulator volume, quick settings (Dolphin, PCSX2), controls, restart, fullscreen.
+- Animated loading screen: the cartridge or disc slides into a matching console.
+- Play time, session count and stats in your profile.
+- Discord Rich Presence (simple on/off).
 
-### Émulateurs
-- Installation et mise à jour en un clic depuis leur source officielle : **RALibretro**, **PCSX2**, **Cemu**, **Dolphin**, plus les cores RALibretro.
-- Contrôles et raccourcis modifiables depuis Emuglob (RALibretro, PCSX2, Dolphin), au clavier ou à la manette.
-- Si un émulateur a disparu (disque débranché, dossier déplacé), Emuglob dit pourquoi et propose de le retrouver ou de le réinstaller.
+### RetroAchievements
+- Achievements, progress and details for each game, with your own RA account.
+- **Subsets**: pick the set when launching, the patch (.xdelta, .bps, .ips) is applied automatically, on every console.
+- Game recognition by hash (cartridges, DS) then by title, accents ignored.
+- Achievements with RALibretro, PCSX2, Dolphin and PPSSPP.
+- Profile with cards and badges, friends and their activity.
 
-### Sauvegardes
-- Copies automatiques de tes sauvegardes à chaque partie, partagées entre émulateurs quand c'est possible.
-- « Retrouver mes sauvegardes » : cherche les sauvegardes déjà présentes sur le PC (dossiers des émulateurs, à côté des ROMs, Cemu…) et les importe sans toucher aux originales.
+### Emulators
+- One-click install and update from their official source: **RALibretro** (and its cores), **PCSX2**, **Cemu**. Version choice under Settings, System.
+- Also supported: **Dolphin**, **PPSSPP**, **Azahar** (detected in the `emulators` folder next to Emuglob.exe, or set by path).
+- Controls and hotkeys editable from Emuglob (RALibretro, PCSX2, Dolphin, Azahar), with keyboard or gamepad.
+- If an emulator is missing (unplugged drive, moved folder), Emuglob says why and offers to locate or reinstall it.
 
-### Apparence
-- 6 thèmes : Aurore, Néon, OLED, Phosphore, Clair, Pastel. Couleur du fond selon la console, fond d'écran perso, sons de navigation.
-- Pensé aussi pour les écrans ultra-larges.
+### Saves
+- Automatic backups of your saves after each session, shared between emulators when possible (RetroArch, Cemu…).
+- "Find my saves": looks for saves already on your PC (emulator folders, next to ROMs…) and imports them without touching the originals.
 
-| Thème Néon | Thème Clair |
+### Look
+- 6 themes: Aurora, Neon, OLED, Phosphor, Light, Pastel. Background color per console, ambient background, custom wallpaper, menu sounds.
+- Built for ultra-wide screens too.
+
+| Neon theme | Light theme |
 |---|---|
-| ![Thème Néon](docs/theme-neon.jpg) | ![Thème Clair](docs/theme-clair.jpg) |
+| ![Neon theme](docs/theme-neon.jpg) | ![Light theme](docs/theme-clair.jpg) |
 
-**Fiche de jeu**
+**Game page**
 
-![Fiche de jeu](docs/fiche.png)
+![Game page](docs/fiche.png)
 
 ## Consoles
 
-| Émulateur | Consoles |
+| Emulator | Consoles |
 |---|---|
-| RALibretro (cores libretro) | NES, SNES, N64, Game Boy / Color / Advance, DS, Mega Drive, Master System, Game Gear, PC Engine, PlayStation, Atari, Neo Geo Pocket, arcade… |
+| RALibretro (libretro cores) | NES, SNES, N64, Game Boy / Color / Advance, DS, Mega Drive, Master System, Game Gear, PC Engine, PlayStation, Atari, Neo Geo Pocket, arcade… |
 | PCSX2 | PlayStation 2 |
+| PPSSPP | PSP |
 | Dolphin | Wii, GameCube |
+| Azahar | Nintendo 3DS |
 | Cemu | Wii U |
 
-D'autres émulateurs peuvent être ajoutés à la main (chemin et arguments dans Paramètres, Émulateurs).
+Other emulators can be added manually (path and arguments in Settings, Emulators).
 
 ## Installation
 
-1. Télécharge le `.zip` de la dernière [Release](../../releases/latest).
-2. Décompresse-le où tu veux (par exemple `C:\Jeux\Emuglob`).
-3. Lance `Emuglob.exe`. Un petit tutoriel t'explique le reste.
+1. Download the `.zip` from the latest [Release](../../releases/latest).
+2. Extract it anywhere (for example `C:\Games\Emuglob`).
+3. Run `Emuglob.exe`. A short tutorial walks you through the rest.
 
-Les **mises à jour** se font depuis Emuglob (Paramètres, Mettre à jour) : seul le fichier `app.asar` de la Release est téléchargé, et son empreinte SHA-256 est vérifiée avant d'être installé.
+**Updates** are done from Emuglob (pop-up at launch, or Settings, Update). Only the Release's `app.asar` file is downloaded, and its SHA-256 hash is checked before it is installed.
 
-> **Aucun jeu, BIOS ni clé de console n'est fourni.** Utilise uniquement tes propres sauvegardes de jeux, le BIOS de ta propre console (PS1, PS2) et les clés tirées de ta propre Wii U (Cemu).
+> **No games, BIOS or console keys are included.** Only use your own game backups, the BIOS from your own console (PS1, PS2) and keys dumped from your own Wii U (Cemu).
 
-## Pour les développeurs
+## For developers
 
 ```
 npm install
-npm start          # lancer depuis les sources
-npm run build-info # empreintes SHA-256 vérifiées au démarrage (à faire avant de construire app.asar)
-npm run pack       # build Windows dans dist/
+npm start          # run from source
+npm run build-info # SHA-256 hashes checked at startup (run before building app.asar)
+npm run pack       # Windows build in dist/
 ```
 
-La configuration de l'utilisateur est dans `%APPDATA%\emuglob-launcher\` (`config.json`, jaquettes, sauvegardes, copies de secours, cache).
+User configuration lives in `%APPDATA%\emuglob-launcher\` (`config.json`, covers, saves, backups, cache).
 
-## Licence
+## License
 
-Emuglob est un logiciel libre sous licence [GPL-3.0](LICENSE) : tu peux l'utiliser, le modifier et le redistribuer, à condition de garder la même licence et de partager le code source de tes modifications.
+Emuglob is free software under the [GPL-3.0](LICENSE) license: you can use, modify and redistribute it, as long as you keep the same license and share the source code of your changes.
 
-## Crédits
+## Credits
 
-Emuglob ne contient aucun émulateur. Ceux qu'il installe sont téléchargés depuis leur source officielle et lancés comme des programmes séparés :
+Emuglob does not contain any emulator. The ones it installs are downloaded from their official source and run as separate programs:
 [RALibretro](https://github.com/RetroAchievements/RALibretro) (GPL-3.0),
 [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0),
 [Cemu](https://github.com/cemu-project/Cemu) (MPL-2.0),
-[Dolphin](https://dolphin-emu.org) (GPL-2.0+).
-Les cores RALibretro viennent du [buildbot libretro](https://buildbot.libretro.com).
+[Dolphin](https://dolphin-emu.org) (GPL-2.0+),
+[PPSSPP](https://www.ppsspp.org) (GPL-2.0+),
+[Azahar](https://azahar-emu.org) (GPL-2.0).
+RALibretro cores come from the [libretro buildbot](https://buildbot.libretro.com).
 
-Services utilisés : [RetroAchievements](https://retroachievements.org) (succès, avec ta propre clé API), [libretro-thumbnails](https://github.com/libretro-thumbnails), [GameTDB](https://www.gametdb.com) et [xlenore](https://github.com/xlenore) (jaquettes), Discord (Rich Presence).
+Services used: [RetroAchievements](https://retroachievements.org) (achievements, with your own account), [libretro-thumbnails](https://github.com/libretro-thumbnails), [GameTDB](https://www.gametdb.com) and [xlenore](https://github.com/xlenore) (covers), Discord (Rich Presence).
 
-Logiciel tiers inclus : [7-Zip](https://www.7-zip.org) (`tools/7za.exe`, Igor Pavlov, GNU LGPL), utilisé seulement pour décompresser les émulateurs téléchargés. Voir `tools/7za-LICENSE.txt`.
+Bundled third-party software: [7-Zip](https://www.7-zip.org) (`tools/7za.exe`, Igor Pavlov, GNU LGPL), used only to extract downloaded emulators, and [xdelta3](https://github.com/jmacd/xdelta-gpl) (GPL-2.0+) for subset patches. See `tools/7za-LICENSE.txt` and `tools/xdelta3-LICENSE.txt`.
 
-Emuglob n'est affilié à aucun fabricant de consoles ni à aucun des projets cités. Les noms de consoles appartiennent à leurs propriétaires.
+Emuglob is not affiliated with any console maker or with any of the projects listed. Console names belong to their owners.
