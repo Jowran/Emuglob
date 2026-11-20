@@ -321,6 +321,41 @@ ipcMain.handle('wiiu:check', (_e, rpx) => {
 });
 ipcMain.handle('files:exist', (_e, paths) => Promise.all(paths.map((p) => fs.promises.access(p).then(() => true, () => false))));
 ipcMain.handle('shell:reveal', (_e, p) => { shell.showItemInFolder(p); });
+// suppression définitive d'une ROM : le fichier + ses fichiers liés (.cue/.gdi → pistes, .m3u → disques, Wii U → dossier du jeu)
+function romFiles(p) {
+  const out = new Set(), dir = path.dirname(p);
+  const add = (f) => { try { fs.statSync(f); out.add(f); } catch { /* absent */ } };
+  const walk = (f, depth) => {
+    let st; try { st = fs.statSync(f); } catch { return; }
+    if (st.isDirectory()) { if (!depth) out.add(f); return; }   // dossier : seulement si c'est le jeu lui-même
+    const ext = path.extname(f).toLowerCase(), d = path.dirname(f);
+    if (ext === '.rpx' && path.basename(d).toLowerCase() === 'code') { out.add(path.dirname(d)); return; }   // Wii U extrait : tout le dossier
+    out.add(f);
+    if (depth > 2 || !['.cue', '.gdi', '.m3u', '.ccd'].includes(ext) || st.size > 1e6) return;
+    if (ext === '.ccd') { for (const e of ['.img', '.sub']) add(f.slice(0, -4) + e); return; }
+    const txt = fs.readFileSync(f, 'utf-8');
+    for (const line of txt.split(/\r?\n/)) {
+      let name = '';
+      if (ext === '.cue') { const m = line.match(/^\s*FILE\s+(?:"([^"]+)"|(\S+))/i); if (m) name = m[1] || m[2]; }
+      else if (ext === '.gdi') { const m = line.match(/^\s*\d+\s+\d+\s+\d+\s+\d+\s+(?:"([^"]+)"|(\S+))/); if (m) name = m[1] || m[2]; }
+      else { const l = line.trim(); if (l && !l.startsWith('#')) name = l; }
+      if (name) walk(path.resolve(path.dirname(f), name), depth + 1);
+    }
+  };
+  walk(p, 0);
+  const wiiu = path.extname(p).toLowerCase() === '.rpx' && path.basename(dir).toLowerCase() === 'code';
+  const base = path.dirname(wiiu ? path.dirname(dir) : dir).toLowerCase();   // garde-fou : rien en dehors du dossier du jeu (ou de son parent), jamais une racine de disque
+  return [...out].filter((f) => path.parse(f).root !== f && f.toLowerCase() !== base && (f === p || f.toLowerCase().startsWith(base)));
+}
+const inLibrary = (p) => (readCfg().games || []).some((g) => g.path === p);
+ipcMain.handle('rom:files', (_e, p) => (p && inLibrary(p) ? romFiles(p) : []));
+ipcMain.handle('rom:delete', (_e, p) => {
+  if (!p || !inLibrary(p)) return { ok: false, error: 'jeu absent de la bibliothèque' };
+  const files = romFiles(p), done = [], errors = [];
+  if (!files.length) return { ok: false, error: 'fichier introuvable' };
+  for (const f of files) { try { fs.rmSync(f, { recursive: true, force: true }); done.push(f); } catch (e) { errors.push(path.basename(f) + ' : ' + e.message); } }
+  return { ok: !errors.length, done, error: errors.join(' ; ') };
+});
 // ouvre un émulateur de la configuration, sans jeu (ex. pour se connecter à RetroAchievements dans ses réglages)
 ipcMain.handle('emu:open', (_e, id) => {
   const emu = (readCfg().emulators || []).find((x) => x.id === id);
