@@ -841,7 +841,7 @@
 
 <dialog id="dlg">
   <h2>Modifier le jeu</h2>
-  <label>Titre</label><input id="f-title">
+  <label>Titre</label><input id="f-name">
   <label>Émulateur</label><select id="f-emu"></select>
   <div id="f-lib">
     <label>Système</label><select id="f-system"></select>
@@ -3008,7 +3008,7 @@ async function scan() {
 function openEdit(g, isNew) {
   return new Promise((resolve) => {
     const d = $('#dlg'); let ok = false;
-    $('#f-title').value = g.title; $('#f-core').value = g.core; $('#f-raid').value = g.raQuery || (g.raId > 0 ? g.raId : '');
+    $('#f-name').value = g.title; $('#f-core').value = g.core; $('#f-raid').value = g.raQuery || (g.raId > 0 ? g.raId : '');
     $('#f-system').innerHTML = '<option value="0">— choisir —</option>' + Object.entries(SYSTEMS).map(([id, v]) => `<option value="${id}" ${Number(id) === g.system ? 'selected' : ''}>${esc(v[0])}</option>`).join('');
     $('#f-emu').innerHTML = cfg.emulators.map((e) => `<option value="${esc(e.id)}" ${e.id === g.emulator ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
     const sync = () => { const e = cfg.emulators.find((x) => x.id === $('#f-emu').value); $('#f-lib').style.display = e && e.kind === 'libretro' ? '' : 'none'; };
@@ -3020,7 +3020,7 @@ function openEdit(g, isNew) {
     $('#f-cover').onclick = async () => { const p = await api.pickCover(g.id); if (p) { g.cover = p; toast('Jaquette définie.'); } };
     $('#f-nocover').onclick = () => { g.cover = ''; toast('Jaquette retirée.'); };
     $('#f-ok').onclick = () => {
-      g.title = $('#f-title').value.trim() || g.title; g.emulator = $('#f-emu').value;
+      g.title = $('#f-name').value.trim() || g.title; g.emulator = $('#f-emu').value;
       g.system = Number($('#f-system').value); g.core = $('#f-core').value.trim();
       g.coreManual = !!g.core && !!SYSTEMS[g.system] && g.core !== SYSTEMS[g.system][1];   // réglé à la main : on le respecte tant qu'il est installé
       const v = $('#f-raid').value.trim();
