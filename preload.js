@@ -67,6 +67,7 @@ contextBridge.exposeInMainWorld('api', {
   updateList: () => ipcRenderer.invoke('update:list'),
   updateInstallTag: (tag) => ipcRenderer.invoke('update:installTag', tag),
   savesOpen: (id) => ipcRenderer.invoke('saves:open', id),
+  savesReplace: (q) => ipcRenderer.invoke('saves:replace', q),
   savesFind: (q) => ipcRenderer.invoke('saves:find', q),
   savesImport: (items) => ipcRenderer.invoke('saves:import', items),
   cemuKeysStatus: (exe) => ipcRenderer.invoke('cemu:keysStatus', exe),

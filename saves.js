@@ -187,6 +187,25 @@ class SaveVault {
   }
 }
 
+// remplace la sauvegarde du jeu par un fichier choisi : coffre + émulateur du jeu (les anciennes partent d'abord dans l'historique)
+SaveVault.prototype.replace = function replace({ gameId, rom, emu, file }) {
+  const st = statOf(file);
+  if (!st) throw new Error('fichier vide ou introuvable');
+  if (st.size > MAX_SAVE) throw new Error('fichier trop gros pour une sauvegarde');
+  const own = locate(emu, rom);
+  const put = (dst, label) => {
+    if (statOf(dst)) this.keep(gameId, dst, label);
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.copyFileSync(file, dst);   // date du jour : devient la plus récente, reprise par les autres émulateurs au lancement
+  };
+  const v = this.file(gameId);
+  put(v, 'avant-remplacement');
+  fs.writeFileSync(path.join(this.dir(gameId), 'source.txt'), `remplacement\n${file}\n${new Date().toISOString()}\n`);
+  let to = null;
+  if (own) { const m = newest(own.found); to = (m && m.p) || own.found.find((p) => statOf(p)) || own.target; put(to, `${emu.name}-avant-remplacement`); }
+  return { ok: true, to };
+};
+
 // ---------- recherche des sauvegardes déjà présentes ailleurs sur le PC (import dans le coffre, l'original n'est jamais touché) ----------
 const SAVE_EXT = new Set(['.srm', '.sav', '.sram', '.mcd', '.mcr', '.dsv', '.eep', '.fla', '.sa1']);
 const MAX_SAVE = 4 * 1048576;
@@ -379,6 +398,15 @@ SaveVault.prototype.restoreDir = function restoreDir(gameId, name, dst) {
   fs.cpSync(src, tmp, { recursive: true, preserveTimestamps: true });
   if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
   fs.renameSync(tmp, dst);
+};
+
+// Cemu : remplace le dossier de sauvegarde du jeu par un dossier choisi (l'actuel est gardé dans le coffre)
+SaveVault.prototype.replaceDirFrom = function replaceDirFrom(gameId, src, dst) {
+  if (!hasFiles(src)) throw new Error('ce dossier est vide');
+  if (path.resolve(src).toLowerCase() === path.resolve(dst).toLowerCase()) throw new Error("c'est déjà le dossier de Cemu");
+  if (fs.existsSync(dst)) this.snapDir(gameId, dst, 'avant-remplacement');
+  replaceDir(src, dst);
+  this.snapDir(gameId, dst, 'remplacement');
 };
 
 // ---------- Cemu : les autres installations du PC (portable, autre dossier, ancien Cemu) partagent leurs sauvegardes ----------

@@ -3332,7 +3332,7 @@ async function openControls(pick, inGame = false) {
 function openMenu(g = cur()) {
   if (!g) return;
   const d = $('#dlg-menu');
-  $('#m-list').innerHTML = `<button data-a="sheet">Fiche du jeu</button><button data-a="fav">${g.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><button data-a="edit">Modifier…</button><button data-a="reveal">Afficher le fichier</button><button data-a="window">Lancer en fenêtre séparée</button><button data-a="saves">Copies de sauvegarde</button><button data-a="del">Retirer de la bibliothèque</button><button data-a="x">Annuler</button>`;
+  $('#m-list').innerHTML = `<button data-a="sheet">Fiche du jeu</button><button data-a="fav">${g.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}</button><button data-a="edit">Modifier…</button><button data-a="reveal">Afficher le fichier</button><button data-a="window">Lancer en fenêtre séparée</button><button data-a="saves">Copies de sauvegarde</button><button data-a="rsave">Remplacer la sauvegarde…</button><button data-a="del">Retirer de la bibliothèque</button><button data-a="x">Annuler</button>`;
   d.onclick = async (e) => {
     const a = e.target.dataset.a; if (!a) return;
     d.close();
@@ -3342,6 +3342,7 @@ function openMenu(g = cur()) {
     else if (a === 'reveal') api.reveal(g.path);
     else if (a === 'window') launch(g, { embed: false });
     else if (a === 'saves') { if (emuOf(g).id === 'cemu') openWiiuSaves(g); else api.savesOpen(g.id); }
+    else if (a === 'rsave') replaceSave(g);
     else if (a === 'del') { cfg.games = cfg.games.filter((x) => x !== g); save(); render(); }
   };
   d.showModal();
@@ -3986,6 +3987,13 @@ async function findWiiuSaves() {
     if (r.dir && !r.copies.length) out.push({ gameId: g.id, title: g.title, file: r.dir, size: 0, mtime: Date.now(), where: 'Cemu (Wii U)', match: 'exact', vault: null, same: false, newer: true, wiiu: true });
   }
   return out;
+}
+async function replaceSave(g) {   // remplace la sauvegarde du jeu par un fichier (ou un dossier pour Cemu) ; l'ancienne reste en copie
+  const e = emuOf(g); if (!e) return toast("Aucun émulateur pour ce jeu.");
+  const r = await api.savesReplace({ gameId: g.id, rom: g.path, emu: plainEmu(e), tid: g.wiiuTid || '' });
+  if (r.canceled) return;
+  if (!r.ok) return toast('Échec : ' + r.error);
+  toast(r.to ? "Sauvegarde remplacée. L'ancienne est gardée en copie." : `Sauvegarde gardée dans Emuglob, mais ${e.name} ne partage pas ses sauvegardes : active « Partager ses sauvegardes » dans ses réglages pour qu'il la reprenne.`);
 }
 function openWiiuSaves(g) {   // copies du dossier de sauvegarde Cemu gardées par Emuglob, avec restauration
   const d = $('#dlg-wsav'), e = emuOf(g), q = () => ({ gameId: g.id, exe: e.exe || '', rom: g.path, tid: g.wiiuTid || '', title: g.title });

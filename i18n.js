@@ -233,7 +233,7 @@
     'Mode portable activé : redémarrage…': 'Portable mode on: restarting…', 'réponse invalide': 'invalid response', 'Recherche des jaquettes…': 'Looking for covers…',
     'Détection des jeux en cours…': 'Detecting games…',
     // menu du jeu, lancement
-    'Afficher le fichier': 'Show file', 'Lancer en fenêtre séparée': 'Launch in a separate window', 'Copies de sauvegarde': 'Save copies', 'Retirer de la bibliothèque': 'Remove from library',
+    'Afficher le fichier': 'Show file', 'Lancer en fenêtre séparée': 'Launch in a separate window', 'Copies de sauvegarde': 'Save copies', 'Remplacer la sauvegarde…': 'Replace save…', "Aucun émulateur pour ce jeu.": 'No emulator for this game.', "Sauvegarde remplacée. L'ancienne est gardée en copie.": 'Save replaced. The old one is kept as a copy.', 'Retirer de la bibliothèque': 'Remove from library',
     'Mode stream indisponible pour cet émulateur : l\'image du jeu ne sera pas visible dans le partage de la fenêtre.': 'Stream mode unavailable for this emulator: the game picture will not show when sharing the window.',
     'Mode stream : fenêtre de l\'émulateur introuvable pour la capture.': 'Stream mode: emulator window not found for capture.',
     'L\'émulateur n\'a pas encore joué de son : le réglage s\'appliquera dès qu\'il en jouera.': "The emulator hasn't played any sound yet: the setting applies as soon as it does.",
@@ -304,7 +304,7 @@
     ['{} sauvegarde{} importée{}{}.', (g) => `${g[0]} save${g[1] ? 's' : ''} imported${g[3]}.`], ['Dans Cemu : {}', 'In Cemu: {}'], ['{} : nouveau chemin enregistré.', '{}: new path saved.'],
     ['Téléchargement de {} ({}/{})…', 'Downloading {} ({}/{})…'], ['Core {} manquant', 'Missing {} core'],
     ['RALibretro n\'a aucun core pour la {} : le jeu ne peut pas se lancer.', 'RALibretro has no core for the {}: the game cannot start.'], ['{} installé.', '{} installed.'],
-    ['Installer les cores de base ({})', 'Install basic cores ({})'], ['{}/{} {}. Échec : {}', '{}/{} {}. Failed: {}'], ['{} supprimé.', '{} deleted.'],
+    ['Installer les cores de base ({})', 'Install basic cores ({})'], ['{}/{} {}. Échec : {}', '{}/{} {}. Failed: {}'], ['{} supprimé.', '{} deleted.'], ['Sauvegarde gardée dans Emuglob, mais {} ne partage pas ses sauvegardes : active « Partager ses sauvegardes » dans ses réglages pour qu\'il la reprenne.', 'Save kept in Emuglob, but {} does not share its saves: turn on "Share its saves" in its settings so it picks it up.'],
     ['Emuglob {} est disponible (Paramètres › Mettre à jour Emuglob).', 'Emuglob {} is available (Settings › Update Emuglob).'],
     ['Résumé : Wikipédia{}, licence CC BY-SA', 'Summary: Wikipedia{}, CC BY-SA license'], [' (en français, pas de page en anglais)', ' (in French, no English page)'],
     ['Format {}', 'Format {}'], ['fichier introuvable : {}. Lance {} une fois pour le créer.', 'file not found: {}. Launch {} once to create it.'],
