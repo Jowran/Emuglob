@@ -860,6 +860,25 @@ ipcMain.handle('wiiusave:restore', (_e, { gameId, exe, rom, tid, name }) => {
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 });
+// remplace la sauvegarde d'un jeu par un fichier choisi (cartouche) ou un dossier (Cemu) ; l'ancienne est gardée dans le coffre
+ipcMain.handle('saves:replace', async (_e, { gameId, rom, emu, tid }) => {
+  if (current && String(current.gameId) === String(gameId)) return { ok: false, error: 'le jeu est en cours : quitte-le avant.' };
+  if (emu && emu.exe && emucfg.running(emu.exe)) return { ok: false, error: `${emu.name} est ouvert : ferme-le avant.` };
+  const wiiu = emu && emu.id === 'cemu';
+  const r = await dialog.showOpenDialog(win, wiiu
+    ? { title: L('Dossier de sauvegarde Wii U à mettre à la place', 'Wii U save folder to use instead'), properties: ['openDirectory'] }
+    : { title: L('Sauvegarde à mettre à la place', 'Save to use instead'), properties: ['openFile'], filters: [{ name: L('Sauvegardes', 'Saves'), extensions: [...require('./saves').SAVE_EXT].map((e) => e.slice(1)).concat('dat', 'bin') }, { name: L('Tous', 'All'), extensions: ['*'] }] });
+  if (r.canceled) return { ok: false, canceled: true };
+  try {
+    if (!wiiu) return getVault().replace({ gameId: String(gameId), rom, emu, file: r.filePaths[0] });
+    let { dir, tid: id } = cemuSaveDir(emu.exe, rom, { tid });
+    if (!dir) { if (!/^[0-9a-f]{16}$/.test(id || '')) return { ok: false, error: 'dossier de sauvegarde de Cemu inconnu pour ce jeu : lance-le une fois dans Cemu' };
+      const roots = require('./saves').cemuMlcRoots(emu.exe); if (!roots.length) return { ok: false, error: 'dossier mlc01 de Cemu introuvable' };
+      dir = path.join(roots[0], 'usr', 'save', id.slice(0, 8), id.slice(8)); }
+    getVault().replaceDirFrom(String(gameId), r.filePaths[0], dir);
+    return { ok: true, to: dir };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
 ipcMain.handle('saves:open', (_e, gameId) => { const d = getVault().dir(String(gameId)); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 // on = interrupteur des Paramètres ; legacyId = ancien ID saisi à la main (repli si DISCORD_APP_ID est vide)
 ipcMain.handle('discord:set', (_e, { on, activity, legacyId }) => { discord.set(on ? (DISCORD_APP_ID || String(legacyId || '').replace(/\D/g, '')) : '', activity); return discord.status; });
