@@ -67,9 +67,7 @@ Windows 10 / 11 · 64-bit · English and French
 |---|---|
 | RALibretro (libretro cores) | NES, SNES, N64, Game Boy / Color / Advance, DS, Mega Drive, Master System, Game Gear, PC Engine, PlayStation, Atari, Neo Geo Pocket, arcade… |
 | PCSX2 | PlayStation 2 |
-| PPSSPP | PSP |
 | Dolphin | Wii, GameCube |
-| Azahar | Nintendo 3DS |
 | Cemu | Wii U |
 
 Other emulators can be added manually (path and arguments in Settings, Emulators).
@@ -106,8 +104,6 @@ Emuglob does not contain any emulator. The ones it installs are downloaded from 
 [PCSX2](https://github.com/PCSX2/pcsx2) (GPL-3.0),
 [Cemu](https://github.com/cemu-project/Cemu) (MPL-2.0),
 [Dolphin](https://dolphin-emu.org) (GPL-2.0+),
-[PPSSPP](https://www.ppsspp.org) (GPL-2.0+),
-[Azahar](https://azahar-emu.org) (GPL-2.0).
 RALibretro cores come from the [libretro buildbot](https://buildbot.libretro.com).
 
 Services used: [RetroAchievements](https://retroachievements.org) (achievements, with your own account), [libretro-thumbnails](https://github.com/libretro-thumbnails), [GameTDB](https://www.gametdb.com) and [xlenore](https://github.com/xlenore) (covers), Discord (Rich Presence).
