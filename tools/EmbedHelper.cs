@@ -149,7 +149,7 @@ public static class EmbedHelper
                 IntPtr emb, top; bool off;
                 lock (gate) { emb = embedded; top = topWin; off = parked; }
                 IntPtr fg = GetForegroundWindow();
-                if (emb != IntPtr.Zero && !off && fg != IntPtr.Zero && (fg == emb || fg == top || GetAncestor(fg, 3) == top || GetAncestor(fg, 2) == emb))
+                if (emb != IntPtr.Zero && !off && fg != IntPtr.Zero && (fg == emb || fg == top || GetAncestor(fg, 3) == top || GetAncestor(fg, 2) == emb || SameProcess(fg, emb) || SameProcess(fg, top)))
                 {
                     if (!f11Down) Out("key f11");   // pas de répétition si la touche reste enfoncée
                     f11Down = true;
@@ -158,6 +158,16 @@ public static class EmbedHelper
             }
         }
         return CallNextHookEx(IntPtr.Zero, code, wParam, ref k);
+    }
+
+    // fenêtre d'un même processus (Dolphin dessine le jeu dans une autre fenêtre que celle intégrée)
+    static bool SameProcess(IntPtr a, IntPtr b)
+    {
+        if (a == IntPtr.Zero || b == IntPtr.Zero) return false;
+        uint pa, pb;
+        GetWindowThreadProcessId(a, out pa);
+        GetWindowThreadProcessId(b, out pb);
+        return pa != 0 && pa == pb;
     }
 
     // plein écran du jeu : seul le menu natif (Win32) peut être retiré ; un menu dessiné par l'émulateur lui-même (Qt) reste
