@@ -462,7 +462,7 @@ async function getHelper() {
   else if (process.platform !== 'win32') throw new Error("l'intégration n'existe que sous Windows");
   else h = new Helper(await compileHelper(), [], {});
   helperObj = h;
-  h.on((line) => { if (line === 'key f11' && win && !win.isDestroyed()) win.webContents.send('game:hotkey', 'f11'); });   // F11 pendant le jeu (le clavier est à l'émulateur)
+  h.on((line) => { if (line === 'key f11') gameHotkey(); });   // F11 pendant le jeu (le clavier est à l'émulateur)
   return h;
 }
 
@@ -962,12 +962,22 @@ body.on div{opacity:1} b{padding:1px 7px;margin:0 2px;border:1px solid #8f7bff;b
   tip.once('ready-to-show', () => { if (!tip.isDestroyed()) tip.showInactive(); });
   setTimeout(() => { if (!tip.isDestroyed()) tip.destroy(); if (fsTip === tip) fsTip = null; }, 3000);
 }
+// F11 en jeu : vient du crochet clavier du module, ou du raccourci global de secours (émulateurs dont le crochet
+// ne voit pas la touche, Dolphin par exemple) ; les deux peuvent arriver pour un même appui, d'où l'anti-rebond
+let hotkeyAt = 0;
+function gameHotkey() {
+  if (Date.now() - hotkeyAt < 400 || !win || win.isDestroyed()) return;
+  hotkeyAt = Date.now();
+  win.webContents.send('game:hotkey', 'f11');
+}
 function setImmersive(on) {
   if (!win || win.isDestroyed()) return false;
   if (on) {
     if (!immersive) { immersive = { wasFs: win.isFullScreen() }; setTimeout(showFsTip, 350); }   // après le passage en plein écran
     win.setFullScreen(true);
+    if (!globalShortcut.isRegistered('F11')) { try { globalShortcut.register('F11', gameHotkey); } catch { /* touche prise ailleurs */ } }   // sortie toujours possible
   } else if (immersive) {
+    try { globalShortcut.unregister('F11'); } catch { /* déjà libérée */ }
     if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
     if (!immersive.wasFs) win.setFullScreen(false);
     immersive = null;
