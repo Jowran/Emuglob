@@ -888,6 +888,26 @@
   body[data-th=wii] .sh-tags span, body[data-th=wii] .sh-tabs button, body[data-th=wii] .sh-achf button { border-radius:99px; }
   /* fiche : aperçu de chaîne (bannière floutée de la jaquette, gros boutons en bas) */
   #sh-wfoot { display:none; }
+  body[data-th=wii] #ov-sheet .sh-cov, body[data-th=wii] #ov-sheet .sh > div:nth-child(2) > .sh-sub, body[data-th=wii] #ov-sheet .sh h1 { display:none; }
+  body[data-th=wii] #ov-sheet .ovb { padding-top:0; }
+  .w-hero { display:none; }
+  body[data-th=wii] .w-hero { position:relative; display:flex; align-items:center; gap:5vw; min-height:calc(100vh - clamp(150px,20vh,220px) - 34px); padding:4vh 7vw 9vh; margin:0 -2vw 10px; }
+  .wh-cov { flex:none; position:relative; display:flex; align-items:center; justify-content:center; }
+  .wh-cov img { display:block; max-height:58vh; max-width:40vw; min-width:220px; border-radius:16px; border:5px solid rgba(255,255,255,.88); box-shadow:0 30px 60px rgba(0,0,0,.45); animation:whin .5s cubic-bezier(.2,.9,.3,1.1) both; }
+  .wh-cov span { display:none; }
+  .wh-cov.none span, .wh-cov:not(:has(img)) span { display:flex; align-items:center; justify-content:center; width:min(30vw,360px); aspect-ratio:3/4; border-radius:16px; border:5px solid rgba(255,255,255,.88); background:rgba(255,255,255,.15); font-size:80px; font-weight:800; }
+  @keyframes whin { from { transform:scale(.92); opacity:0; } }
+  .wh-tx { min-width:0; flex:1; animation:whtx .5s .08s cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes whtx { from { transform:translateX(30px); opacity:0; } }
+  .wh-tx h1 { margin:0; font-size:clamp(40px,6vh,72px); font-weight:800; line-height:1.05; color:#fff; text-shadow:0 4px 16px rgba(0,0,0,.4); overflow-wrap:anywhere; }
+  .wh-meta { margin-top:12px; font-size:clamp(18px,2.2vh,24px); font-weight:500; opacity:.92; }
+  .wh-prog { display:flex; align-items:center; gap:16px; margin-top:28px; font-size:clamp(17px,2vh,21px); font-weight:700; }
+  .wh-bar { width:min(340px,30vw); height:14px; border-radius:99px; background:rgba(255,255,255,.3); overflow:hidden; } .wh-bar i { display:block; height:100%; border-radius:99px; background:#fff; }
+  .wh-tags { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+  .wh-tags span { padding:6px 16px; border-radius:99px; background:rgba(255,255,255,.22); font-weight:700; font-size:15px; backdrop-filter:blur(6px); }
+  .wh-more { position:absolute; left:50%; bottom:2vh; transform:translateX(-50%); display:flex; align-items:center; gap:8px; padding:6px 18px; border-radius:99px; background:rgba(255,255,255,.18); font-weight:700; font-size:14px; cursor:inherit; animation:whb 2s ease-in-out infinite; }
+  .wh-more .ico { width:18px; height:18px; }
+  @keyframes whb { 50% { transform:translate(-50%,5px); } }
   body[data-th=wii] #ov-sheet { padding-bottom:0; background:#2a2f35; }
   body[data-th=wii] #ov-sheet::before { display:block; content:""; position:absolute; inset:-80px; z-index:-1; background:var(--wban,none) center/cover, #5d6a76; filter:blur(46px) saturate(1.25) brightness(.78); }
   body[data-th=wii] #ov-sheet .ovh { display:none; }
@@ -2183,6 +2203,28 @@ function wOpen(g = cur(), el = $('#w-grid .wch.on')) {
   setTimeout(() => { openSheet(g); requestAnimationFrame(() => { z.classList.add('out'); setTimeout(() => z.remove(), 320); }); }, 430);
 }
 const homeA = () => (isWii() ? wOpen() : launch(cur()));
+// fiche Wii : grand en-tête (jaquette + titre + infos + succès) qui remplit l'écran, le détail se trouve en dessous
+function wiiHero() {
+  const g = sheetGame, body = $('#sh-body');
+  if (!g || !isWii() || !body.firstElementChild) return;
+  const p = g.raId > 0 && prog[g.raId] ? prog[g.raId].data : null, s = stats(g), emu = g.virtual ? null : emuOf(g), u = artUrl(g);
+  const genres = p && p.Genre ? p.Genre.split(/,\s*/).filter(Boolean) : [];
+  const meta = [g.virtual ? (p && p.ConsoleName) || g.raConsole || '' : labelOf(g), p && p.Released ? p.Released.slice(0, 4) : '', genres[0] || '', p && p.Publisher].filter(Boolean);
+  const pc = s && s.total ? Math.round((100 * s.got.length) / s.total) : 0;
+  const tags = [g.playSeconds >= 60 ? 'Joué ' + fmtDur(g.playSeconds) : '', g.lastPlayed ? 'Dernière partie ' + ago(g.lastPlayed) : g.virtual ? '' : 'Jamais lancé',
+    emu ? emu.name : '', g.favorite ? '★ Favori' : '', subsetsOf(g).length ? subsetsOf(g).length + ' subset(s)' : ''].filter(Boolean);
+  const h = document.createElement('div');
+  h.className = 'w-hero';
+  h.innerHTML = `<div class="wh-cov">${u ? `<img src="${esc(u)}" alt="" onerror="this.parentNode.classList.add('none');this.remove()">` : ''}<span translate="no">${esc(g.title.slice(0, 2).toUpperCase())}</span></div>
+    <div class="wh-tx"><h1 translate="no">${esc(g.title)}</h1><div class="wh-meta">${meta.map(esc).join(' · ')}</div>
+    ${s ? `<div class="wh-prog"><div class="wh-bar"><i style="width:${pc}%"></i></div><span>${s.got.length} / ${s.total} succès · ${s.pts} pts</span></div>` : ''}
+    ${tags.length ? `<div class="wh-tags">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>` : ''}</div>
+    <div class="wh-more">${ic('down')} Plus d'infos</div>`;
+  body.prepend(h);
+  h.querySelector('.wh-more').onclick = () => body.scrollTo({ top: h.offsetHeight - 10, behavior: 'smooth' });
+}
+{ const base = renderSheet; renderSheet = function () { base(); wiiHero(); }; }
+
 // fiche dans le thème Wii : bannière = jaquette floutée, gros boutons Accueil / Jouer, flèches jeu précédent / suivant
 function wiiSheet() {
   const g = sheetGame; if (!g || !isWii()) return;
