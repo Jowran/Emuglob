@@ -755,11 +755,30 @@ const CE = {
     return xEl('emulated_controller', [xEl('type', [], gid === 'c0' ? 'Wii U GamePad' : 'Wii U Pro Controller')]);
   },
   ctrls: (doc) => doc.kids.filter((k) => k.name === 'controller'),
-  devOf(gid) { const p = this.pads[gid]; return p ? parseInt(p.uuid, 10) || 0 : CE_PLAYERS[gid]; },
-  padAt(gid, idx) {   // manette du joueur, sur la manette physique idx si elle est choisie
+  // manette de chaque joueur = API Cemu + identifiant (« XInput|0 », « SDLController|0_0300…») ; les manettes SDL viennent des profils déjà faits dans Cemu
+  devOf(gid) { const p = this.pads[gid] || { api: 'XInput', uuid: String(CE_PLAYERS[gid]) }; return `${p.api}|${p.uuid}`; },
+  devOpts() {
+    const opts = [0, 1, 2, 3].map((i) => ({ v: `XInput|${i}`, t: `XInput · Manette ${i + 1}` }));
+    for (const s of this.sdl) opts.push({ v: `SDLController|${s.uuid}`, t: `SDL · ${s.name || 'Manette'} (${+s.uuid.split('_')[0] + 1})` });
+    return opts;
+  },
+  padAt(gid, dev) {   // manette du joueur, ou celle choisie (« api|uuid »)
+    if (typeof dev === 'string' && dev.includes('|')) { const [api, uuid] = dev.split('|'); return { api, uuid }; }
     const p = this.pads[gid] || { api: 'XInput', uuid: String(CE_PLAYERS[gid]) };
-    if (idx == null) return p;
-    return { api: p.api, uuid: p.api === 'XInput' ? String(+idx) : p.uuid.replace(/^\d+_/, `${+idx}_`) };
+    if (dev == null) return p;
+    return { api: p.api, uuid: p.api === 'XInput' ? String(+dev) : p.uuid.replace(/^\d+_/, `${+dev}_`) };
+  },
+  scanSdl(exe) {   // manettes SDL connues de Cemu : tous les profils du dossier controllerProfiles
+    const out = [], dir = this.dir(exe);
+    let files = []; try { files = fs.readdirSync(dir).filter((f) => /\.xml$/i.test(f)); } catch { /* pas encore de dossier */ }
+    for (const f of files) {
+      let doc = null; try { doc = xmlParse(readText(path.join(dir, f)) || ''); } catch { /* fichier illisible */ }
+      if (!doc) continue;
+      for (const c of doc.kids.filter((k) => k.name === 'controller' && xVal(k, 'api') === 'SDLController')) {
+        const uuid = xVal(c, 'uuid') || ''; if (uuid && !out.some((x) => x.uuid === uuid)) out.push({ uuid, name: xVal(c, 'display_name') || '' });
+      }
+    }
+    return out;
   },
   padOf(doc) {   // manette déjà utilisée dans ce profil (XInput ou SDL), sinon la manette XInput du joueur
     const c = this.ctrls(doc).find((k) => /^(XInput|SDLController)$/.test(xVal(k, 'api')));
@@ -792,7 +811,7 @@ const CE = {
     return i >= 0 ? { t: 'btn', i } : null;
   },
   load(exe) {
-    this.docs = {}; this.pads = {};
+    this.docs = {}; this.pads = {}; this.sdl = this.scanSdl(exe);
     const groups = [];
     for (const gid of Object.keys(CE_PLAYERS)) {
       const doc = this.read(exe, gid), type = xVal(doc, 'type'), ids = CEMU_IDS[type];
@@ -822,7 +841,8 @@ const CE = {
   ctrlNode(doc, api, uuid) {   // nœud <controller> de cet appareil, créé si besoin
     let c = this.ctrls(doc).find((k) => xVal(k, 'api') === api && xVal(k, 'uuid') === uuid);
     if (!c) {
-      const name = api === 'Keyboard' ? 'Keyboard' : api === 'XInput' ? `Controller ${+uuid + 1}` : 'Controller';
+      const sd = (this.sdl || []).find((x) => x.uuid === uuid);
+      const name = api === 'Keyboard' ? 'Keyboard' : api === 'XInput' ? `Controller ${+uuid + 1}` : (sd && sd.name) || 'Controller';
       c = xEl('controller', [xEl('api', [], api), xEl('uuid', [], uuid), xEl('display_name', [], name)]);
       if (api !== 'Keyboard') c.kids.push(xEl('rumble', [], '0'), xEl('axis', [xEl('deadzone', [], '0.15'), xEl('range', [], '1')]), xEl('rotation', [xEl('deadzone', [], '0.15'), xEl('range', [], '1')]), xEl('trigger', [xEl('deadzone', [], '0.15'), xEl('range', [], '1')]));
       c.kids.push(xEl('mappings'));
@@ -834,11 +854,24 @@ const CE = {
     this.load(exe);
     const touched = new Set();
     for (const ch of changes.filter((x) => x.key === '#dev')) {   // changement de manette : le nœud de la manette du joueur change d'identifiant
-      const doc = this.docs[ch.group], p = this.pads[ch.group]; if (!doc || !p) continue;
+      const doc = this.docs[ch.group], p = this.pads[ch.group]; if (!doc) continue;
+      if (!p) { this.pads[ch.group] = this.padAt(ch.group, ch.raw); continue; }   // pas encore de manette : les touches suivantes l'ajouteront
       const c = this.ctrls(doc).find((k) => xVal(k, 'api') === p.api && xVal(k, 'uuid') === p.uuid), np = this.padAt(ch.group, ch.raw);
-      if (!c) continue;
-      xSet(c, 'uuid', np.uuid); if (p.api === 'XInput') xSet(c, 'display_name', `Controller ${+ch.raw + 1}`);
-      this.pads[ch.group] = { ...p, uuid: np.uuid }; touched.add(ch.group);
+      if (!c || (np.api === p.api && np.uuid === p.uuid)) continue;
+      const other = this.ctrls(doc).find((k) => k !== c && xVal(k, 'api') === np.api && xVal(k, 'uuid') === np.uuid);
+      if (other) doc.kids.splice(doc.kids.indexOf(other), 1);   // la manette choisie était déjà là : elle reprend les touches du joueur
+      if (np.api !== p.api) {   // XInput ↔ SDL : numéros des boutons et sens de l'axe Y différents
+        const ms = xKid(c, 'mappings');
+        if (ms) for (const e of ms.kids.filter((x) => x.name === 'entry')) {
+          const pad = this.decode(`${p.api}|${p.uuid}|${xVal(e, 'button')}`); if (!pad) continue;
+          xSet(e, 'button', this.encode({ ...pad, dev: `${np.api}|${np.uuid}` }, ch.group).split('|')[2]);
+        }
+        xSet(c, 'api', np.api);
+      }
+      xSet(c, 'uuid', np.uuid);
+      const sd = this.sdl.find((x) => x.uuid === np.uuid);
+      xSet(c, 'display_name', np.api === 'XInput' ? `Controller ${+np.uuid + 1}` : (sd && sd.name) || 'Controller');
+      this.pads[ch.group] = np; touched.add(ch.group);
     }
     for (const ch of changes.filter((x) => x.key !== '#dev')) {
       const doc = this.docs[ch.group]; if (!doc) continue;
@@ -890,7 +923,7 @@ function load(exe) {
     const m = ad.load(exe);
     return {
       ok: true, id: ad.id, name: ad.name, files: m.files,
-      groups: ad.groups.map((g) => ({ id: g.id, title: g.title, dev: ad.devOf ? ad.devOf(g.id) : undefined, items: g.items.map(([key, label, opt]) => {
+      groups: ad.groups.map((g) => ({ id: g.id, title: g.title, dev: ad.devOf ? ad.devOf(g.id) : undefined, devOpts: ad.devOpts && ad.devOf && ad.devOf(g.id) !== undefined ? ad.devOpts(g.id) : undefined, items: g.items.map(([key, label, opt]) => {
         const raw = m.get(g.id, key) || '';
         if (opt && opt.num) {   // réglage chiffré (zone morte) : sticks physiques concernés pour l'aperçu
           const ref = opt.stickKey ? ad.decode(m.get(g.id, opt.stickKey)) : null;
@@ -986,4 +1019,4 @@ function quickSave(exe, values) {
   return Object.values(byFile).reduce((n, a) => n + a.length, 0);
 }
 
-module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running, quick, quickSave };
+module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running, quick, quickSave, readText, writeWithBackup, adapters: { RA, P2, DOL, AZ, PP, CE } };

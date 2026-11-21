@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
   pickWallpaper: () => ipcRenderer.invoke('dialog:wallpaper'),
   scanFolder: (extensions) => ipcRenderer.invoke('scan:folder', extensions),
   launch: (payload) => ipcRenderer.invoke('game:launch', payload),
+  emuLang: (exes) => ipcRenderer.invoke('emulang:apply', exes),
   fullscreen: (force) => ipcRenderer.invoke('win:fullscreen', force),
   gameImmersive: (on) => ipcRenderer.invoke('game:immersive', !!on),
   onGameHotkey: (cb) => ipcRenderer.on('game:hotkey', (_e, k) => cb(k)),

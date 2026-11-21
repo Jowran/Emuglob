@@ -1949,6 +1949,23 @@ function openLayoutDlg() {
   };
   d.showModal();
 }
+// émulateurs en français : langue de l'interface et de la console émulée (la région n'est jamais changée)
+const EL_ST = { fr: 'passé en français', ok: 'déjà en français', manuel: 'autre langue choisie, laissée', absent: 'fichier absent (lance l\'émulateur une fois)', ouvert: 'ouvert : ferme-le d\'abord', erreur: 'erreur', vu: 'déjà réglé' };
+function openEmuLang(res) {
+  const d = $('#dlg-menu'), on = cfg.emuFr !== false;
+  $('#m-list').innerHTML = '<div class="mcap">Émulateurs en français</div>'
+    + '<div class="muted" style="padding:2px 14px 10px;max-width:460px;font-size:13px;line-height:1.45">Quand Emuglob est en français, chaque émulateur passe en français à son lancement : menus et langue de la console (DS, 3DS, Wii, GameCube, Wii U, PSP). Une seule fois par réglage : si tu changes la langue dans l\'émulateur, Emuglob la laisse. La région n\'est jamais changée (sauvegardes et jeux NTSC intacts). PS2 : la langue se règle dans le BIOS.</div>'
+    + (res ? '<div style="padding:0 14px 10px;font-size:13px;line-height:1.5">' + (res.length ? res.map((r) => `<div><b>${esc(r.emu)}</b>${r.label ? ' · ' + esc(r.label) : ''} : <span class="muted">${esc(EL_ST[r.status] || r.status)}${r.error ? ' (' + esc(r.error) + ')' : ''}</span></div>`).join('') : '<div class="muted">Aucun émulateur pris en charge configuré.</div>') + '</div>' : '')
+    + `<button data-a="t">${on ? '✓ Activé (cliquer pour désactiver)' : 'Désactivé (cliquer pour activer)'}</button>`
+    + '<button data-a="now">Tout mettre en français maintenant</button><button data-a="x">Fermer</button>';
+  d.onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.a === 't') { cfg.emuFr = !on; await save(); if (mode === 'settings') drawSetPane(); return openEmuLang(res); }
+    if (b.dataset.a === 'now') { b.disabled = true; b.textContent = 'Réglage…'; const r = await api.emuLang((cfg.emulators || []).map((x) => x.exe).filter(Boolean)); return openEmuLang(r); }
+    d.close();
+  };
+  if (!d.open) d.showModal();
+}
 // colonnes de la grille (Étagère)
 const gridCols = () => Math.max(1, getComputedStyle($('#f-items')).gridTemplateColumns.split(' ').filter(Boolean).length);
 function placeAlt(st) {
@@ -2489,7 +2506,11 @@ async function launch(g, opts = {}) {
     if (rom === g.path) { g.missing = false; render(); }
   }
   const emu = emuOf(g);
-  if (!emu.exe) { emu.exe = await askEmuExe(g, emu); if (!emu.exe) return; save(); }
+  if (!emu.exe) {
+    const p = await askEmuExe(g, emu); if (!p) return;
+    if (emu.id === 'ralibretro' && !/ralibretro/i.test(p.split(/[\\/]/).pop())) return toast(`${p.split(/[\\/]/).pop()} n'est pas RALibretro : choisis RALibretro.exe, ou change l'émulateur du jeu (… > Modifier).`);
+    emu.exe = p; save();
+  }
   if (['.wud', '.wux'].includes(extOf(rom)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
     if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
       const r = await api.cemuKeysImport(emu.exe);
@@ -3334,6 +3355,7 @@ const SET_ITEMS = [
   { g:'lang', ic:'globe', t:'Automatique', get s() { return (langPick() === 'auto' ? '✓ Utilisée · ' : '') + 'Langue de Windows'; }, act:() => setLang('auto'), keep:true },
   { g:'lang', ic:'globe', t:'Français', get s() { return langPick() === 'fr' ? '✓ Utilisée' : 'Interface en français'; }, act:() => setLang('fr'), keep:true },
   { g:'lang', ic:'globe', t:'English', get s() { return langPick() === 'en' ? '✓ Utilisée' : 'Interface en anglais'; }, act:() => setLang('en'), keep:true },
+  { g:'lang', ic:'gamepad', t:'Émulateurs en français', get s() { return LANG !== 'fr' ? 'Seulement si Emuglob est en français' : cfg.emuFr === false ? 'Désactivé' : 'Activé · langue réglée au lancement'; }, act:() => openEmuLang(), keep:true },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },
@@ -3556,14 +3578,17 @@ function openEmulators() {
     $('#e-sv').checked = !!cur.shareSaves; $('#e-svdir').value = cur.saveDir || ''; $('#e-svext').value = cur.saveExt || '';
     $('#e-del').style.display = cur.builtin ? 'none' : '';
   };
-  const commit = () => { cur.name = $('#e-name').value.trim() || cur.name; cur.exe = $('#e-exe').value.trim(); cur.args = $('#e-args').value;
+  const commit = () => { cur.name = $('#e-name').value.trim() || cur.name; cur.args = $('#e-args').value;
+    const exe = $('#e-exe').value.trim();
+    if (cur.id === 'ralibretro' && exe && !/ralibretro/i.test(exe.split(/[\\/]/).pop())) toast(`${exe.split(/[\\/]/).pop()} n'est pas RALibretro : chemin de RALibretro non modifié.`);
+    else cur.exe = exe;
     if (cur.kind !== 'libretro' && !cur.builtin) { cur.shareSaves = $('#e-sv').checked; cur.saveDir = $('#e-svdir').value.trim(); cur.saveExt = $('#e-svext').value.trim(); }
     save(); };
   $('#e-list').onchange = () => { commit(); cur = cfg.emulators.find((e) => e.id === $('#e-list').value); fill(); };
   $('#e-browse').onclick = async () => { const p = await api.pickExe(); if (p) $('#e-exe').value = p; };
   $('#e-add').onclick = () => { commit(); cur = { id: uid(), name: 'Nouvel émulateur', kind: 'standalone', exe: '', args: '"{game}"' }; cfg.emulators.push(cur); fill(); };
   $('#e-del').onclick = () => {
-    cfg.games.forEach((g) => { if (g.emulator === cur.id) g.emulator = 'ralibretro'; });
+    cfg.games.forEach((g) => { if (g.emulator === cur.id) g.emulator = emuForExt(extOf(g.path), g.path); });   // un jeu 3DS reste sur Azahar, pas sur RALibretro
     cfg.emulators = cfg.emulators.filter((e) => e !== cur); cur = cfg.emulators[0]; fill();
   };
   $('#e-ok').onclick = () => d.close();
@@ -3716,8 +3741,11 @@ async function openControls(pick, inGame = false) {
   const tabs = () => { $('#c-tabs').innerHTML = data.groups.map((g) => `<button data-g="${esc(g.id)}" class="${g.id === tab ? 'on' : ''}">${esc(g.title)}</button>`).join(''); };
   const list = () => {
     const g = data.groups.find((x) => x.id === tab);
-    const dv = devSel(g), nPads = Math.max(4, dv + 1);
-    $('#c-list').innerHTML = (dv === undefined ? '' : `<div class="crow cdev"><span>Manette utilisée</span><select id="c-dev">${Array.from({ length: nPads }, (_, i) => `<option value="${i}" ${i === dv ? 'selected' : ''}>Manette ${i + 1}${padName(i)}</option>`).join('')}</select></div>`) + g.items.map((it, n) => {
+    const dv = devSel(g);
+    const opts = g.devOpts ? (g.devOpts.some((o) => o.v === dv) ? g.devOpts : [...g.devOpts, { v: dv, t: dv }]).map((o) => ({ v: o.v, t: o.t + (/^XInput\|\d$/.test(o.v) ? padName(+o.v.split('|')[1]) : '') }))
+      : Array.from({ length: Math.max(4, (dv || 0) + 1) }, (_, i) => ({ v: i, t: `Manette ${i + 1}${padName(i)}` }));
+    $('#c-list').innerHTML = (dv === undefined ? '' : `<div class="crow cdev"><span>${g.devOpts ? 'API et manette (Cemu)' : 'Manette utilisée'}</span><select id="c-dev">${opts.map((o) => `<option value="${esc(String(o.v))}" ${o.v === dv ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select></div>`
+      + (g.devOpts && !g.devOpts.some((o) => /^SDL/.test(o.v)) ? `<div class="crow cdev"><span style="color:var(--muted);font-size:12.5px">Pour une manette SDL : ajoute-la une fois dans Cemu (réglages manette, API SDLController), elle apparaîtra ici.</span></div>` : '')) + g.items.map((it, n) => {
       const c = changes.get(g.id + '\u0000' + it.key);
       if (it.num) {
         const v = c ? c.num : it.value;
@@ -3727,11 +3755,11 @@ async function openControls(pick, inGame = false) {
     }).join('');
   };
   // manette physique de chaque joueur (onglet) : changée ici, toutes ses touches manette suivent à l'enregistrement
-  const devSel = (g) => { if (g.dev === undefined || g.dev === null) return undefined; const c = changes.get(g.id + '\u0000#dev'); return c ? +c.raw : g.dev; };
+  const devSel = (g) => { if (g.dev === undefined || g.dev === null) return undefined; const c = changes.get(g.id + '\u0000#dev'); return c ? (typeof g.dev === 'string' ? c.raw : +c.raw) : g.dev; };
   const padName = (i) => { const p = (navigator.getGamepads() || [])[i]; return p ? ' · ' + p.id.replace(/\s*\(.*\)\s*$/, '').slice(0, 32) : ''; };
   $('#c-list').onchange = (e) => {
     if (e.target.id !== 'c-dev') return;
-    const g = data.groups.find((x) => x.id === tab), v = +e.target.value;
+    const g = data.groups.find((x) => x.id === tab), v = typeof g.dev === 'string' ? e.target.value : +e.target.value;
     if (v === g.dev) changes.delete(g.id + '\u0000#dev'); else changes.set(g.id + '\u0000#dev', { group: g.id, key: '#dev', raw: String(v) });
   };
   const assign = async (n, bind, btn) => {
@@ -3802,7 +3830,8 @@ async function openControls(pick, inGame = false) {
     if (!d.open) return;
     const g = data && data.ok && data.groups.find((x) => x.id === tab);
     const gps = navigator.getGamepads() || [], dsel = g ? devSel(g) : undefined;
-    const gp = (dsel !== undefined && gps[dsel]) || [...gps].find(Boolean);   // aperçu : la manette choisie pour ce joueur
+    const di = typeof dsel === 'string' ? (/^XInput\|(\d)$/.exec(dsel) || [])[1] : dsel;
+    const gp = (di !== undefined && gps[+di]) || [...gps].find(Boolean);   // aperçu : la manette choisie pour ce joueur
     const active = [];
     document.querySelectorAll('#c-pad [data-b]').forEach((el) => { const b = gp && gp.buttons[+el.dataset.b]; const on = !!(b && b.value > 0.4); el.classList.toggle('on', on); if (on) active.push({ t: 'btn', i: +el.dataset.b }); });
     for (const s of [0, 2]) {
@@ -4461,14 +4490,14 @@ async function openInstall(id) {
   };
   if (id === 'ralibretro') {
     const refresh = async () => {
-      const have = emu.exe && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
+      const have = emu.exe && /ralibretro/i.test(emu.exe.split(/[\\/]/).pop()) && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
       const miss = have ? BASE_CORES.filter((c) => !have.includes(c)) : [];
       cb.hidden = !have || !miss.length;
       cb.textContent = have && have.length ? `Cores manquants (${miss.length})` : `Cores de base (${miss.length})`;
       cb.onclick = async () => {
         cb.disabled = true; $('#i-go').disabled = true;
         const fails = await downloadCores(emu, miss, (t) => { $('#i-state').textContent = t; });
-        $('#i-state').textContent = fails.length ? `${miss.length - fails.length} cores installés, ${fails.length} en échec (${fails[0]}).` : `${miss.length} cores installés.`;
+        $('#i-state').textContent = fails.length ? `${fails.done || 0}/${miss.length} cores installés. Échec : ${fails[0]}` : `${miss.length} cores installés.`;
         cb.disabled = false; $('#i-go').disabled = false; refresh();
       };
     };
@@ -4599,7 +4628,9 @@ async function downloadCores(emu, list, state) {
   for (const [i, core] of list.entries()) {
     state(`Téléchargement de ${core} (${i + 1}/${list.length})…`);
     const r = await api.coreDownload(emu.exe, core);
-    if (!r.ok) fails.push(`${core} : ${r.error}`);
+    if (r.ok) { fails.done = (fails.done || 0) + 1; continue; }
+    if (r.stop) { fails.push(r.error); break; }   // RALibretro mal configuré ou dossier protégé : inutile d'essayer les autres
+    fails.push(`${core} : ${r.error}`);
   }
   return fails;
 }
@@ -4626,6 +4657,10 @@ function openCores() {   // section Paramètres : cores par console, installés 
       $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
       $('#co-state').textContent = "RALibretro n'est pas installé : installe-le d'abord (Paramètres, Installation, RALibretro)."; return;
     }
+    if (!/ralibretro/i.test(emu.exe.split(/[\\/]/).pop())) {
+      $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
+      $('#co-state').textContent = `Le chemin de RALibretro pointe vers ${emu.exe.split(/[\\/]/).pop()}, pas vers RALibretro.exe. Corrige-le dans Paramètres, Émulateurs.`; return;
+    }
     const have = await api.coreList(emu.exe), miss = BASE_CORES.filter((c) => !have[c]);
     $('#co-base').disabled = busy || !miss.length;
     $('#co-base').textContent = miss.length ? `Installer les cores de base (${miss.length})` : 'Cores de base installés';
@@ -4640,7 +4675,7 @@ function openCores() {   // section Paramètres : cores par console, installés 
   const run = async (list, verb) => {
     busy = true; draw();
     const fails = await downloadCores(emu, list, (t) => { $('#co-state').textContent = t; });
-    $('#co-state').textContent = fails.length ? `${list.length - fails.length}/${list.length} ${verb}. Échec : ${fails[0]}` : `${list.length > 1 ? list.length + ' cores' : list[0]} ${verb}.`;
+    $('#co-state').textContent = fails.length ? `${fails.done || 0}/${list.length} ${verb}. Échec : ${fails[0]}` : `${list.length > 1 ? list.length + ' cores' : list[0]} ${verb}.`;
     busy = false; draw();
   };
   $('#co-list').onclick = async (e) => {

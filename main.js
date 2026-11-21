@@ -462,7 +462,7 @@ async function getHelper() {
   else if (process.platform !== 'win32') throw new Error("l'intégration n'existe que sous Windows");
   else h = new Helper(await compileHelper(), [], {});
   helperObj = h;
-  h.on((line) => { if (line === 'key f11' && win && !win.isDestroyed()) win.webContents.send('game:hotkey', 'f11'); });   // F11 pendant le jeu (le clavier est à l'émulateur)
+  h.on((line) => { if (line === 'key f11') gameHotkey(); });   // F11 pendant le jeu (le clavier est à l'émulateur)
   return h;
 }
 
@@ -556,6 +556,27 @@ function emuEnv(exe) {
   embedLog(`${path.basename(exe)} lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
   return { ...process.env, __COMPAT_LAYER: (cur.replace(/\b(dpiunaware|gdidpiscaling)\b/ig, '').trim() + ' HighDpiAware').trim() };
 }
+// émulateurs en français (Emuglob en français, réglage « Émulateurs en français » actif) : langue de l'interface et de la console émulée,
+// une fois par réglage ; la région n'est jamais changée (voir emulang.js)
+const emuLangPath = () => path.join(app.getPath('userData'), 'emulang.json');
+function emuFrench(exe, force) {
+  let c = {}; try { c = readCfg(); } catch { /* config illisible */ }
+  if (!force && (L('fr', 'en') !== 'fr' || c.emuFr === false)) return [];
+  let done = {}; try { done = JSON.parse(fs.readFileSync(emuLangPath(), 'utf-8')) || {}; } catch { /* premier passage */ }
+  const res = require('./emulang').localize(exe, { done, force });
+  try { fs.writeFileSync(emuLangPath(), JSON.stringify(done, null, 1)); } catch { /* sans importance */ }
+  const ch = res.filter((r) => r.status !== 'vu' && r.status !== 'absent');
+  if (ch.length) embedLog('émulateur en français : ' + ch.map((r) => `${r.emu} ${r.label} = ${r.status}${r.from !== undefined ? ' (avant : ' + r.from + ')' : ''}${r.error ? ' : ' + r.error : ''}`).join(' ; '));
+  return res;
+}
+ipcMain.handle('emulang:apply', (_e, exes) => {
+  const out = [];
+  for (const exe of [...new Set((exes || []).filter((x) => typeof x === 'string' && x && fs.existsSync(x)))]) {
+    if (emucfg.running(exe)) { out.push({ emu: path.basename(exe), label: '', status: 'ouvert' }); continue; }
+    try { out.push(...emuFrench(exe, true)); } catch (e) { out.push({ emu: path.basename(exe), label: '', status: 'erreur', error: e.message }); }
+  }
+  return out;
+});
 ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
   new Promise((resolve) => {
     if (!exe || !fs.existsSync(exe)) return resolve({ ok: false, error: 'Exécutable introuvable : ' + exe });
@@ -570,6 +591,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
       embedLog('sauvegardes : ' + JSON.stringify(saves));
     }
     try {
+      try { emuFrench(exe); } catch (err) { embedLog('émulateur en français : ' + err.message); }
       embedLog(`lancement : ${exe} ${args.join(' ')} (intégration : ${embed ? 'oui, mode ' + (mode || 'overlay') : 'non'})`);
       const child = spawn(exe, args, { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
       child.once('error', (err) => resolve({ ok: false, error: err.message }));
@@ -962,12 +984,22 @@ body.on div{opacity:1} b{padding:1px 7px;margin:0 2px;border:1px solid #8f7bff;b
   tip.once('ready-to-show', () => { if (!tip.isDestroyed()) tip.showInactive(); });
   setTimeout(() => { if (!tip.isDestroyed()) tip.destroy(); if (fsTip === tip) fsTip = null; }, 3000);
 }
+// F11 en jeu : vient du crochet clavier du module, ou du raccourci global de secours (émulateurs dont le crochet
+// ne voit pas la touche, Dolphin par exemple) ; les deux peuvent arriver pour un même appui, d'où l'anti-rebond
+let hotkeyAt = 0;
+function gameHotkey() {
+  if (Date.now() - hotkeyAt < 400 || !win || win.isDestroyed()) return;
+  hotkeyAt = Date.now();
+  win.webContents.send('game:hotkey', 'f11');
+}
 function setImmersive(on) {
   if (!win || win.isDestroyed()) return false;
   if (on) {
     if (!immersive) { immersive = { wasFs: win.isFullScreen() }; setTimeout(showFsTip, 350); }   // après le passage en plein écran
     win.setFullScreen(true);
+    if (!globalShortcut.isRegistered('F11')) { try { globalShortcut.register('F11', gameHotkey); } catch { /* touche prise ailleurs */ } }   // sortie toujours possible
   } else if (immersive) {
+    try { globalShortcut.unregister('F11'); } catch { /* déjà libérée */ }
     if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
     if (!immersive.wasFs) win.setFullScreen(false);
     immersive = null;
@@ -1337,6 +1369,9 @@ ipcMain.handle('cores:installed', (_e, exe) => {
 
 // cores RALibretro : téléchargés depuis le buildbot officiel libretro (Windows 64 bits), comme le fait RALibretro lui-même
 const CORE_URL = process.env.EMUGLOB_CORE_URL || 'https://buildbot.libretro.com/nightly/windows/x86_64/latest/';
+// le chemin enregistré doit être celui de RALibretro.exe : sinon on écrirait dans le dossier d'un autre émulateur (ex. Azahar dans Program Files)
+const notRalib = (exe) => (exe && !/ralibretro/i.test(path.basename(exe)) ? `le chemin de RALibretro pointe vers ${path.basename(exe)}, pas vers RALibretro.exe : corrige-le dans Paramètres, Émulateurs` : '');
+const denied = (e, dir) => (/^(EPERM|EACCES|EROFS)$/.test(e.code) ? `Windows refuse d'écrire dans ${dir}. Installe RALibretro dans un dossier à toi (Paramètres, Installation, RALibretro), pas dans Program Files.` : '');
 ipcMain.handle('cores:list', (_e, exe) => {   // { nom: { size, mtime } } des cores présents
   const out = {};
   try {
@@ -1347,12 +1382,21 @@ ipcMain.handle('cores:list', (_e, exe) => {   // { nom: { size, mtime } } des co
 });
 ipcMain.handle('cores:delete', (_e, { exe, core }) => {
   if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
+  if (notRalib(exe)) return { ok: false, error: notRalib(exe) };
   if (emucfg.running(exe)) return { ok: false, error: 'RALibretro est ouvert : ferme-le avant.' };
-  try { fs.unlinkSync(path.join(path.dirname(exe), 'Cores', core + '.dll')); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; }
+  const dir = path.join(path.dirname(exe), 'Cores');
+  try { fs.unlinkSync(path.join(dir, core + '.dll')); return { ok: true }; } catch (e) { return { ok: false, error: denied(e, dir) || e.message }; }
 });
 ipcMain.handle('cores:download', async (_e, { exe, core }) => {
   if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
-  if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'RALibretro introuvable' };
+  if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'RALibretro introuvable', stop: true };
+  if (notRalib(exe)) return { ok: false, error: notRalib(exe), stop: true };
+  const dir = path.join(path.dirname(exe), 'Cores');
+  // dossier non inscriptible (Program Files…) : on le sait avant de télécharger, et on n'essaie pas les autres cores
+  try { fs.mkdirSync(dir, { recursive: true }); const t = path.join(dir, '.emuglob-test'); fs.writeFileSync(t, ''); fs.unlinkSync(t); } catch (e) {
+    embedLog(`core ${core} : ${e.message}`);
+    return { ok: false, error: denied(e, dir) || e.message, stop: true };
+  }
   if (emucfg.running(exe) && fs.existsSync(path.join(path.dirname(exe), 'Cores', core + '.dll'))) return { ok: false, error: 'RALibretro est ouvert : ferme-le pour mettre à jour ce core.' };
   const work = path.join(app.getPath('userData'), 'update', 'core-' + core);
   const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('inst:progress', { id: 'core', core, ...p }); };
@@ -1372,8 +1416,6 @@ ipcMain.handle('cores:download', async (_e, { exe, core }) => {
     await extract(file, path.join(work, 'x'));
     const dll = findFile(path.join(work, 'x'), [core.toLowerCase() + '.dll'], 2);
     if (!dll || fs.statSync(dll).size < 1024) throw new Error(`${core}.dll introuvable dans l'archive`);
-    const dir = path.join(path.dirname(exe), 'Cores');
-    fs.mkdirSync(dir, { recursive: true });
     fs.copyFileSync(dll, path.join(dir, core + '.dll'));
     fs.rmSync(work, { recursive: true, force: true });
     embedLog(`core ${core} installé dans ${dir}`);
@@ -1381,7 +1423,7 @@ ipcMain.handle('cores:download', async (_e, { exe, core }) => {
   } catch (e) {
     embedLog(`core ${core} : ${e.message}`);
     try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignoré */ }
-    return { ok: false, error: e.message };
+    return { ok: false, error: denied(e, dir) || e.message, stop: !!denied(e, dir) };
   }
 });
 
