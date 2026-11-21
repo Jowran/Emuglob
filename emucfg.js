@@ -1,5 +1,5 @@
 // Contrôles et raccourcis des émulateurs, modifiés directement dans leurs fichiers de configuration.
-// Couverts : RALibretro, PCSX2, Dolphin, Azahar. Une copie .bak est faite avant chaque écriture.
+// Couverts : RALibretro, PCSX2, Dolphin, Azahar, PPSSPP. Une copie .bak est faite avant chaque écriture.
 //
 // Une « touche » arrive du renderer sous une forme neutre :
 //   { t:'key', code:'KeyA', ch:'a', ctrl, alt, shift }   (code = touche physique, ch = caractère de la disposition)
@@ -495,7 +495,132 @@ const AZ = {
   },
 };
 
-const ADAPTERS = [RA, P2, DOL, AZ];
+// ======================= PPSSPP (memstick\PSP\SYSTEM\controls.ini [ControlMapping], zone morte dans ppsspp.ini) =======================
+// Une ligne par bouton PSP : liste « appareil-code » séparée par des virgules (1 = clavier, 20 = manette XInput, 10 = DirectInput),
+// « : » pour une combinaison. Codes = NKCODE d'Android ; axes = 4000 + axe*2 (+1 pour le sens négatif).
+const PP_NK = { Enter: 66, NumpadEnter: 160, Escape: 111, Space: 62, Tab: 61, Backspace: 67, Delete: 112, Insert: 124, Home: 122, End: 123, PageUp: 92, PageDown: 93,
+  ArrowUp: 19, ArrowDown: 20, ArrowLeft: 21, ArrowRight: 22, ShiftLeft: 59, ShiftRight: 60, ControlLeft: 113, ControlRight: 114, AltLeft: 57, AltRight: 58,
+  CapsLock: 115, ScrollLock: 116, Pause: 121, PrintScreen: 120, Minus: 69, Equal: 70, BracketLeft: 71, BracketRight: 72, Backslash: 73, Semicolon: 74, Quote: 75,
+  Slash: 76, Backquote: 68, Comma: 55, Period: 56, NumpadAdd: 157, NumpadSubtract: 156, NumpadMultiply: 155, NumpadDivide: 154, NumpadDecimal: 158 };
+const PP_NK_FR = { 66: 'Entrée', 160: 'Pavé Entrée', 111: 'Échap', 62: 'Espace', 61: 'Tab', 67: 'Retour arr.', 112: 'Suppr', 124: 'Inser', 122: 'Début', 123: 'Fin', 92: 'Page ↑', 93: 'Page ↓',
+  19: '↑', 20: '↓', 21: '←', 22: '→', 59: 'Maj G', 60: 'Maj D', 113: 'Ctrl G', 114: 'Ctrl D', 57: 'Alt', 58: 'Alt Gr', 115: 'Verr. maj', 116: 'Arrêt défil', 121: 'Pause', 120: 'Impr. écran',
+  69: '-', 70: '=', 71: '[', 72: ']', 73: '\\', 74: ';', 75: "'", 76: '/', 68: '`', 55: ',', 56: '.', 157: 'Pavé +', 156: 'Pavé −', 155: 'Pavé *', 154: 'Pavé /', 158: 'Pavé .' };
+function ppKey(b) {   // PPSSPP (Windows) lit la touche selon la disposition du clavier : on part du caractère pour les lettres
+  const ch = (b.ch || '').toLowerCase();
+  if (/^[a-z]$/.test(ch)) return 29 + ch.charCodeAt(0) - 97;
+  if (PP_NK[b.code]) return PP_NK[b.code];
+  let m = /^Key([A-Z])$/.exec(b.code); if (m) return 29 + m[1].charCodeAt(0) - 65;
+  m = /^Digit(\d)$/.exec(b.code); if (m) return 7 + +m[1];
+  m = /^Numpad(\d)$/.exec(b.code); if (m) return 144 + +m[1];
+  m = /^F(\d+)$/.exec(b.code); if (m && +m[1] <= 12) return 130 + +m[1];
+  throw new Error('touche non reconnue');
+}
+function ppKeyText(c) {
+  if (c >= 29 && c <= 54) return String.fromCharCode(65 + c - 29);
+  if (c >= 7 && c <= 16) return String(c - 7);
+  if (c >= 131 && c <= 142) return 'F' + (c - 130);
+  if (c >= 144 && c <= 153) return 'Pavé ' + (c - 144);
+  return PP_NK_FR[c] || 'Touche ' + c;
+}
+// manette XInput (appareil 20) : bouton du navigateur → NKCODE ; sticks : X+ = droite, Y+ = haut (XInput n'inverse pas)
+const PP_BTN = [96, 97, 99, 100, 102, 103, null, null, 109, 108, 106, 107, 19, 20, 21, 22, 3];
+const PP_TRIG = { 6: 4034, 7: 4036 };
+const PP_AX = [0, 1, 11, 14];
+const ppAxisCode = (a, dir) => 4000 + PP_AX[a] * 2 + ((a % 2 ? -dir : dir) < 0 ? 1 : 0);
+function ppPad(code) {   // NKCODE / axe XInput → touche neutre (aperçu de la manette)
+  const i = PP_BTN.indexOf(code); if (i >= 0) return { t: 'btn', i };
+  for (const [k, v] of Object.entries(PP_TRIG)) if (v === code) return { t: 'btn', i: +k };
+  if (code === 4046 || code === 4044) return { t: 'btn', i: code === 4046 ? 6 : 7 };   // gâchettes, 2e axe envoyé par XInput
+  if (code >= 4000) { const ax = (code - 4000) >> 1, neg = (code - 4000) & 1, a = PP_AX.indexOf(ax); if (a >= 0) return { t: 'axis', a, dir: (a % 2 ? !neg : neg) ? -1 : 1 }; }
+  return null;
+}
+const ppParts = (raw) => String(raw || '').split(',').map((x) => x.trim()).filter(Boolean);
+const ppDev = (part) => +part.split(':')[0].split('-')[0];
+const PP_KB = (p) => ppDev(p) === 1, PP_XI = (p) => ppDev(p) === 20, PP_ANYPAD = (p) => ppDev(p) >= 10;
+function ppPartText(part) {
+  return part.split(':').map((x) => {
+    const [d, c] = x.split('-').map(Number);
+    if (d === 1) return ppKeyText(c);
+    if (d === 2) return 'Souris ' + c;
+    const pad = d === 20 ? ppPad(c) : null;
+    if (pad) return 'Manette ' + (pad.t === 'btn' ? PAD_FR[pad.i] : AXIS_FR(pad.a, pad.dir));
+    return (d === 10 ? 'DirectInput ' : 'Manette ') + (c >= 4000 ? 'axe ' + ((c - 4000) >> 1) + ((c - 4000) & 1 ? '−' : '+') : 'bouton ' + c);
+  }).join(' + ');
+}
+const PP_PSP = [['Up', 'Croix haut'], ['Down', 'Croix bas'], ['Left', 'Croix gauche'], ['Right', 'Croix droite'], ['Cross', 'Croix ✕'], ['Circle', 'Rond ○'], ['Square', 'Carré □'], ['Triangle', 'Triangle △'],
+  ['L', 'L'], ['R', 'R'], ['Start', 'Start'], ['Select', 'Select'], ['An.Up', 'Stick haut'], ['An.Down', 'Stick bas'], ['An.Left', 'Stick gauche'], ['An.Right', 'Stick droite']];
+const PP_HK = [['Pause', 'Pause (menu)'], ['Fast-forward', 'Vitesse max (maintenir)'], ['SpeedToggle', 'Choix de vitesse'], ['Rewind', 'Rembobiner'], ['Save State', 'Sauvegarde rapide'],
+  ['Load State', 'Chargement rapide'], ['Next Slot', 'Emplacement suivant'], ['Previous Slot', 'Emplacement précédent'], ['Toggle Fullscreen', 'Plein écran'], ['Screenshot', "Capture d'écran"],
+  ['Mute toggle', 'Muet'], ['Reset', 'Redémarrer'], ['Analog limiter', 'Limiteur analogique'], ['RapidFire', 'Tir rapide']];
+const PP_DZ = { num: true, min: 0, max: 100, unit: '%', sticks: [0, 2], in: (r) => (r === undefined || r === '' ? 15 : Math.round((parseFloat(r) || 0) * 100)), out: (v) => (v / 100).toFixed(6) };
+const PP = {
+  id: 'ppsspp', name: 'PPSSPP',
+  match: (exe) => /ppsspp/i.test(path.basename(exe)),
+  dir(exe) {   // dossier memstick : à côté de l'exe (version zip), sinon Documents\PPSSPP (version installée, installed.txt)
+    const d = path.dirname(exe), inst = path.join(d, 'installed.txt');
+    if (fs.existsSync(inst)) {
+      const p = (readText(inst) || '').split(/\r?\n/)[0].trim();
+      return path.join(p && fs.existsSync(p) ? p : path.join(docs(), 'PPSSPP'), 'PSP', 'SYSTEM');
+    }
+    return path.join(d, 'memstick', 'PSP', 'SYSTEM');
+  },
+  groups: [{ id: 'kb', title: 'Clavier', items: PP_PSP }, { id: 'pad', title: 'Manette', items: [...PP_PSP, ['AnalogDeadzone', 'Zone morte du stick', PP_DZ]] }, { id: 'hk', title: 'Raccourcis', items: PP_HK }],
+  // kb / pad : seulement la partie clavier / manette XInput de la ligne ; raccourcis : la ligne entière (tous appareils)
+  pick(line, gid) {
+    const p = ppParts(line);
+    if (gid === 'kb') return p.filter(PP_KB).join(',');
+    if (gid === 'pad') { const x = p.filter(PP_XI); return (x.length ? x : p.filter(PP_ANYPAD)).join(','); }
+    return p.join(',');
+  },
+  encode(b, gid) {
+    if (gid === 'kb' && b.t !== 'key' && b.t !== 'none') throw new Error('onglet Clavier : appuie sur une touche du clavier');
+    if (gid === 'pad' && b.t === 'key') throw new Error('onglet Manette : appuie sur un bouton de la manette');
+    let part = '';
+    if (b.t === 'key') part = [b.ctrl && 113, b.alt && 57, b.shift && 59, ppKey(b)].filter(Boolean).filter((c, i, a) => a.indexOf(c) === i).map((c) => '1-' + c).join(':');
+    else if (b.t === 'btn') { const c = PP_TRIG[b.i] || PP_BTN[b.i]; if (c == null) throw new Error('bouton non reconnu'); part = '20-' + c; }
+    else if (b.t === 'axis') part = '20-' + ppAxisCode(b.a, b.dir);
+    return part;
+  },
+  text(raw) {   // DirectInput masqué quand il y a aussi du clavier ou de l'XInput (réglages par défaut de PPSSPP)
+    let p = ppParts(raw); if (p.some((x) => !PP_ANYPAD(x) || PP_XI(x))) p = p.filter((x) => ppDev(x) !== 10);
+    return p.length ? [...new Set(p.map(ppPartText))].join(' / ') : '—';
+  },
+  decode(raw) {
+    const x = ppParts(raw).find((p) => PP_XI(p) && !p.includes(':'));
+    return x ? ppPad(+x.split('-')[1]) : null;
+  },
+  load(exe) {
+    const d = this.dir(exe), f = path.join(d, 'controls.ini'), txt = readText(f);
+    if (txt === null) throw new Error(`fichier introuvable : ${f}. Lance PPSSPP une fois pour le créer.`);
+    const ini = new Ini(txt), main = new Ini(readText(path.join(d, 'ppsspp.ini')) || '');
+    return {
+      files: [f, path.join(d, 'ppsspp.ini')],
+      get: (gid, key) => (key === 'AnalogDeadzone' ? main.get('Control', key) : this.pick(ini.get('ControlMapping', key) || '', gid)),
+    };
+  },
+  save(exe, changes) {
+    const d = this.dir(exe), f = path.join(d, 'controls.ini'), mf = path.join(d, 'ppsspp.ini');
+    const ini = new Ini(readText(f)), main = new Ini(readText(mf) || '');
+    let mainChanged = false;
+    for (const c of changes) {
+      if (c.key === 'AnalogDeadzone') { main.set('Control', c.key, c.raw); mainChanged = true; continue; }
+      // la nouvelle touche remplace celles du même type (clavier ou manette XInput) ; ✕ sur un raccourci efface tout
+      const p = ppParts(ini.get('ControlMapping', c.key)), np = ppParts(c.raw);
+      const kbNew = c.group === 'kb' || (c.group === 'hk' && np.some(PP_KB));
+      let line;
+      if (c.group === 'hk' && !np.length) line = '';
+      else if (kbNew) line = [...np, ...p.filter((x) => !PP_KB(x))].join(',');
+      else { const kb = p.filter(PP_KB), rest = p.filter((x) => !PP_KB(x) && !PP_XI(x)); line = [...kb, ...np, ...rest].join(','); }
+      ini.set('ControlMapping', c.key, line);
+    }
+    writeWithBackup(f, ini.toString());
+    const out = [f];
+    if (mainChanged) { writeWithBackup(mf, main.toString()); out.push(mf); }
+    return out;
+  },
+};
+
+const ADAPTERS = [RA, P2, DOL, AZ, PP];
 const adapterFor = (exe) => (exe ? ADAPTERS.find((a) => a.match(exe)) : null);
 
 function running(exe) {
@@ -508,7 +633,7 @@ function running(exe) {
 
 function load(exe) {
   const ad = adapterFor(exe);
-  if (!ad) return { ok: false, unsupported: true, error: "Cet émulateur n'est pas encore pris en charge par l'éditeur intégré (RALibretro, PCSX2, Dolphin et Azahar le sont)." };
+  if (!ad) return { ok: false, unsupported: true, error: "Cet émulateur n'est pas encore pris en charge par l'éditeur intégré (RALibretro, PCSX2, Dolphin, Azahar et PPSSPP le sont)." };
   if (!fs.existsSync(exe)) return { ok: false, error: 'Exécutable introuvable : ' + exe };
   try {
     const m = ad.load(exe);
