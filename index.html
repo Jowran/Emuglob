@@ -2489,7 +2489,11 @@ async function launch(g, opts = {}) {
     if (rom === g.path) { g.missing = false; render(); }
   }
   const emu = emuOf(g);
-  if (!emu.exe) { emu.exe = await askEmuExe(g, emu); if (!emu.exe) return; save(); }
+  if (!emu.exe) {
+    const p = await askEmuExe(g, emu); if (!p) return;
+    if (emu.id === 'ralibretro' && !/ralibretro/i.test(p.split(/[\\/]/).pop())) return toast(`${p.split(/[\\/]/).pop()} n'est pas RALibretro : choisis RALibretro.exe, ou change l'émulateur du jeu (… > Modifier).`);
+    emu.exe = p; save();
+  }
   if (['.wud', '.wux'].includes(extOf(rom)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
     if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
       const r = await api.cemuKeysImport(emu.exe);
@@ -3556,14 +3560,17 @@ function openEmulators() {
     $('#e-sv').checked = !!cur.shareSaves; $('#e-svdir').value = cur.saveDir || ''; $('#e-svext').value = cur.saveExt || '';
     $('#e-del').style.display = cur.builtin ? 'none' : '';
   };
-  const commit = () => { cur.name = $('#e-name').value.trim() || cur.name; cur.exe = $('#e-exe').value.trim(); cur.args = $('#e-args').value;
+  const commit = () => { cur.name = $('#e-name').value.trim() || cur.name; cur.args = $('#e-args').value;
+    const exe = $('#e-exe').value.trim();
+    if (cur.id === 'ralibretro' && exe && !/ralibretro/i.test(exe.split(/[\\/]/).pop())) toast(`${exe.split(/[\\/]/).pop()} n'est pas RALibretro : chemin de RALibretro non modifié.`);
+    else cur.exe = exe;
     if (cur.kind !== 'libretro' && !cur.builtin) { cur.shareSaves = $('#e-sv').checked; cur.saveDir = $('#e-svdir').value.trim(); cur.saveExt = $('#e-svext').value.trim(); }
     save(); };
   $('#e-list').onchange = () => { commit(); cur = cfg.emulators.find((e) => e.id === $('#e-list').value); fill(); };
   $('#e-browse').onclick = async () => { const p = await api.pickExe(); if (p) $('#e-exe').value = p; };
   $('#e-add').onclick = () => { commit(); cur = { id: uid(), name: 'Nouvel émulateur', kind: 'standalone', exe: '', args: '"{game}"' }; cfg.emulators.push(cur); fill(); };
   $('#e-del').onclick = () => {
-    cfg.games.forEach((g) => { if (g.emulator === cur.id) g.emulator = 'ralibretro'; });
+    cfg.games.forEach((g) => { if (g.emulator === cur.id) g.emulator = emuForExt(extOf(g.path), g.path); });   // un jeu 3DS reste sur Azahar, pas sur RALibretro
     cfg.emulators = cfg.emulators.filter((e) => e !== cur); cur = cfg.emulators[0]; fill();
   };
   $('#e-ok').onclick = () => d.close();
@@ -4461,14 +4468,14 @@ async function openInstall(id) {
   };
   if (id === 'ralibretro') {
     const refresh = async () => {
-      const have = emu.exe && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
+      const have = emu.exe && /ralibretro/i.test(emu.exe.split(/[\\/]/).pop()) && (await api.filesExist([emu.exe]))[0] ? (await api.coresInstalled(emu.exe)) || [] : null;
       const miss = have ? BASE_CORES.filter((c) => !have.includes(c)) : [];
       cb.hidden = !have || !miss.length;
       cb.textContent = have && have.length ? `Cores manquants (${miss.length})` : `Cores de base (${miss.length})`;
       cb.onclick = async () => {
         cb.disabled = true; $('#i-go').disabled = true;
         const fails = await downloadCores(emu, miss, (t) => { $('#i-state').textContent = t; });
-        $('#i-state').textContent = fails.length ? `${miss.length - fails.length} cores installés, ${fails.length} en échec (${fails[0]}).` : `${miss.length} cores installés.`;
+        $('#i-state').textContent = fails.length ? `${fails.done || 0}/${miss.length} cores installés. Échec : ${fails[0]}` : `${miss.length} cores installés.`;
         cb.disabled = false; $('#i-go').disabled = false; refresh();
       };
     };
@@ -4599,7 +4606,9 @@ async function downloadCores(emu, list, state) {
   for (const [i, core] of list.entries()) {
     state(`Téléchargement de ${core} (${i + 1}/${list.length})…`);
     const r = await api.coreDownload(emu.exe, core);
-    if (!r.ok) fails.push(`${core} : ${r.error}`);
+    if (r.ok) { fails.done = (fails.done || 0) + 1; continue; }
+    if (r.stop) { fails.push(r.error); break; }   // RALibretro mal configuré ou dossier protégé : inutile d'essayer les autres
+    fails.push(`${core} : ${r.error}`);
   }
   return fails;
 }
@@ -4626,6 +4635,10 @@ function openCores() {   // section Paramètres : cores par console, installés 
       $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
       $('#co-state').textContent = "RALibretro n'est pas installé : installe-le d'abord (Paramètres, Installation, RALibretro)."; return;
     }
+    if (!/ralibretro/i.test(emu.exe.split(/[\\/]/).pop())) {
+      $('#co-list').innerHTML = ''; $('#co-base').disabled = true;
+      $('#co-state').textContent = `Le chemin de RALibretro pointe vers ${emu.exe.split(/[\\/]/).pop()}, pas vers RALibretro.exe. Corrige-le dans Paramètres, Émulateurs.`; return;
+    }
     const have = await api.coreList(emu.exe), miss = BASE_CORES.filter((c) => !have[c]);
     $('#co-base').disabled = busy || !miss.length;
     $('#co-base').textContent = miss.length ? `Installer les cores de base (${miss.length})` : 'Cores de base installés';
@@ -4640,7 +4653,7 @@ function openCores() {   // section Paramètres : cores par console, installés 
   const run = async (list, verb) => {
     busy = true; draw();
     const fails = await downloadCores(emu, list, (t) => { $('#co-state').textContent = t; });
-    $('#co-state').textContent = fails.length ? `${list.length - fails.length}/${list.length} ${verb}. Échec : ${fails[0]}` : `${list.length > 1 ? list.length + ' cores' : list[0]} ${verb}.`;
+    $('#co-state').textContent = fails.length ? `${fails.done || 0}/${list.length} ${verb}. Échec : ${fails[0]}` : `${list.length > 1 ? list.length + ' cores' : list[0]} ${verb}.`;
     busy = false; draw();
   };
   $('#co-list').onclick = async (e) => {
