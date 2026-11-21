@@ -1,13 +1,13 @@
 {
- "built": "2026-11-21T05:05:06Z",
+ "built": "2026-11-21T05:16:25Z",
  "sha256": {
   "discid.js": "c1b71f187f4624d9c97c878ae19f93f3445eae40e1c19bf35d4d4e72e01b729d",
   "discord.js": "2f4c2026480238e527b72fffbfe07f3cb8abc7a3e7acc299944e478f24505d5a",
   "emucfg.js": "cf2dd28c5ca9d7161c53edcfe5b68bbeaa4a34d616a734d93aea52db1511a54a",
   "i18n.js": "b0a4eb53c1898848ed70c12e1f95842fe559588b529fd61562bba85141a3a8b9",
-  "index.html": "53dff5e0a0d377b264c040a168320fbded316be14c16a6ed45463f858d64c6b8",
+  "index.html": "efeb8ff7ff7dd75aed68cbff23657cc704dcc20505d3fe4d1eeacc617e74d03b",
   "main.js": "2481b5f266ecbeebcbd8e2d442e0ce23b0d825ae70ed6124384bde4f0637a60b",
-  "package.json": "b958764cc0adf640eff1ccc037f881ae936615519b1c6b349b21f2ea74954fef",
+  "package.json": "68cb0f544e5c5d13c593775a938e38ea70b7abe881fa673c773213b2c6d05cd7",
   "preload.js": "a39374ed1cf8cc092dad3b978cc4231994b83fdac5154ebe188bbe2b945362fd",
   "romhash.js": "c018771aab114a7a84888843bf30add0be25e9ab177e1c6357204eed147b6e9b",
   "saves.js": "74f30c96dae7de09c107b824fd08a427df14539f57b0e20fa6ade64d2040b499",
