@@ -941,12 +941,34 @@ app.on('before-quit', () => { discord.close(); if (helperObj && current && curre
 // plein écran du jeu : Emuglob en plein écran, la barre en jeu est masquée côté page, le menu natif de l'émulateur est retiré ;
 // à la sortie, tout revient comme avant (Emuglob reste en plein écran s'il l'était déjà)
 let immersive = null;   // { wasFs }
+// petite bulle « F11 pour quitter » : fenêtre à part, sinon elle serait cachée sous l'émulateur intégré
+let fsTip = null;
+function showFsTip() {
+  if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
+  if (!win || win.isDestroyed()) return;
+  const d = screen.getDisplayMatching(win.getBounds()).bounds, w = 380, h = 52;
+  const tip = fsTip = new BrowserWindow({ x: Math.round(d.x + (d.width - w) / 2), y: d.y + 28, width: w, height: h, parent: win, frame: false, transparent: true, show: false,
+    focusable: false, skipTaskbar: true, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+  tip.setIgnoreMouseEvents(true);
+  tip.setAlwaysOnTop(true, 'pop-up-menu');
+  const txt = L('Appuyez sur <b>F11</b> pour quitter le plein écran', 'Press <b>F11</b> to exit full screen');
+  const html = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+body{display:grid;place-items:center;font:14px "Segoe UI",system-ui,sans-serif;color:#fff}
+div{padding:10px 18px;border-radius:999px;background:rgba(18,16,42,.92);border:1px solid #3a3560;opacity:0;transition:opacity .25s}
+body.on div{opacity:1} b{padding:1px 7px;margin:0 2px;border:1px solid #8f7bff;border-radius:6px;font-weight:600}</style>
+<div>${txt}</div><script>requestAnimationFrame(()=>document.body.classList.add('on'));setTimeout(()=>document.body.classList.remove('on'),2600)</script>`;
+  tip.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  tip.once('ready-to-show', () => { if (!tip.isDestroyed()) tip.showInactive(); });
+  setTimeout(() => { if (!tip.isDestroyed()) tip.destroy(); if (fsTip === tip) fsTip = null; }, 3000);
+}
 function setImmersive(on) {
   if (!win || win.isDestroyed()) return false;
   if (on) {
-    if (!immersive) immersive = { wasFs: win.isFullScreen() };
+    if (!immersive) { immersive = { wasFs: win.isFullScreen() }; setTimeout(showFsTip, 350); }   // après le passage en plein écran
     win.setFullScreen(true);
   } else if (immersive) {
+    if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
     if (!immersive.wasFs) win.setFullScreen(false);
     immersive = null;
   }
