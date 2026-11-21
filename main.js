@@ -1337,6 +1337,9 @@ ipcMain.handle('cores:installed', (_e, exe) => {
 
 // cores RALibretro : téléchargés depuis le buildbot officiel libretro (Windows 64 bits), comme le fait RALibretro lui-même
 const CORE_URL = process.env.EMUGLOB_CORE_URL || 'https://buildbot.libretro.com/nightly/windows/x86_64/latest/';
+// le chemin enregistré doit être celui de RALibretro.exe : sinon on écrirait dans le dossier d'un autre émulateur (ex. Azahar dans Program Files)
+const notRalib = (exe) => (exe && !/ralibretro/i.test(path.basename(exe)) ? `le chemin de RALibretro pointe vers ${path.basename(exe)}, pas vers RALibretro.exe : corrige-le dans Paramètres, Émulateurs` : '');
+const denied = (e, dir) => (/^(EPERM|EACCES|EROFS)$/.test(e.code) ? `Windows refuse d'écrire dans ${dir}. Installe RALibretro dans un dossier à toi (Paramètres, Installation, RALibretro), pas dans Program Files.` : '');
 ipcMain.handle('cores:list', (_e, exe) => {   // { nom: { size, mtime } } des cores présents
   const out = {};
   try {
@@ -1347,12 +1350,21 @@ ipcMain.handle('cores:list', (_e, exe) => {   // { nom: { size, mtime } } des co
 });
 ipcMain.handle('cores:delete', (_e, { exe, core }) => {
   if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
+  if (notRalib(exe)) return { ok: false, error: notRalib(exe) };
   if (emucfg.running(exe)) return { ok: false, error: 'RALibretro est ouvert : ferme-le avant.' };
-  try { fs.unlinkSync(path.join(path.dirname(exe), 'Cores', core + '.dll')); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; }
+  const dir = path.join(path.dirname(exe), 'Cores');
+  try { fs.unlinkSync(path.join(dir, core + '.dll')); return { ok: true }; } catch (e) { return { ok: false, error: denied(e, dir) || e.message }; }
 });
 ipcMain.handle('cores:download', async (_e, { exe, core }) => {
   if (!/^[a-z0-9_+-]+_libretro$/i.test(String(core || ''))) return { ok: false, error: 'nom de core invalide' };
-  if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'RALibretro introuvable' };
+  if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'RALibretro introuvable', stop: true };
+  if (notRalib(exe)) return { ok: false, error: notRalib(exe), stop: true };
+  const dir = path.join(path.dirname(exe), 'Cores');
+  // dossier non inscriptible (Program Files…) : on le sait avant de télécharger, et on n'essaie pas les autres cores
+  try { fs.mkdirSync(dir, { recursive: true }); const t = path.join(dir, '.emuglob-test'); fs.writeFileSync(t, ''); fs.unlinkSync(t); } catch (e) {
+    embedLog(`core ${core} : ${e.message}`);
+    return { ok: false, error: denied(e, dir) || e.message, stop: true };
+  }
   if (emucfg.running(exe) && fs.existsSync(path.join(path.dirname(exe), 'Cores', core + '.dll'))) return { ok: false, error: 'RALibretro est ouvert : ferme-le pour mettre à jour ce core.' };
   const work = path.join(app.getPath('userData'), 'update', 'core-' + core);
   const send = (p) => { if (win && !win.isDestroyed()) win.webContents.send('inst:progress', { id: 'core', core, ...p }); };
@@ -1372,8 +1384,6 @@ ipcMain.handle('cores:download', async (_e, { exe, core }) => {
     await extract(file, path.join(work, 'x'));
     const dll = findFile(path.join(work, 'x'), [core.toLowerCase() + '.dll'], 2);
     if (!dll || fs.statSync(dll).size < 1024) throw new Error(`${core}.dll introuvable dans l'archive`);
-    const dir = path.join(path.dirname(exe), 'Cores');
-    fs.mkdirSync(dir, { recursive: true });
     fs.copyFileSync(dll, path.join(dir, core + '.dll'));
     fs.rmSync(work, { recursive: true, force: true });
     embedLog(`core ${core} installé dans ${dir}`);
@@ -1381,7 +1391,7 @@ ipcMain.handle('cores:download', async (_e, { exe, core }) => {
   } catch (e) {
     embedLog(`core ${core} : ${e.message}`);
     try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignoré */ }
-    return { ok: false, error: e.message };
+    return { ok: false, error: denied(e, dir) || e.message, stop: !!denied(e, dir) };
   }
 });
 
