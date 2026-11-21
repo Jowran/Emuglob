@@ -198,11 +198,17 @@ const P2 = {
     if (fs.existsSync(path.join(d, 'portable.ini')) || fs.existsSync(path.join(d, 'portable.txt'))) return path.join(d, 'inis', 'PCSX2.ini');
     return path.join(docs(), 'PCSX2', 'inis', 'PCSX2.ini');
   },
-  groups: [{ id: 'Pad1', title: 'Manette 1', items: [...P2_PAD, ['Deadzone', 'Zone morte des sticks', P2_DZ]] }, { id: 'Pad2', title: 'Manette 2', items: [...P2_PAD, ['Deadzone', 'Zone morte des sticks', P2_DZ]] }, { id: 'Hotkeys', title: 'Raccourcis', items: P2_HK }],
+  // manettes 3 et 4 : multitap sur le port 1 (emplacements 1B et 1C = sections Pad3 et Pad4), activé à l'enregistrement
+  groups: [...[1, 2, 3, 4].map((n) => ({ id: 'Pad' + n, title: n > 2 ? `Manette ${n} (multitap)` : `Manette ${n}`, items: [...P2_PAD, ['Deadzone', 'Zone morte des sticks', P2_DZ]] })), { id: 'Hotkeys', title: 'Raccourcis', items: P2_HK }],
   dev: 'SDL-0',
+  devOf(gid) {   // numéro de la manette physique utilisée par ce joueur (SDL-n / XInput-n)
+    if (!/^Pad\d$/.test(gid)) return undefined;
+    const m = /(?:SDL|XInput|DInput)-(\d+)\//.exec(this.ini ? this.ini.keys(gid).map(([, v]) => v).join(' ') : '');
+    return m ? +m[1] : +this.dev.split('-')[1] + +gid.slice(3) - 1;
+  },
   encode(b, gid) {
     if (b.t === 'none') return '';
-    const dev = gid === 'Pad2' ? this.dev.replace(/\d+$/, (n) => +n + 1) : this.dev;
+    const idx = b.dev != null && /^Pad\d$/.test(gid) ? +b.dev : this.devOf(gid), dev = idx === undefined ? this.dev : this.dev.split('-')[0] + '-' + idx;
     if (b.t === 'btn') return `${dev}/${P2_BTN[b.i]}`;
     if (b.t === 'axis') return `${dev}/${b.dir < 0 ? '-' : '+'}${P2_AXIS[b.a]}`;
     const parts = [];
@@ -234,14 +240,17 @@ const P2 = {
     if (txt === null) throw new Error(`fichier introuvable : ${f}. Lance PCSX2 une fois pour le créer.`);
     const ini = new Ini(txt);
     const m = /((?:SDL|XInput)-\d+)\//.exec(ini.keys('Pad1').map(([, v]) => v).join(' '));
-    this.dev = m ? m[1] : 'SDL-0';
+    this.dev = m ? m[1] : 'SDL-0'; this.ini = ini;
     return { files: [f], get: (gid, key) => ini.get(gid, key) };
   },
   save(exe, changes) {
     const f = this.file(exe), ini = new Ini(readText(f));
-    for (const c of changes) {
-      if (c.group === 'Pad2' && !ini.get('Pad2', 'Type')) ini.set('Pad2', 'Type', 'DualShock2');
-      if (c.group === 'Pad2' && ini.get('Pad2', 'Type') === 'None') ini.set('Pad2', 'Type', 'DualShock2');
+    for (const c of changes.filter((x) => x.key === '#dev')) {   // changement de manette : toutes les touches manette du joueur suivent
+      for (const [k, v] of ini.keys(c.group)) if (/(SDL|XInput|DInput)-\d+\//.test(v)) ini.set(c.group, k, v.replace(/(SDL|XInput|DInput)-\d+\//g, `$1-${+c.raw}/`));
+    }
+    for (const c of changes.filter((x) => x.key !== '#dev')) {
+      if (/^Pad[2-4]$/.test(c.group) && (!ini.get(c.group, 'Type') || ini.get(c.group, 'Type').trim() === 'None')) ini.set(c.group, 'Type', 'DualShock2');
+      if (/^Pad[34]$/.test(c.group) && (ini.get('Pad', 'MultitapPort1') || '').trim() !== 'true') ini.set('Pad', 'MultitapPort1', 'true');
       ini.set(c.group, c.key, c.raw);
     }
     writeWithBackup(f, ini.toString());
@@ -311,14 +320,20 @@ const DOL = {
     if (fs.existsSync(doc)) return path.join(doc, 'Config');
     return path.join(appData(), 'Dolphin Emulator', 'Config');
   },
-  where: { GCPad1: 'GCPadNew.ini', GCPad2: 'GCPadNew.ini', Wiimote1: 'WiimoteNew.ini', Hotkeys: 'Hotkeys.ini' },
-  groups: [{ id: 'GCPad1', title: 'GameCube 1', items: DOL_GC }, { id: 'GCPad2', title: 'GameCube 2', items: DOL_GC }, { id: 'Wiimote1', title: 'Wiimote 1', items: DOL_WII }, { id: 'Hotkeys', title: 'Raccourcis', items: DOL_HK }],
+  where: { GCPad1: 'GCPadNew.ini', GCPad2: 'GCPadNew.ini', GCPad3: 'GCPadNew.ini', GCPad4: 'GCPadNew.ini', Wiimote1: 'WiimoteNew.ini', Wiimote2: 'WiimoteNew.ini', Wiimote3: 'WiimoteNew.ini', Wiimote4: 'WiimoteNew.ini', Hotkeys: 'Hotkeys.ini' },
+  groups: [...[1, 2, 3, 4].map((n) => ({ id: 'GCPad' + n, title: 'GameCube ' + n, items: DOL_GC })), ...[1, 2, 3, 4].map((n) => ({ id: 'Wiimote' + n, title: 'Wiimote ' + n, items: DOL_WII })), { id: 'Hotkeys', title: 'Raccourcis', items: DOL_HK }],
   devs: {},
-  padDev(gid) {
+  devOf(gid) {
+    if (gid === 'Hotkeys') return undefined;
+    return +this.padDev(gid).split('/')[1];
+  },
+  padDev(gid, idx) {
+    if (idx != null) return this.padDev(gid).replace(/^(\w+)\/\d+\//, `$1/${+idx}/`);
     const d = this.devs[gid] || '';
     if (/^(XInput|SDL|WGInput)\//.test(d)) return d;
     const other = Object.values(this.devs).find((x) => /^(XInput|SDL|WGInput)\//.test(x));
-    return other || 'XInput/0/Gamepad';
+    const n = /(\d)$/.exec(gid), i = n && gid !== 'Hotkeys' ? +n[1] - 1 : 0;   // joueur n : n-ième manette du même type
+    return (other || 'XInput/0/Gamepad').replace(/^(\w+)\/\d+\//, `$1/${i}/`);
   },
   encode(b, gid) {
     if (b.t === 'none') return '';
@@ -331,7 +346,7 @@ const DOL = {
       if (mods.length) throw new Error('combinaison de touches possible seulement si ce groupe utilise le clavier');
       return '`' + DOL_KB + ':' + k + '`';
     }
-    const pd = this.padDev(gid), fam = pd.split('/')[0];
+    const pd = this.padDev(gid, gid === 'Hotkeys' ? null : b.dev), fam = pd.split('/')[0];
     const name = b.t === 'btn' ? DOL_PAD[fam][b.i] : DOL_AXIS(b.a, b.dir);
     if (!name) throw new Error("ce bouton n'existe pas pour cette manette dans Dolphin");
     return pd === dev ? quote(name) : '`' + pd + ':' + name + '`';
@@ -374,9 +389,25 @@ const DOL = {
   save(exe, changes) {
     this.load(exe);
     const dir = this.dir(exe), touched = new Set();
-    for (const c of changes) {
+    for (const c of changes.filter((x) => x.key === '#dev')) {   // changement de manette : appareil du groupe et touches manette déjà écrites
+      const f = this.where[c.group], ini = this.inis[f], np = this.padDev(c.group, c.raw), fam = np.split('/')[0];
+      for (const [k, v] of ini.keys(c.group)) {
+        if (k === 'Device') { if (/^(XInput|SDL|WGInput)\//.test(v)) ini.set(c.group, k, np); }
+        else if (v.includes(fam + '/')) ini.set(c.group, k, v.replace(new RegExp(fam + '\\/\\d+\\/', 'g'), `${fam}/${+c.raw}/`));
+      }
+      this.devs[c.group] = ini.get(c.group, 'Device') || '';
+      touched.add(f);
+    }
+    for (const c of changes.filter((x) => x.key !== '#dev')) {
       const f = this.where[c.group];
-      if (c.group === 'GCPad2' && !this.inis[f].get('GCPad2', 'Device')) this.inis[f].set('GCPad2', 'Device', this.padDev('GCPad2'));
+      if (c.group !== 'GCPad1' && c.group !== 'Wiimote1' && c.group !== 'Hotkeys' && !this.inis[f].get(c.group, 'Device')) this.inis[f].set(c.group, 'Device', this.padDev(c.group));
+      if (/^Wiimote[2-4]$/.test(c.group) && !/^[12]$/.test((this.inis[f].get(c.group, 'Source') || '').trim())) this.inis[f].set(c.group, 'Source', '1');   // Wiimote émulée
+      const gc = /^GCPad([2-4])$/.exec(c.group);
+      if (gc) {   // port GameCube branché : manette standard (6) dans Dolphin.ini
+        const df = path.join(dir, 'Dolphin.ini'), di = this.inis['Dolphin.ini'] || (this.inis['Dolphin.ini'] = new Ini(readText(df) || ''));
+        const k = 'SIDevice' + (+gc[1] - 1), v = (di.get('Core', k) || '').trim();
+        if (!v || v === '0') { di.set('Core', k, '6'); touched.add('Dolphin.ini'); }
+      }
       this.inis[f].set(c.group, c.key, c.raw);
       touched.add(f);
     }
@@ -418,6 +449,7 @@ const AZ = {
     return path.join(appData(), n, 'config', 'qt-config.ini');
   },
   groups: [],
+  devOf(gid) { return gid === 'btn' ? (this.port || 0) : undefined; },
   encode(b, gid) {
     if (gid === 'sc') {
       if (b.t === 'none') return '';
@@ -431,6 +463,7 @@ const AZ = {
       if (b.ctrl || b.alt || b.shift) throw new Error("Azahar n'accepte pas de combinaison pour un bouton");
       return `code:${qtCode(b)},engine:keyboard`;
     }
+    if (b.dev != null) this.port = +b.dev;
     if (!this.guid) throw new Error("aucune manette n'est encore configurée dans Azahar : impossible de connaître son identifiant. Assigne d'abord au clavier.");
     const base = `engine:sdl,guid:${this.guid},maptype:guid+port,port:${this.port || 0}`;
     if (b.t === 'btn') {
@@ -484,7 +517,10 @@ const AZ = {
   save(exe, changes) {
     const f = this.file(exe), ini = new Ini(readText(f));
     const q = (v) => (/[,"\\;=]/.test(v) ? '"' + v.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"' : v);
-    for (const c of changes) {
+    for (const c of changes.filter((x) => x.key === '#dev')) {   // changement de manette : port SDL des boutons du profil actif
+      for (const [k, v] of ini.keys('Controls')) if (k.startsWith(this.pre) && /engine:sdl/.test(v) && /port:\d+/.test(v)) ini.set('Controls', k, v.replace(/port:\d+/, 'port:' + (+c.raw)), '=');
+    }
+    for (const c of changes.filter((x) => x.key !== '#dev')) {
       const sec = c.group === 'btn' ? 'Controls' : 'UI';
       const key = c.group === 'btn' ? this.pre + c.key : `Shortcuts\\Main%20Window\\${c.key}\\KeySeq`;
       ini.set(sec, key + '\\default', 'false', '=');
@@ -652,7 +688,11 @@ const CEMU_IDS = {
     LUp: 17, LDown: 18, LLeft: 19, LRight: 20, RUp: 21, RDown: 22, RLeft: 23, RRight: 24, Mic: 25, Screen: 26, Home: 27 },
   'Wii U Pro Controller': { A: 1, B: 2, X: 3, Y: 4, L: 5, R: 6, ZL: 7, ZR: 8, Plus: 9, Minus: 10, Home: 11, Up: 12, Down: 13, Left: 14, Right: 15, L3: 16, R3: 17,
     LUp: 18, LDown: 19, LLeft: 20, LRight: 21, RUp: 22, RDown: 23, RLeft: 24, RRight: 25 },
+  Wiimote: { A: 1, B: 2, One: 3, Two: 4, NZ: 5, NC: 6, Plus: 7, Minus: 8, Up: 9, Down: 10, Left: 11, Right: 12, LUp: 13, LDown: 14, LLeft: 15, LRight: 16, Home: 17 },
 };
+const CEMU_WII = [['A', 'A'], ['B', 'B'], ['One', '1'], ['Two', '2'], ['Plus', '+'], ['Minus', '−'], ['Home', 'Home'], ['Up', 'Croix haut'], ['Down', 'Croix bas'], ['Left', 'Croix gauche'], ['Right', 'Croix droite'],
+  ['NC', 'Nunchuk C'], ['NZ', 'Nunchuk Z'], ['LUp', 'Nunchuk stick haut'], ['LDown', 'Nunchuk stick bas'], ['LLeft', 'Nunchuk stick gauche'], ['LRight', 'Nunchuk stick droite']];
+const CE_TYPE_FR = { 'Wii U GamePad': 'GamePad', 'Wii U Pro Controller': 'manette Pro', Wiimote: 'Wiimote' };
 const CEMU_ITEMS = [['A', 'A'], ['B', 'B'], ['X', 'X'], ['Y', 'Y'], ['L', 'L'], ['R', 'R'], ['ZL', 'ZL'], ['ZR', 'ZR'], ['Plus', '+ (Start)'], ['Minus', '− (Select)'], ['Home', 'Home'],
   ['Up', 'Croix haut'], ['Down', 'Croix bas'], ['Left', 'Croix gauche'], ['Right', 'Croix droite'], ['L3', 'Clic stick gauche'], ['R3', 'Clic stick droit'],
   ['LUp', 'Stick gauche haut'], ['LDown', 'Stick gauche bas'], ['LLeft', 'Stick gauche gauche'], ['LRight', 'Stick gauche droite'],
@@ -694,7 +734,7 @@ function vkText(c) {
   if (c >= 112 && c <= 135) return 'F' + (c - 111);
   return VK_FR[c] || 'Touche ' + c;
 }
-const CE_PLAYERS = { c0: 0, c1: 1 };
+const CE_PLAYERS = { c0: 0, c1: 1, c2: 2, c3: 3 };
 const CE = {
   id: 'cemu', name: 'Cemu',
   match: (exe) => /^cemu/i.test(path.basename(exe)),
@@ -715,6 +755,12 @@ const CE = {
     return xEl('emulated_controller', [xEl('type', [], gid === 'c0' ? 'Wii U GamePad' : 'Wii U Pro Controller')]);
   },
   ctrls: (doc) => doc.kids.filter((k) => k.name === 'controller'),
+  devOf(gid) { const p = this.pads[gid]; return p ? parseInt(p.uuid, 10) || 0 : CE_PLAYERS[gid]; },
+  padAt(gid, idx) {   // manette du joueur, sur la manette physique idx si elle est choisie
+    const p = this.pads[gid] || { api: 'XInput', uuid: String(CE_PLAYERS[gid]) };
+    if (idx == null) return p;
+    return { api: p.api, uuid: p.api === 'XInput' ? String(+idx) : p.uuid.replace(/^\d+_/, `${+idx}_`) };
+  },
   padOf(doc) {   // manette déjà utilisée dans ce profil (XInput ou SDL), sinon la manette XInput du joueur
     const c = this.ctrls(doc).find((k) => /^(XInput|SDLController)$/.test(xVal(k, 'api')));
     return c ? { api: xVal(c, 'api'), uuid: xVal(c, 'uuid'), name: xVal(c, 'display_name') || '' } : null;
@@ -725,7 +771,7 @@ const CE = {
       if ((b.ctrl || b.alt || b.shift) && !isMod(b.code)) throw new Error("Cemu n'accepte pas de combinaison pour un bouton");
       return `Keyboard|keyboard|${vkOf(b)}`;
     }
-    const p = this.pads[gid] || { api: 'XInput', uuid: String(CE_PLAYERS[gid]) }, sdl = p.api === 'SDLController';
+    const p = this.padAt(gid, b.dev), sdl = p.api === 'SDLController';
     if (b.t === 'btn') { const c = (sdl ? CE_SDL : CE_XI)[b.i]; if (c == null) throw new Error("ce bouton n'est pas lisible par Cemu en XInput"); return `${p.api}|${p.uuid}|${c}`; }
     return `${p.api}|${p.uuid}|${ceAxis(b.a, b.dir, sdl)}`;
   },
@@ -751,8 +797,9 @@ const CE = {
     for (const gid of Object.keys(CE_PLAYERS)) {
       const doc = this.read(exe, gid), type = xVal(doc, 'type'), ids = CEMU_IDS[type];
       this.docs[gid] = doc; this.pads[gid] = this.padOf(doc);
-      const title = `Joueur ${CE_PLAYERS[gid] + 1} (${type === 'Wii U GamePad' ? 'GamePad' : 'manette Pro'})`;
-      groups.push({ id: gid, title, items: [...CEMU_ITEMS.filter(([k]) => ids[k]), ['dz:axis', 'Zone morte du stick gauche', CEMU_DZ([0])], ['dz:rotation', 'Zone morte du stick droit', CEMU_DZ([2])]] });
+      const title = `Joueur ${CE_PLAYERS[gid] + 1} (${CE_TYPE_FR[type]})`;
+      groups.push({ id: gid, title, items: type === 'Wiimote' ? [...CEMU_WII, ['dz:axis', 'Zone morte du stick Nunchuk', CEMU_DZ([0])]]
+        : [...CEMU_ITEMS.filter(([k]) => ids[k]), ['dz:axis', 'Zone morte du stick gauche', CEMU_DZ([0])], ['dz:rotation', 'Zone morte du stick droit', CEMU_DZ([2])]] });
     }
     this.groups = groups;
     const get = (gid, key) => {
@@ -786,11 +833,18 @@ const CE = {
   save(exe, changes) {
     this.load(exe);
     const touched = new Set();
-    for (const ch of changes) {
+    for (const ch of changes.filter((x) => x.key === '#dev')) {   // changement de manette : le nœud de la manette du joueur change d'identifiant
+      const doc = this.docs[ch.group], p = this.pads[ch.group]; if (!doc || !p) continue;
+      const c = this.ctrls(doc).find((k) => xVal(k, 'api') === p.api && xVal(k, 'uuid') === p.uuid), np = this.padAt(ch.group, ch.raw);
+      if (!c) continue;
+      xSet(c, 'uuid', np.uuid); if (p.api === 'XInput') xSet(c, 'display_name', `Controller ${+ch.raw + 1}`);
+      this.pads[ch.group] = { ...p, uuid: np.uuid }; touched.add(ch.group);
+    }
+    for (const ch of changes.filter((x) => x.key !== '#dev')) {
       const doc = this.docs[ch.group]; if (!doc) continue;
       touched.add(ch.group);
       if (ch.key.startsWith('dz:')) {
-        const p = this.pads[ch.group] || { api: 'XInput', uuid: String(CE_PLAYERS[ch.group]) };
+        const p = this.padAt(ch.group, ch.dev);
         const c = this.ctrlNode(doc, p.api, p.uuid);
         let sec = xKid(c, ch.key.slice(3));
         if (!sec) { sec = xEl(ch.key.slice(3), [xEl('deadzone', [], ch.raw), xEl('range', [], '1')]); c.kids.splice(c.kids.findIndex((k) => k.name === 'mappings'), 0, sec); } else xSet(sec, 'deadzone', ch.raw);
@@ -836,7 +890,7 @@ function load(exe) {
     const m = ad.load(exe);
     return {
       ok: true, id: ad.id, name: ad.name, files: m.files,
-      groups: ad.groups.map((g) => ({ id: g.id, title: g.title, items: g.items.map(([key, label, opt]) => {
+      groups: ad.groups.map((g) => ({ id: g.id, title: g.title, dev: ad.devOf ? ad.devOf(g.id) : undefined, items: g.items.map(([key, label, opt]) => {
         const raw = m.get(g.id, key) || '';
         if (opt && opt.num) {   // réglage chiffré (zone morte) : sticks physiques concernés pour l'aperçu
           const ref = opt.stickKey ? ad.decode(m.get(g.id, opt.stickKey)) : null;
@@ -858,7 +912,7 @@ function save(exe, changes) {
   if (running(exe)) return { ok: false, error: `${ad.name} est ouvert : ferme-le avant d'enregistrer (il écraserait les changements en quittant).` };
   try {
     ad.load(exe);
-    for (const c of changes) if (c.num !== undefined) {   // valeur affichée → format du fichier
+    for (const c of changes) if (c.num !== undefined && c.key !== '#dev') {   // valeur affichée → format du fichier
       const g = ad.groups.find((x) => x.id === c.group), it = g && g.items.find(([k]) => k === c.key);
       if (!it || !it[2] || !it[2].num) throw new Error('réglage inconnu : ' + c.key);
       c.raw = it[2].out(Math.max(it[2].min, Math.min(it[2].max, Math.round(+c.num || 0))));

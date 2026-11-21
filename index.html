@@ -219,6 +219,7 @@
   .crow .cv.chg { outline:1px solid #ffc83d; }
   .crow .cv.wait { background:#5b46d6; animation:cpulse 1s infinite; }
   .crow .cx { padding:6px 9px; opacity:.6; }
+  .crow.cdev { grid-column:1/-1; } .crow.cdev select { width:auto; min-width:220px; max-width:60%; margin:0; }
   @keyframes cpulse { 50% { opacity:.55; } }
   #c-body { display:flex; gap:18px; align-items:flex-start; }
   #c-body #c-list { flex:1; min-width:0; }
@@ -3715,7 +3716,8 @@ async function openControls(pick, inGame = false) {
   const tabs = () => { $('#c-tabs').innerHTML = data.groups.map((g) => `<button data-g="${esc(g.id)}" class="${g.id === tab ? 'on' : ''}">${esc(g.title)}</button>`).join(''); };
   const list = () => {
     const g = data.groups.find((x) => x.id === tab);
-    $('#c-list').innerHTML = g.items.map((it, n) => {
+    const dv = devSel(g), nPads = Math.max(4, dv + 1);
+    $('#c-list').innerHTML = (dv === undefined ? '' : `<div class="crow cdev"><span>Manette utilisée</span><select id="c-dev">${Array.from({ length: nPads }, (_, i) => `<option value="${i}" ${i === dv ? 'selected' : ''}>Manette ${i + 1}${padName(i)}</option>`).join('')}</select></div>`) + g.items.map((it, n) => {
       const c = changes.get(g.id + '\u0000' + it.key);
       if (it.num) {
         const v = c ? c.num : it.value;
@@ -3724,8 +3726,17 @@ async function openControls(pick, inGame = false) {
       return `<div class="crow" data-row="${n}"><span>${esc(it.label)}</span><button class="cv ${c ? 'chg' : ''}" data-n="${n}" title="${esc(c ? c.raw : it.raw)}">${esc(c ? c.text : it.text)}</button><button class="cx" data-x="${n}" title="Effacer">✕</button></div>`;
     }).join('');
   };
+  // manette physique de chaque joueur (onglet) : changée ici, toutes ses touches manette suivent à l'enregistrement
+  const devSel = (g) => { if (g.dev === undefined || g.dev === null) return undefined; const c = changes.get(g.id + '\u0000#dev'); return c ? +c.raw : g.dev; };
+  const padName = (i) => { const p = (navigator.getGamepads() || [])[i]; return p ? ' · ' + p.id.replace(/\s*\(.*\)\s*$/, '').slice(0, 32) : ''; };
+  $('#c-list').onchange = (e) => {
+    if (e.target.id !== 'c-dev') return;
+    const g = data.groups.find((x) => x.id === tab), v = +e.target.value;
+    if (v === g.dev) changes.delete(g.id + '\u0000#dev'); else changes.set(g.id + '\u0000#dev', { group: g.id, key: '#dev', raw: String(v) });
+  };
   const assign = async (n, bind, btn) => {
     const g = data.groups.find((x) => x.id === tab), it = g.items[n];
+    if (bind.t !== 'none' && devSel(g) !== undefined) bind = { ...bind, dev: devSel(g) };
     const r = await api.emuCfgEncode(emu.exe, g.id, bind);
     if (!r.ok) { list(); return toast(r.error); }
     if (r.raw === it.raw) changes.delete(g.id + '\u0000' + it.key);
@@ -3789,8 +3800,9 @@ async function openControls(pick, inGame = false) {
   };
   const frame = () => {
     if (!d.open) return;
-    const gp = [...(navigator.getGamepads() || [])].find(Boolean);
     const g = data && data.ok && data.groups.find((x) => x.id === tab);
+    const gps = navigator.getGamepads() || [], dsel = g ? devSel(g) : undefined;
+    const gp = (dsel !== undefined && gps[dsel]) || [...gps].find(Boolean);   // aperçu : la manette choisie pour ce joueur
     const active = [];
     document.querySelectorAll('#c-pad [data-b]').forEach((el) => { const b = gp && gp.buttons[+el.dataset.b]; const on = !!(b && b.value > 0.4); el.classList.toggle('on', on); if (on) active.push({ t: 'btn', i: +el.dataset.b }); });
     for (const s of [0, 2]) {
