@@ -1,6 +1,6 @@
 {
   "name": "emuglob-launcher",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "license": "GPL-3.0-only",
   "description": "Launcher personnalisé pour RALibretro et d'autres émulateurs",
   "main": "boot.js",

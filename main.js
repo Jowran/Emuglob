@@ -462,6 +462,7 @@ async function getHelper() {
   else if (process.platform !== 'win32') throw new Error("l'intégration n'existe que sous Windows");
   else h = new Helper(await compileHelper(), [], {});
   helperObj = h;
+  h.on((line) => { if (line === 'key f11' && win && !win.isDestroyed()) win.webContents.send('game:hotkey', 'f11'); });   // F11 pendant le jeu (le clavier est à l'émulateur)
   return h;
 }
 
@@ -588,6 +589,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           hideCover(true);
           streamSource = null;
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
+          setImmersive(false);   // le jeu est fini : affichage d'avant
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
           if (sync && sync.rom && sync.emu && sync.emu.id === 'cemu') {   // Wii U : copie du dossier de sauvegarde du jeu
@@ -936,6 +938,44 @@ ipcMain.handle('discord:status', () => discord.status);
 ipcMain.handle('embed:openlog', () => shell.openPath(embedLogPath()));
 app.on('before-quit', () => { discord.close(); if (helperObj && current && current.embedded) helperObj.send('close'); });
 
+// plein écran du jeu : Emuglob en plein écran, la barre en jeu est masquée côté page, le menu natif de l'émulateur est retiré ;
+// à la sortie, tout revient comme avant (Emuglob reste en plein écran s'il l'était déjà)
+let immersive = null;   // { wasFs }
+// petite bulle « F11 pour quitter » : fenêtre à part, sinon elle serait cachée sous l'émulateur intégré
+let fsTip = null;
+function showFsTip() {
+  if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
+  if (!win || win.isDestroyed()) return;
+  const d = screen.getDisplayMatching(win.getBounds()).bounds, w = 380, h = 52;
+  const tip = fsTip = new BrowserWindow({ x: Math.round(d.x + (d.width - w) / 2), y: d.y + 28, width: w, height: h, parent: win, frame: false, transparent: true, show: false,
+    focusable: false, skipTaskbar: true, resizable: false, movable: false, minimizable: false, maximizable: false, fullscreenable: false, hasShadow: false,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+  tip.setIgnoreMouseEvents(true);
+  tip.setAlwaysOnTop(true, 'pop-up-menu');
+  const txt = L('Appuyez sur <b>F11</b> pour quitter le plein écran', 'Press <b>F11</b> to exit full screen');
+  const html = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+body{display:grid;place-items:center;font:14px "Segoe UI",system-ui,sans-serif;color:#fff}
+div{padding:10px 18px;border-radius:999px;background:rgba(18,16,42,.92);border:1px solid #3a3560;opacity:0;transition:opacity .25s}
+body.on div{opacity:1} b{padding:1px 7px;margin:0 2px;border:1px solid #8f7bff;border-radius:6px;font-weight:600}</style>
+<div>${txt}</div><script>requestAnimationFrame(()=>document.body.classList.add('on'));setTimeout(()=>document.body.classList.remove('on'),2600)</script>`;
+  tip.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  tip.once('ready-to-show', () => { if (!tip.isDestroyed()) tip.showInactive(); });
+  setTimeout(() => { if (!tip.isDestroyed()) tip.destroy(); if (fsTip === tip) fsTip = null; }, 3000);
+}
+function setImmersive(on) {
+  if (!win || win.isDestroyed()) return false;
+  if (on) {
+    if (!immersive) { immersive = { wasFs: win.isFullScreen() }; setTimeout(showFsTip, 350); }   // après le passage en plein écran
+    win.setFullScreen(true);
+  } else if (immersive) {
+    if (fsTip && !fsTip.isDestroyed()) fsTip.destroy();
+    if (!immersive.wasFs) win.setFullScreen(false);
+    immersive = null;
+  }
+  if (helperObj && current && current.embedded) helperObj.send(on ? 'menu hide' : 'menu show');
+  return on;
+}
+ipcMain.handle('game:immersive', (_e, on) => setImmersive(!!on));
 ipcMain.handle('win:fullscreen', (_e, force) => {
   const next = typeof force === 'boolean' ? force : !win.isFullScreen();
   win.setFullScreen(next);

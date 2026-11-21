@@ -2,9 +2,11 @@
 // Protocole texte (une commande par ligne sur stdin, événements sur stdout) :
 //   embed <pid> <hwndParent> <x> <y> <w> <h> <timeoutMs> [child|overlay]   move <x> <y> <w> <h>   focus   close   release   quit
 //   (embed cache aussi, dès sa création, toute fenêtre du processus hors de l'écran jusqu'à l'intégration)
+//   menu hide|show   (plein écran du jeu : retire / remet le menu natif de l'émulateur)
 //   vol <pid> <0-100 ou -1> <muet 0|1|-1>   (volume de l'émulateur dans le mélangeur de Windows ; -1 = ne pas changer) → vol <niveau> <muet> <sessions>
 // (x y w h = zone cliente d'Emuglob, en pixels physiques)
-// Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed
+// Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed | key f11
+//   (key f11 : F11 pressée pendant que l'émulateur intégré ou Emuglob est au premier plan ; la touche n'est pas transmise à l'émulateur)
 // Deux modes :
 //   child   : la fenêtre devient une VRAIE fenêtre enfant (SetParent) du moteur de rendu d'Emuglob. Peut rester noire avec OpenGL / Vulkan / DirectX.
 //   overlay : la fenêtre reste une fenêtre de premier niveau, sans bordure, POSSÉDÉE par Emuglob, collée sur la zone de jeu et suivie 12 fois par seconde.
@@ -90,6 +92,14 @@ public static class EmbedHelper
     [DllImport("user32.dll")] static extern bool TranslateMessage(ref MSG msg);
     [DllImport("user32.dll")] static extern IntPtr DispatchMessage(ref MSG msg);
     [DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
+    [DllImport("user32.dll")] static extern IntPtr GetMenu(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern bool DrawMenuBar(IntPtr hwnd);
+    [StructLayout(LayoutKind.Sequential)]
+    struct KBDLLHOOKSTRUCT { public uint vkCode, scanCode, flags, time; public IntPtr extra; }
+    delegate IntPtr KeyProc(int code, IntPtr wParam, ref KBDLLHOOKSTRUCT k);
+    [DllImport("user32.dll")] static extern IntPtr SetWindowsHookEx(int id, KeyProc proc, IntPtr mod, uint tid);
+    [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, ref KBDLLHOOKSTRUCT k);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr GetModuleHandle(string name);
 
     static readonly object gate = new object();
     static IntPtr embedded = IntPtr.Zero;   // fenêtre de l'émulateur
@@ -97,6 +107,9 @@ public static class EmbedHelper
     static string curMode = "child";
     static bool parked = false;             // fenêtre cachée le temps d'un panneau d'Emuglob par-dessus le jeu (contrôles)
     static bool streamMode = false;
+    static IntPtr savedMenu = IntPtr.Zero;  // menu natif retiré pendant le plein écran du jeu (remis ensuite)
+    static KeyProc keyProc;                 // gardé en champ (ramasse-miettes)
+    static bool f11Down = false;
     static int rx, ry, rw, rh;              // zone de jeu (pixels physiques, relative à la zone cliente d'Emuglob)
 
     // ---------- masquage : les fenêtres de l'émulateur sont envoyées hors de l'écran dès leur création, jusqu'à l'intégration ----------
@@ -114,11 +127,60 @@ public static class EmbedHelper
             hideProc = new WinEventProc(OnWinEvent);
             // 0x8000 CREATE … 0x800B LOCATIONCHANGE (dont SHOW 0x8002) ; hors contexte (0), on ignore nos propres événements (2)
             SetWinEventHook(0x8000, 0x800B, IntPtr.Zero, hideProc, 0, 0, 0x0002);
+            // F11 : le clavier va à l'émulateur, Emuglob ne la verrait jamais ; crochet clavier limité au jeu intégré et à Emuglob
+            keyProc = new KeyProc(OnKey);
+            SetWindowsHookEx(13, keyProc, GetModuleHandle(null), 0);   // WH_KEYBOARD_LL
             MSG msg;
             while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) { TranslateMessage(ref msg); DispatchMessage(ref msg); }
         });
         t.IsBackground = true;
         t.Start();
+    }
+
+    static IntPtr OnKey(int code, IntPtr wParam, ref KBDLLHOOKSTRUCT k)
+    {
+        if (code >= 0 && k.vkCode == 0x7A)   // VK_F11
+        {
+            int msg = wParam.ToInt32();
+            bool down = msg == 0x0100 || msg == 0x0104;
+            if (!down && f11Down) { f11Down = false; return new IntPtr(1); }
+            if (down)
+            {
+                IntPtr emb, top; bool off;
+                lock (gate) { emb = embedded; top = topWin; off = parked; }
+                IntPtr fg = GetForegroundWindow();
+                if (emb != IntPtr.Zero && !off && fg != IntPtr.Zero && (fg == emb || fg == top || GetAncestor(fg, 3) == top || GetAncestor(fg, 2) == emb))
+                {
+                    if (!f11Down) Out("key f11");   // pas de répétition si la touche reste enfoncée
+                    f11Down = true;
+                    return new IntPtr(1);
+                }
+            }
+        }
+        return CallNextHookEx(IntPtr.Zero, code, wParam, ref k);
+    }
+
+    // plein écran du jeu : seul le menu natif (Win32) peut être retiré ; un menu dessiné par l'émulateur lui-même (Qt) reste
+    static void Menu(bool hide)
+    {
+        IntPtr win;
+        lock (gate) { win = embedded; }
+        if (win == IntPtr.Zero || !IsWindow(win)) return;
+        if (hide)
+        {
+            IntPtr m = GetMenu(win);
+            if (m == IntPtr.Zero) return;
+            lock (gate) { savedMenu = m; }
+            SetMenu(win, IntPtr.Zero);
+        }
+        else
+        {
+            IntPtr m;
+            lock (gate) { m = savedMenu; savedMenu = IntPtr.Zero; }
+            if (m == IntPtr.Zero) return;
+            SetMenu(win, m);
+            DrawMenuBar(win);
+        }
     }
 
     static void OnWinEvent(IntPtr hook, uint ev, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
@@ -201,6 +263,7 @@ public static class EmbedHelper
                 int timeout = p.Length > 7 ? int.Parse(p[7]) : 20000;
                 string mode = p.Length > 8 && p[8] == "overlay" ? "overlay" : "child";
                 streamMode = p.Length > 9 && p[9] == "stream";   // mode stream : la fenêtre doit rester « capturable » (pas de WS_EX_TOOLWINDOW)
+                lock (gate) { savedMenu = IntPtr.Zero; }
                 HideStart(pid);   // tout de suite, avant que l'émulateur ait créé sa fenêtre
                 Thread t = new Thread(delegate () { DoEmbed(pid, parent, x, y, w, h, timeout, mode); });
                 t.IsBackground = true;
@@ -233,6 +296,9 @@ public static class EmbedHelper
                 IntPtr c;
                 lock (gate) { c = embedded; }
                 if (c != IntPtr.Zero) PostMessage(c, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                break;
+            case "menu":
+                Menu(p.Length > 1 && p[1] == "hide");
                 break;
             case "release":
                 Release();
@@ -541,6 +607,9 @@ public static class EmbedHelper
         IntPtr win;
         lock (gate) { win = embedded; embedded = IntPtr.Zero; parked = false; }
         if (win == IntPtr.Zero || !IsWindow(win)) return;
+        IntPtr sm;
+        lock (gate) { sm = savedMenu; savedMenu = IntPtr.Zero; }
+        if (sm != IntPtr.Zero) SetMenu(win, sm);   // menu retiré par le plein écran du jeu : rendu à l'émulateur
         uint style = (uint)(GetWindowLongPtr(win, GWL_STYLE).ToInt64() & 0xFFFFFFFFL);
         style = (style & ~WS_CHILD & ~WS_POPUP) | WS_OVERLAPPEDWINDOW | WS_VISIBLE;
         SetWindowLongPtr(win, GWLP_HWNDPARENT, IntPtr.Zero);

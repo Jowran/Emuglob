@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('api', {
   scanFolder: (extensions) => ipcRenderer.invoke('scan:folder', extensions),
   launch: (payload) => ipcRenderer.invoke('game:launch', payload),
   fullscreen: (force) => ipcRenderer.invoke('win:fullscreen', force),
+  gameImmersive: (on) => ipcRenderer.invoke('game:immersive', !!on),
+  onGameHotkey: (cb) => ipcRenderer.on('game:hotkey', (_e, k) => cb(k)),
   quit: () => ipcRenderer.invoke('app:quit'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   ra: (endpoint, params, ttl) => ipcRenderer.invoke('ra:call', { endpoint, params, ttl }),
