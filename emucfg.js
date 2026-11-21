@@ -986,4 +986,4 @@ function quickSave(exe, values) {
   return Object.values(byFile).reduce((n, a) => n + a.length, 0);
 }
 
-module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running, quick, quickSave };
+module.exports = { load, encode, save, bindText, isMod, Ini, detect, emuRoots, running, quick, quickSave, readText, writeWithBackup, adapters: { RA, P2, DOL, AZ, PP, CE } };
