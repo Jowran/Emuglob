@@ -32,7 +32,7 @@
     'Succès : jeu non reconnu sur RetroAchievements': 'Achievements: game not recognized on RetroAchievements', 'Succès : chargement…': 'Achievements: loading…',
     'Aucun jeu dans cet onglet': 'No games in this tab', 'Bienvenue dans Emuglob': 'Welcome to Emuglob', "Ajoute tes jeux dans l'onglet Paramètres": 'Add your games in the Settings tab',
     'Jamais lancé': 'Never played', 'de jeu': 'played', 'Fichier introuvable': 'File not found', 'Trophées': 'Trophies', 'Lier RetroAchievements': 'Link RetroAchievements',
-    'Aurore': 'Aurora', 'Néon': 'Neon', 'Phosphore': 'Phosphor', 'Clair': 'Light', 'Pastel': 'Pastel', 'Ce jeu': 'This game', 'Aucun jeu trouvé': 'No game found',
+    'Aurore': 'Aurora', 'Néon': 'Neon', 'Phosphore': 'Phosphor', 'Clair': 'Light', 'Pastel': 'Pastel', 'Accueil': 'Home', 'Ajouter des jeux': 'Add games', 'Page précédente': 'Previous page', 'Page suivante': 'Next page', 'Jeu précédent': 'Previous game', 'Jeu suivant': 'Next game', 'Aucun jeu ici': 'No games here', 'Ajoute tes jeux avec le bouton +': 'Add your games with the + button', 'Nouveau': 'New', 'Ce jeu': 'This game', 'Aucun jeu trouvé': 'No game found',
     'Retirer des favoris': 'Remove from favorites', 'Ajouter aux favoris': 'Add to favorites', 'Jeu retiré': 'Removed game', 'illisible': 'unreadable', 'Chargement…': 'Loading…',
     // modifier un jeu
     'Modifier le jeu': 'Edit game', 'Titre': 'Title', 'Émulateur': 'Emulator', 'Système': 'System', 'Core libretro': 'Libretro core',

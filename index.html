@@ -768,6 +768,176 @@
   #home.lh .fi.cc .case { opacity:1; transform:scale(1.18); box-shadow:0 0 0 3px var(--acc), 0 0 26px color-mix(in srgb, var(--acc) 55%, transparent), 0 18px 34px rgba(0,0,0,.6); }
   body.light #home.lg .fi::after { background:linear-gradient(rgba(0,0,0,.06), rgba(0,0,0,0)); border-top-color:rgba(0,0,0,.12); box-shadow:none; }
   @media (min-width:2400px) { #home.lh #f-sub { font-size:19px; } }
+  /* ---------- thème Wii : style « console de salon blanche », formes et sons faits maison, police libre (M PLUS Rounded 1c, OFL) ---------- */
+  @font-face { font-family:"Emuglob Rond"; src:url(assets/fonts/rounded-400.woff2) format("woff2"); font-weight:400; }
+  @font-face { font-family:"Emuglob Rond"; src:url(assets/fonts/rounded-500.woff2) format("woff2"); font-weight:500; }
+  @font-face { font-family:"Emuglob Rond"; src:url(assets/fonts/rounded-700.woff2) format("woff2"); font-weight:600 700; }
+  @font-face { font-family:"Emuglob Rond"; src:url(assets/fonts/rounded-800.woff2) format("woff2"); font-weight:800 900; }
+  #wii[hidden] { display:none; }
+  body[data-th=wii] { --acc:#22a6dc; --wb:#2fb4e8; --wb2:#8fd8f5; --wink:#555b63; --wink2:#8a9097; --wline:#cfd5db; --glow:rgba(47,180,232,.45); --muted:#7b828a; --glass:rgba(255,255,255,.85);
+    color:var(--wink); font-family:"Emuglob Rond","Segoe UI",system-ui,sans-serif;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.028) 0 2px, transparent 2px 5px), linear-gradient(180deg,#fbfcfd,#eef1f4 70%,#e5e9ed);
+    cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='38' viewBox='0 0 64 72'%3E%3Cpath d='M22 6c4 0 6 3 6 7v18l2-1c3-2 7-1 8 2l1 1c3-2 7-1 8 3c3-1 7 1 7 5v12c0 9-7 17-17 17h-6c-6 0-10-3-13-8L8 46c-2-3-1-7 2-8s6 0 8 3l-2-28c0-4 2-7 6-7z' fill='%23fff' stroke='%232fb4e8' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M28 30v14M38 34v10M46 38v7' stroke='%23b9e6f8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 11 2, auto; }
+  body[data-th=wii] input, body[data-th=wii] select, body[data-th=wii] textarea { cursor:auto; }
+  body[data-th=wii] input[type=range], body[data-th=wii] input[type=checkbox] { accent-color:#2fb4e8; }
+  body[data-th=wii]::before, body[data-th=wii] #tint, body[data-th=wii] #f-hero { display:none; }
+  body[data-th=wii] #home { display:none !important; }
+  /* barre du haut : invisible, sauf la recherche qui s'ouvre en bulle */
+  body[data-th=wii] #top { position:fixed; inset:0 0 auto 0; height:0; padding:0; z-index:12; }
+  body[data-th=wii] #top > *:not(#searchbox) { display:none !important; }
+  body[data-th=wii] #searchbox { position:fixed; left:50%; top:22px; transform:translate(-50%,-180px); width:min(640px,80vw); height:62px; padding:0 24px; border-radius:99px; background:#fff; border:3px solid var(--wb); box-shadow:0 0 0 6px #fff, 0 0 0 8px var(--wb2), 0 14px 30px rgba(40,90,120,.2); transition:transform .3s cubic-bezier(.3,1.4,.5,1); font-size:20px; }
+  body[data-th=wii] #searchbox .ico { width:26px; height:26px; color:var(--wb); }
+  body[data-th=wii] #searchbox input { font-size:20px; color:var(--wink) !important; }
+  body[data-th=wii].wsrch #searchbox, body[data-th=wii] #searchbox:focus-within { transform:translate(-50%,0); width:min(640px,80vw); }
+  body[data-th=wii] #q-res { top:70px; border-radius:24px; border:3px solid var(--wb2); }
+  /* accueil : chaînes */
+  #wii { position:fixed; inset:0; z-index:1; overflow:hidden; --wbar:clamp(170px,21vh,240px); }
+  #w-chips { position:absolute; left:7vw; right:7vw; top:max(12px,1.5vh); display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:4px 2px; }
+  #w-chips::-webkit-scrollbar { display:none; }
+  .wpill { flex:none; display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 20px; border-radius:99px; background:#fff; border:3px solid #d3d9de; font-family:inherit; font-weight:700; font-size:15px; color:var(--wink2); cursor:inherit; white-space:nowrap; }
+  .wpill:hover, .wpill:focus-visible { border-color:var(--wb2); color:var(--wink); outline:none; }
+  .wpill.on { border-color:var(--wb); color:#1593c6; }
+  .wpill .ico { width:18px; height:18px; }
+  .wpill small { font-weight:500; opacity:.7; }
+  #w-view { position:absolute; left:7vw; right:7vw; top:calc(max(12px,1.5vh) + 56px); bottom:calc(var(--wbar) + 30px); }
+  #w-grid { position:absolute; inset:0; display:grid; grid-template-columns:repeat(var(--wc,4),minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); gap:clamp(10px,2.2vh,26px) clamp(12px,1.6vw,34px); }
+  #w-grid.sl { animation:wsl .38s cubic-bezier(.2,.8,.3,1) both; } #w-grid.sr { animation:wsr .38s cubic-bezier(.2,.8,.3,1) both; }
+  @keyframes wsl { from { transform:translateX(-12%); opacity:0; } } @keyframes wsr { from { transform:translateX(12%); opacity:0; } }
+  .wch { position:relative; border-radius:22px; background:#fff; border:3px solid #d7dce1; overflow:hidden; box-shadow:0 4px 10px rgba(80,90,100,.12); cursor:inherit; transition:transform .18s cubic-bezier(.3,1.5,.5,1), box-shadow .18s, border-color .18s; outline:none; }
+  .wch .bg { position:absolute; inset:-20px; background:center/cover; filter:blur(18px) saturate(1.2); opacity:.55; }
+  .wch .cv { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); height:80%; max-width:86%; aspect-ratio:var(--ar,.72); border-radius:6px; overflow:hidden; box-shadow:0 6px 14px rgba(0,0,0,.25); }
+  .wch img.cv { aspect-ratio:auto; width:auto; height:auto; max-height:80%; min-height:40%; object-fit:contain; }
+  .wch .ph { border-radius:0; font-size:clamp(20px,3vh,40px); }
+  .wch .tg { position:absolute; left:12px; bottom:10px; max-width:calc(100% - 24px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:700; color:#fff; background:rgba(60,70,80,.5); padding:2px 9px; border-radius:99px; letter-spacing:.3px; }
+  .wch .fav { position:absolute; right:10px; top:9px; width:24px; height:24px; color:#ffc83d; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+  .wch .nw { position:absolute; right:10px; top:10px; padding:2px 9px; border-radius:99px; background:var(--wb); color:#fff; font-size:12px; font-weight:800; }
+  .wch::after { content:""; position:absolute; inset:0; border-radius:19px; background:linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,0) 38%); pointer-events:none; }
+  .wch.empty { background:repeating-linear-gradient(0deg, #eceff2 0 2px, #f3f5f7 2px 5px); border-color:#dde1e5; box-shadow:inset 0 2px 6px rgba(0,0,0,.06); pointer-events:none; }
+  .wch.empty::after { display:none; }
+  .wch.miss .cv { filter:grayscale(1); opacity:.6; }
+  .wch:hover, .wch.on { border-color:var(--wb); box-shadow:0 0 0 5px rgba(47,180,232,.28), 0 10px 22px rgba(47,140,200,.25); transform:scale(1.04); z-index:2; }
+  #w-tip { position:absolute; z-index:5; padding:8px 22px; background:#fff; border:3px solid var(--wb); border-radius:99px; font-weight:700; font-size:18px; color:var(--wink); box-shadow:0 6px 16px rgba(0,0,0,.12); white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; pointer-events:none; transform:translateX(-50%); animation:wtip .2s cubic-bezier(.3,1.6,.5,1) both; }
+  #w-tip[hidden] { display:none; }
+  @keyframes wtip { from { transform:translateX(-50%) scale(.8); opacity:0; } }
+  #w-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; font-size:26px; font-weight:700; color:var(--wink2); text-align:center; }
+  #w-empty[hidden] { display:none; }
+  #w-empty small { font-size:17px; font-weight:500; }
+  .w-arr { position:absolute; top:calc((100% - var(--wbar)) / 2 + 10px); width:70px; height:70px; margin-top:-35px; padding:0; border:0; background:none; cursor:inherit; transition:transform .15s; }
+  .w-arr svg { width:100%; height:100%; filter:drop-shadow(0 3px 4px rgba(20,120,170,.35)); }
+  .w-arr:hover { transform:scale(1.15); } .w-arr[hidden] { display:none; }
+  .w-arr.l { left:1.2vw; } .w-arr.r { right:1.2vw; } .w-arr.l svg { transform:scaleX(-1); }
+  #w-dots { position:absolute; left:0; right:0; bottom:calc(var(--wbar) + 6px); display:flex; justify-content:center; gap:10px; }
+  #w-dots i { width:10px; height:10px; border-radius:50%; background:#cfd5db; cursor:inherit; } #w-dots i.on { background:var(--wb); }
+  /* barre du bas */
+  #w-bar { position:absolute; left:0; right:0; bottom:0; height:var(--wbar); }
+  #w-bar > svg { position:absolute; inset:0; width:100%; height:100%; }
+  #w-clk { position:absolute; left:0; right:0; top:44%; transform:translateY(-50%); text-align:center; font-size:clamp(44px,6vh,72px); font-weight:500; color:#9aa1a8; letter-spacing:3px; line-height:1; pointer-events:none; }
+  #w-clk b { font-weight:500; animation:wblink 1s steps(1) infinite; } @keyframes wblink { 50% { opacity:.25; } }
+  #w-date { position:absolute; left:0; right:0; top:72%; text-align:center; font-size:clamp(20px,2.6vh,30px); font-weight:700; color:#7f868d; pointer-events:none; }
+  .w-rb { position:absolute; bottom:calc(var(--wbar) * .17); width:calc(var(--wbar) * .56); height:calc(var(--wbar) * .56); border-radius:50%; padding:0; background:radial-gradient(circle at 50% 30%, #fff, #e9edf0 70%); border:4px solid #c6cdd3; box-shadow:0 0 0 7px #fff, 0 0 0 9px #cfd6dc, 0 8px 16px rgba(0,0,0,.12); display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--wink2); font-family:inherit; font-weight:800; font-size:clamp(13px,1.6vh,17px); gap:2px; cursor:inherit; transition:transform .15s cubic-bezier(.3,1.6,.5,1), box-shadow .15s, border-color .15s; }
+  .w-rb .ico { width:42%; height:42%; color:var(--wb); stroke-width:1.7; }
+  .w-rb.l { left:clamp(30px,3.6vw,80px); } .w-rb.r { right:clamp(30px,3.6vw,80px); }
+  .w-rb:hover, .w-rb:focus-visible, .w-sb:hover, .w-sb:focus-visible { border-color:var(--wb); box-shadow:0 0 0 7px #fff, 0 0 0 9px var(--wb2), 0 8px 20px rgba(47,180,232,.35); transform:scale(1.06); outline:none; }
+  .w-rb .bdg { position:absolute; top:2px; right:2px; min-width:30px; height:30px; padding:0 8px; border-radius:99px; background:var(--wb); color:#fff; font-size:15px; display:flex; align-items:center; justify-content:center; border:3px solid #fff; }
+  .w-rb .bdg[hidden] { display:none; }
+  .w-rb .av { width:46%; height:46%; border-radius:50%; background:center/cover; }
+  .w-sbs { position:absolute; bottom:calc(var(--wbar) * .26); display:flex; gap:clamp(10px,1vw,20px); }
+  .w-sbs.l { left:calc(clamp(30px,3.6vw,80px) + var(--wbar) * .56 + 36px); } .w-sbs.r { right:calc(clamp(30px,3.6vw,80px) + var(--wbar) * .56 + 36px); }
+  .w-sb { position:relative; width:calc(var(--wbar) * .3); height:calc(var(--wbar) * .3); border-radius:50%; padding:0; background:#fff; border:3px solid #cdd3d9; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,.08); color:var(--wink2); cursor:inherit; transition:transform .15s cubic-bezier(.3,1.6,.5,1), box-shadow .15s, border-color .15s; }
+  .w-sb .ico { width:46%; height:46%; }
+  .w-sb .av { width:72%; height:72%; border-radius:50%; background:#dfe5ea center/cover; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--wb); }
+  .w-sb.act { border-color:var(--wb); color:var(--wb); }
+  /* zoom d'une chaîne vers sa fiche */
+  #w-zoom { position:fixed; z-index:60; border-radius:22px; background:#fff center/cover; overflow:hidden; pointer-events:none; transition:all .42s cubic-bezier(.6,0,.25,1); }
+  #w-zoom i { position:absolute; inset:-40px; background:inherit; filter:blur(30px) saturate(1.3); }
+  #w-zoom.full { border-radius:0; }
+  #w-zoom.out { opacity:0; transition:opacity .3s ease; }
+  body[data-th=wii] #wii.in { animation:wback .4s cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes wback { from { transform:scale(1.08); opacity:0; } }
+  /* pages par-dessus l'accueil */
+  body[data-th=wii] .overlay { padding:0 6vw 26px; background:repeating-linear-gradient(0deg, rgba(0,0,0,.026) 0 2px, transparent 2px 5px), linear-gradient(180deg,#fdfefe,#eef1f4 70%,#e6eaee); animation:wov .32s cubic-bezier(.2,.9,.3,1) both; z-index:11; }
+  @keyframes wov { from { transform:scale(.96); opacity:0; } }
+  body[data-th=wii] .overlay::before { display:none; }
+  body[data-th=wii] .ovh { margin:0 -6vw 22px; padding:26px 6vw 16px; min-height:104px; align-items:flex-end; background:linear-gradient(180deg,#fff,#f4f7f9); border-bottom:4px solid var(--wb2); flex-wrap:wrap; }
+  body[data-th=wii] .ovh h2 { font-size:clamp(28px,3.6vh,40px); font-weight:800; color:var(--wink); }
+  body[data-th=wii] .ovh button, body[data-th=wii] dialog button:not(.thc), body[data-th=wii] #gbar button, body[data-th=wii] .sh-btns button, body[data-th=wii] #m-list button { background:linear-gradient(180deg,#fff,#f0f3f5); color:var(--wink); border:3px solid #d0d6db; border-radius:99px; padding:8px 20px; font-weight:700; font-family:inherit; cursor:inherit; }
+  body[data-th=wii] .ovh button:hover, body[data-th=wii] dialog button:not(.thc):hover, body[data-th=wii] #gbar button:hover, body[data-th=wii] .sh-btns button:hover, body[data-th=wii] #m-list button:hover,
+  body[data-th=wii] dialog button:not(.thc):focus-visible, body[data-th=wii] #m-list button:focus-visible { border-color:var(--wb); color:#1593c6; box-shadow:0 0 0 4px rgba(47,180,232,.2); outline:none; }
+  body[data-th=wii] .ovh .on, body[data-th=wii] [style*="#5b46d6"], body[data-th=wii] #c-tabs button.on, body[data-th=wii] .sh-btns .p { background:linear-gradient(180deg,#fff,#eaf7fd) !important; border-color:var(--wb) !important; color:#1593c6 !important; }
+  body[data-th=wii] [style*="#c8323c"] { background:#fff !important; border-color:#e5505a !important; color:#d23a44 !important; }
+  body[data-th=wii] .ovh input, body[data-th=wii] dialog input, body[data-th=wii] dialog select { border-radius:99px; border:3px solid #d0d6db; background:#fff; padding:8px 16px; font-family:inherit; }
+  body[data-th=wii] .ovh input:focus, body[data-th=wii] dialog input:focus, body[data-th=wii] dialog select:focus { border-color:var(--wb); outline:none; }
+  /* paramètres : grosses pilules */
+  body[data-th=wii] .snav { border-radius:99px; font-weight:700; color:var(--wink2); }
+  body[data-th=wii] .snav.on { background:#fff; color:#1593c6; box-shadow:inset 0 0 0 3px var(--wb); }
+  body[data-th=wii] .snav.on::before { display:none; }
+  body[data-th=wii] .snav .ico { color:var(--wb); opacity:1; }
+  body[data-th=wii] .sset { border-radius:99px; background:linear-gradient(180deg,#fff,#f1f4f6); border:4px solid #cfd5db; box-shadow:0 0 0 5px #fff, 0 0 0 7px #dde2e6, 0 6px 14px rgba(0,0,0,.05); padding:16px 30px; backdrop-filter:none; }
+  body[data-th=wii] .slist { gap:22px 26px; padding:8px; }
+  body[data-th=wii] .sset .si { color:var(--wb); opacity:1; }
+  body[data-th=wii] .sset b { font-weight:800; color:var(--wink); }
+  body[data-th=wii] .sset:hover, body[data-th=wii] .sset:focus { border-color:var(--wb); box-shadow:0 0 0 5px #fff, 0 0 0 7px var(--wb2), 0 8px 20px rgba(47,180,232,.28); }
+  /* cartes et listes (amis, succès, profil, bibliothèque) */
+  body[data-th=wii] .fcard, body[data-th=wii] .fr, body[data-th=wii] .ach, body[data-th=wii] .lhead, body[data-th=wii] .sh-card, body[data-th=wii] .sh-hl > div { background:#fff; border:3px solid #dde2e6; border-radius:24px; box-shadow:0 4px 10px rgba(80,90,100,.06); }
+  body[data-th=wii] .lhead:hover, body[data-th=wii] .lhead:focus, body[data-th=wii] .fr[data-ach]:hover { border-color:var(--wb); box-shadow:0 0 0 4px rgba(47,180,232,.2); background:#fff; }
+  body[data-th=wii] .fcard.live { border-color:#8fd8f5; background:linear-gradient(160deg,#eaf8fe,#fff 60%); }
+  body[data-th=wii] .fr .pts, body[data-th=wii] .ach .pts { color:#1593c6; }
+  body[data-th=wii] .bar i, body[data-th=wii] .sh-bar i { background:var(--wb); }
+  body[data-th=wii] .lcard .case, body[data-th=wii] .sh-cov { border-radius:14px; }
+  body[data-th=wii] .lcard:hover .case, body[data-th=wii] .lcard:focus .case { box-shadow:0 0 0 4px var(--wb), 0 0 0 8px rgba(47,180,232,.25), 0 14px 24px rgba(0,0,0,.2); }
+  body[data-th=wii] .sh-tags span, body[data-th=wii] .sh-tabs button, body[data-th=wii] .sh-achf button { border-radius:99px; }
+  /* fiche : aperçu de chaîne (bannière floutée de la jaquette, gros boutons en bas) */
+  #sh-wfoot { display:none; }
+  body[data-th=wii] #ov-sheet { padding-bottom:0; background:#2a2f35; }
+  body[data-th=wii] #ov-sheet::before { display:block; content:""; position:absolute; inset:-80px; z-index:-1; background:var(--wban,none) center/cover, #5d6a76; filter:blur(46px) saturate(1.25) brightness(.78); }
+  body[data-th=wii] #ov-sheet .ovh { display:none; }
+  body[data-th=wii] #ov-sheet .ovb { color:#fff; padding:34px 2vw 30px; }
+  body[data-th=wii] #ov-sheet .sh { --muted:rgba(255,255,255,.75); }
+  body[data-th=wii] #ov-sheet .sh h1 { font-size:clamp(40px,5vh,60px); font-weight:800; text-shadow:0 4px 16px rgba(0,0,0,.35); }
+  body[data-th=wii] #ov-sheet .sh-card, body[data-th=wii] #ov-sheet .sh-hl > div { background:rgba(255,255,255,.14); border:2px solid rgba(255,255,255,.28); backdrop-filter:blur(10px); box-shadow:none; color:#fff; }
+  body[data-th=wii] #ov-sheet .sh-tags span { background:rgba(255,255,255,.2); color:#fff; }
+  body[data-th=wii] #ov-sheet .sh-cov { border:5px solid rgba(255,255,255,.85); box-shadow:0 30px 60px rgba(0,0,0,.45); }
+  body[data-th=wii] #ov-sheet .sh-cov.ct { border:0; box-shadow:none; }
+  body[data-th=wii] #ov-sheet .sh-btns { display:none; }
+  body[data-th=wii] #ov-sheet .sh-tabs button { background:rgba(255,255,255,.16); color:#fff; }
+  body[data-th=wii] #ov-sheet .sh-tabs button.on { background:#fff; color:#1593c6; }
+  body[data-th=wii] #ov-sheet .sh-achf button { border-color:rgba(255,255,255,.35); color:#fff; } body[data-th=wii] #ov-sheet .sh-achf button.on { background:rgba(255,255,255,.25); }
+  body[data-th=wii] #ov-sheet .sh-achr:hover, body[data-th=wii] #ov-sheet .sh-achr:focus, body[data-th=wii] #ov-sheet .sh-sub-r { background:rgba(255,255,255,.12); }
+  body[data-th=wii] #ov-sheet .sh-achp, body[data-th=wii] #ov-sheet .sh-own.on { color:#bfeaff; }
+  body[data-th=wii] #ov-sheet .sh-lnk { border-color:rgba(255,255,255,.4); }
+  body[data-th=wii] #sh-wfoot { display:block; position:relative; flex:none; height:clamp(150px,20vh,220px); margin:0 -6vw; border-top:4px solid var(--wb2); background:repeating-linear-gradient(0deg, rgba(0,0,0,.026) 0 2px, transparent 2px 5px), linear-gradient(180deg,#fbfcfd,#e6eaee); }
+  .w-big { position:absolute; top:50%; transform:translateY(-50%); width:min(28vw,520px); height:clamp(76px,9.5vh,104px); border-radius:99px; background:linear-gradient(180deg,#fff,#eef1f4); border:4px solid #c9d0d6; box-shadow:0 0 0 6px #fff, 0 0 0 8px #d5dbe0, 0 10px 20px rgba(0,0,0,.08); font-family:inherit; font-weight:800; font-size:clamp(24px,3.2vh,34px); color:var(--wink); cursor:inherit; transition:transform .15s cubic-bezier(.3,1.6,.5,1), box-shadow .15s, border-color .15s; }
+  .w-big.l { left:9vw; } .w-big.r { right:9vw; border-color:var(--wb); color:#1593c6; box-shadow:0 0 0 6px #fff, 0 0 0 8px var(--wb2), 0 10px 24px rgba(47,180,232,.3); }
+  .w-big:hover, .w-big:focus-visible { transform:translateY(-50%) scale(1.04); border-color:var(--wb); outline:none; }
+  .w-big:disabled { opacity:.5; transform:translateY(-50%); }
+  #sh-wfoot .w-mid { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; gap:20px; }
+  #sh-wfoot .w-sb { width:clamp(56px,7vh,72px); height:clamp(56px,7vh,72px); }
+  #sh-wfoot .w-sb.on { color:#ffc83d; }
+  .w-side { position:absolute; top:calc(50% - 90px); width:64px; height:64px; z-index:3; padding:0; border:0; background:none; cursor:inherit; transition:transform .15s; }
+  .w-side svg { width:100%; height:100%; filter:drop-shadow(0 3px 6px rgba(0,0,0,.35)); } .w-side:hover { transform:scale(1.15); }
+  .w-side.l { left:1.4vw; } .w-side.l svg { transform:scaleX(-1); } .w-side.r { right:1.4vw; }
+  #ov-sheet .w-side { display:none; } body[data-th=wii] #ov-sheet .w-side { display:block; }
+  /* pop-ups */
+  body[data-th=wii] dialog { border-radius:36px; border:4px solid var(--wb2); background:#fff; color:var(--wink); box-shadow:0 0 0 8px #fff, 0 0 0 11px #d4dbe0, 0 30px 60px rgba(60,80,100,.25); padding:30px 34px; }
+  body[data-th=wii] dialog[open] { animation:wdlg .28s cubic-bezier(.3,1.5,.5,1) both; }
+  @keyframes wdlg { from { transform:scale(.88); opacity:0; } }
+  body[data-th=wii] dialog::backdrop { background:rgba(235,240,244,.7); backdrop-filter:blur(3px); }
+  body[data-th=wii] dialog h2 { font-weight:800; color:var(--wink); }
+  body[data-th=wii] dialog .row button { min-width:130px; padding:12px 24px; font-size:16px; }
+  body[data-th=wii] #toast { background:#fff; color:var(--wink); border:3px solid var(--wb); border-radius:99px; font-weight:700; padding:10px 26px; box-shadow:0 8px 20px rgba(0,0,0,.12); bottom:calc(clamp(170px,21vh,240px) + 40px); }
+  /* en jeu */
+  body[data-th=wii] #game { background:#fff; }
+  body[data-th=wii] #gbar { background:linear-gradient(180deg,#fff,#f1f4f6); border-bottom:3px solid var(--wb2); color:var(--wink); }
+  body[data-th=wii] #gbar button { padding:4px 14px; border-width:2px; }
+  body[data-th=wii] #g-back { border-color:var(--wb) !important; color:#1593c6 !important; }
+  body[data-th=wii] #gquick { background:#f4f7f9; border-bottom:2px solid #dde2e6; }
+  body[data-th=wii] #g-resume { background:#fff; border:3px solid var(--wb2); box-shadow:0 0 0 5px #fff, 0 10px 26px rgba(0,0,0,.18); }
+  body[data-th=wii] #g-resume #gr-go { background:linear-gradient(180deg,#fff,#eaf7fd); color:#1593c6; border:3px solid var(--wb); font-weight:700; }
+  /* écran de démarrage */
+  #splash.wii { background:#fff; }
+  #splash.wii::after { content:""; position:absolute; left:50%; bottom:12vh; width:46px; height:46px; margin-left:-23px; border-radius:50%; border:5px solid #dfe5ea; border-top-color:#2fb4e8; animation:wspin 1s linear infinite; }
+  @keyframes wspin { to { transform:rotate(1turn); } }
+  @media (prefers-reduced-motion: reduce) { #w-zoom, body[data-th=wii] .overlay, body[data-th=wii] dialog[open], #w-grid.sl, #w-grid.sr, #wii.in { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
@@ -781,6 +951,7 @@
   try { t = JSON.parse(localStorage.getItem('emuglob-splash') || 'null'); } catch { /* rien */ }
   const el = document.getElementById('splash');
   if (t && t.bg) { el.style.setProperty('--sbg', t.bg); el.style.setProperty('--sacc', t.acc); el.style.setProperty('--sfg', t.fg); }
+  if (t && t.wii) el.classList.add('wii');
   const t0 = Date.now();
   window.hideSplash = () => {
     if (!el.isConnected || el.classList.contains('out')) return;
@@ -816,6 +987,24 @@
   <div id="bottom"></div>
 </div>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="w-arrg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fd6f7"/><stop offset="1" stop-color="#1aa3dc"/></linearGradient>
+  <linearGradient id="w-barg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f8fa"/><stop offset="1" stop-color="#d8dde2"/></linearGradient>
+  <pattern id="w-bars" width="6" height="5" patternUnits="userSpaceOnUse"><rect width="6" height="2" fill="rgba(0,0,0,.025)"/></pattern></defs></svg>
+<div id="wii" hidden>
+  <div id="w-chips"></div>
+  <div id="w-view"><div id="w-grid"></div><div id="w-empty" hidden>Aucun jeu ici<small>Ajoute tes jeux avec le bouton +</small></div></div>
+  <div id="w-tip" hidden translate="no"></div>
+  <button class="w-arr l" id="w-prev" title="Page précédente"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6 Q12 4 14 3 L40 21 Q43 24 40 27 L14 45 Q12 44 14 42 Z" fill="url(#w-arrg)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></button><button class="w-arr r" id="w-next" title="Page suivante"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6 Q12 4 14 3 L40 21 Q43 24 40 27 L14 45 Q12 44 14 42 Z" fill="url(#w-arrg)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></button>
+  <div id="w-dots"></div>
+  <div id="w-bar">
+    <svg aria-hidden="true" preserveAspectRatio="none"><path id="w-bp" fill="url(#w-barg)" stroke="#8fd8f5" stroke-width="4"/><path id="w-bp2" fill="url(#w-bars)"/></svg>
+    <div id="w-clk"></div><div id="w-date"></div>
+    <button class="w-rb l" id="w-menu" title="Paramètres"><i data-ic="gear"></i>Emuglob</button>
+    <div class="w-sbs l"><button class="w-sb" id="w-add" title="Ajouter des jeux"><i data-ic="plus"></i></button><button class="w-sb" id="w-search" title="Rechercher un jeu…"><i data-ic="search"></i></button></div>
+    <div class="w-sbs r"><button class="w-sb" id="w-tro" title="Succès"><i data-ic="trophy"></i></button><button class="w-sb" id="w-pro" title="Mon profil"><span class="av"></span></button></div>
+    <button class="w-rb r" id="w-fr" title="Amis RetroAchievements"><span class="bdg" id="w-frn" hidden></span><i data-ic="users"></i>Amis</button>
+  </div>
+</div>
 <div class="overlay" id="ov-lib" hidden>
   <div class="ovh"><h2>Bibliothèque</h2><input id="lib-q" placeholder="Rechercher un jeu…"><button id="lib-less">Tout réduire</button><button id="lib-more">Tout ouvrir</button><button id="lib-close"><i data-ic="close"></i> Fermer</button></div>
   <div class="ovb" id="lib-body"></div>
@@ -824,6 +1013,8 @@
 <div class="overlay" id="ov-sheet" hidden>
   <div class="ovh"><span style="flex:1"></span><button id="sh-close"><i data-ic="close"></i> Fermer</button></div>
   <div class="ovb" id="sh-body"></div>
+  <button class="w-side l" id="sh-wprev" title="Jeu précédent"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6 Q12 4 14 3 L40 21 Q43 24 40 27 L14 45 Q12 44 14 42 Z" fill="url(#w-arrg)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></button><button class="w-side r" id="sh-wnext" title="Jeu suivant"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6 Q12 4 14 3 L40 21 Q43 24 40 27 L14 45 Q12 44 14 42 Z" fill="url(#w-arrg)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></button>
+  <div id="sh-wfoot"><button class="w-big l" id="sh-whome">Accueil</button><div class="w-mid"><button class="w-sb" id="sh-wfav" title="Favori"><i data-ic="star"></i></button><button class="w-sb" id="sh-wach" title="Succès"><i data-ic="trophy"></i></button><button class="w-sb" id="sh-wmore" title="Options"><i data-ic="more"></i></button></div><button class="w-big r" id="sh-wplay">Jouer</button></div>
 </div>
 
 <div class="overlay" id="ov-tro" hidden>
@@ -1213,6 +1404,7 @@ const ICONS = {
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
   sort: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  users: '<circle cx="9" cy="9" r="3.5"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8" r="2.8"/><path d="M16 13.5c3 0 5 2 5 5"/>',
   home: '<path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   flow: '<rect x="8.5" y="4" width="7" height="16" rx="1.2"/><path d="M4.5 7v10M19.5 7v10"/>',
@@ -1694,6 +1886,7 @@ function updTabsFade() {
 
 function placeFlow() {
   const st = $('#f-stage'), cg = fgames[fi];
+  if (isWii()) return wiiPlace();
   if (!cg) return;
   if (homeLayout() !== 'flow') return placeAlt(st);
   const Hc = Math.max(160, Math.min(st.clientHeight * 0.66, 540));
@@ -1765,6 +1958,7 @@ function placeAlt(st) {
 }
 // haut / bas : rangée suivante dans l'Étagère (console suivante au bord), console suivante ailleurs
 function homeVert(d) {
+  if (isWii()) { const t = fi + d * wColsN; return t >= 0 && t < fgames.length ? flowSet(t) : null; }
   if (homeLayout() !== 'grid' || !fgames.length) return flowCons(d);
   const c = gridCols(), t = fi + d * c;
   if (t >= 0 && t < fgames.length) return flowSet(t);
@@ -1863,6 +2057,7 @@ const THEMES = {
   crt:     { n: 'Phosphore', th: ['#050300', '#0b0700', '#140c00', '#1f1300'], acc: '#ffb000' },
   clair:   { n: 'Clair', th: ['#f8fafc', '#eef2f7', '#e3e8f0', '#d9e0eb'], acc: '#4f46e5', light: true, tint: 'light', amb2: '#06b6d4' },
   pastel:  { n: 'Pastel', th: ['#fdf0f7', '#f3eaff', '#e7efff', '#e3f8f0'], acc: '#c026d3', light: true, amb2: '#60a5fa' },
+  wii:     { n: 'Wii', th: ['#fbfcfd', '#f4f6f8', '#eceff2', '#e3e7eb'], acc: '#2fb4e8', light: true, amb2: '#8fd8f5' },
 };
 const themeOf = () => THEMES[cfg.theme] || THEMES.aurore;
 function applyTheme() {
@@ -1879,12 +2074,166 @@ function applyTheme() {
   th.forEach((v, i) => b.style.setProperty(`--th${i + 1}`, v));
   try {   // pour l'écran de démarrage du prochain lancement
     const n = parseInt(T.acc.slice(1), 16), lum = 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
-    localStorage.setItem('emuglob-splash', JSON.stringify({ bg: T.th[1], acc: T.acc, fg: lum > 170 ? '#000' : '#fff' }));
+    localStorage.setItem('emuglob-splash', JSON.stringify({ bg: T.th[1], acc: T.acc, fg: lum > 170 ? '#000' : '#fff', wii: cfg.theme === 'wii' }));
   } catch { /* rien */ }
   // halo secondaire du fond ambiant : couleur de la console si le thème est teinté, sinon celle du thème
   const amb2 = T.tint && cfg.consoleTheme !== false && fcons[fci] ? consColor(fcons[fci]) : T.amb2;
   if (amb2) b.style.setProperty('--amb2', amb2); else b.style.removeProperty('--amb2');
+  wiiRender();
 }
+
+/* ---------- thème Wii : accueil en « chaînes », barre du bas (horloge, boutons ronds), aperçu de chaîne ---------- */
+const isWii = () => cfg.theme === 'wii';
+const W_ARR = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M14 6 Q12 4 14 3 L40 21 Q43 24 40 27 L14 45 Q12 44 14 42 Z" fill="url(#w-arrg)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>';
+const cssU = (u) => u.replace(/["\\()\s']/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'));
+const wCols = () => Math.max(3, Math.min(8, Math.round((innerWidth / Math.max(1, innerHeight)) * 2.4)));
+let wPage = -1, wColsN = 0, wWheel = 0;
+function wTile(g) {
+  if (!g) return '<div class="wch empty"></div>';
+  const u = artUrl(g), st = styleOf(g);
+  const ph = u ? '' : `<div class="ph" style="background:linear-gradient(135deg,hsl(${hue(g.title)},55%,45%),hsl(${(hue(g.title) + 50) % 360},55%,30%))">${esc(g.title.slice(0, 2).toUpperCase())}</div>`;
+  return `<div class="wch ${g.missing ? 'miss' : ''}" data-gid="${g.id}" title="">`
+    + (u ? `<div class="bg" style="background-image:url('${cssU(u)}')"></div><img class="cv" src="${esc(u)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'cv'}))">` : `<div class="cv" style="--ar:${g.ar || st.ar}">${ph}</div>`)
+    + `<span class="tg">${esc(labelOf(g))}</span>${g.favorite ? `<svg class="fav ico fill" viewBox="0 0 24 24">${ICONS.star}</svg>` : isNew(g) ? '<span class="nw">Nouveau</span>' : ''}</div>`;
+}
+function wBar() {
+  const b = $('#w-bar'); if (!b) return;
+  const W = b.clientWidth, H = b.clientHeight; if (!W || !H) return;
+  const rb = $('#w-menu'), L = rb.offsetLeft + rb.offsetWidth + 70, y1 = H * 0.09, y0 = H * 0.36, c = Math.min(200, W * 0.09);
+  const d = `M-4 ${y1} L${L} ${y1} C${L + c * 0.5} ${y1} ${L + c * 0.5} ${y0} ${L + c} ${y0} L${W - L - c} ${y0} C${W - L - c * 0.5} ${y0} ${W - L - c * 0.5} ${y1} ${W - L} ${y1} L${W + 4} ${y1} L${W + 4} ${H + 4} L-4 ${H + 4} Z`;
+  $('#w-bar > svg').setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('#w-bp').setAttribute('d', d); $('#w-bp2').setAttribute('d', d);
+}
+function wClock() {
+  if (!isWii()) return;
+  const n = new Date(), p = n.toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' }).split(':');
+  $('#w-clk').innerHTML = p.length === 2 ? `${p[0]}<b>:</b>${p[1]}` : esc(p.join(':'));
+  $('#w-date').textContent = n.toLocaleDateString(LOC, { weekday: 'short', day: '2-digit', month: '2-digit' });
+}
+function wiiRender(dir = 0) {
+  const w = $('#wii'), on = isWii();
+  w.hidden = !on;
+  if (!on) { document.body.classList.remove('wsrch'); return; }
+  const cols = wCols(), per = cols * 3;
+  wColsN = cols; w.style.setProperty('--wc', cols);
+  const sortOn = (SORTS[cfg.sortBy] && cfg.sortBy !== 'name') || !!cfg.onlyUnplayed;
+  $('#w-chips').innerHTML = fcons.map((t, k) => `<button class="wpill ${k === fci ? 'on' : ''}" data-i="${k}">${t.key === '__fav' ? ic('star') : t.key === '__recent' ? ic('clock') : ''}<span translate="no">${esc(t.label)}</span><small>${t.games.length}</small></button>`).join('')
+    + `<button class="wpill ${sortOn ? 'on' : ''}" id="w-sort" title="Trier / filtrer">${ic('sort')}</button>`;
+  const pages = Math.max(1, Math.ceil(fgames.length / per)), pg = Math.min(pages - 1, Math.floor(fi / per));
+  wPage = pg;
+  const list = fgames.slice(pg * per, pg * per + per);
+  const gr = $('#w-grid');
+  gr.innerHTML = fgames.length ? Array.from({ length: per }, (_, k) => wTile(list[k])).join('') : '';
+  $('#w-empty').hidden = !!fgames.length;
+  gr.classList.remove('sl', 'sr');
+  if (dir) { void gr.offsetWidth; gr.classList.add(dir < 0 ? 'sl' : 'sr'); }
+  $('#w-dots').innerHTML = pages > 1 ? Array.from({ length: pages }, (_, k) => `<i class="${k === pg ? 'on' : ''}" data-p="${k}"></i>`).join('') : '';
+  $('#w-prev').hidden = pg <= 0; $('#w-next').hidden = pg >= pages - 1;
+  const chip = $('#w-chips .on'); if (chip) chip.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  const nLive = (friends || []).filter((f) => f.live).length;
+  $('#w-frn').hidden = !nLive; $('#w-frn').textContent = nLive;
+  const av = $('#w-pro .av');
+  if (profile && profile.UserPic) { av.style.backgroundImage = `url('${RAM}${profile.UserPic}')`; av.textContent = ''; }
+  else { av.style.backgroundImage = ''; av.textContent = ((cfg.ra && cfg.ra.user) || 'E').slice(0, 1).toUpperCase(); }
+  $('#w-sort').classList.toggle('on', sortOn);
+  wMark(); wBar(); wClock();
+}
+// jeu choisi : contour bleu + bulle du titre
+function wMark(showTip = true) {
+  const g = cur();
+  let sel = null;
+  document.querySelectorAll('#w-grid .wch[data-gid]').forEach((el) => { const on = !!g && el.dataset.gid === g.id; el.classList.toggle('on', on); if (on) sel = el; });
+  wTip(showTip ? sel : null);
+}
+function wTip(el) {
+  const t = $('#w-tip');
+  if (!el) { t.hidden = true; return; }
+  const g = find(el.dataset.gid); if (!g) { t.hidden = true; return; }
+  const r = el.getBoundingClientRect(), v = $('#wii').getBoundingClientRect();
+  t.textContent = g.title; t.hidden = false;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  t.style.left = Math.max(v.left + 200, Math.min(v.right - 200, r.left + r.width / 2)) + 'px';
+  t.style.top = (r.bottom - 6) + 'px';
+}
+function wiiPlace() {
+  const per = wCols() * 3;
+  if (wCols() !== wColsN || Math.floor(fi / per) !== wPage) return wiiRender(Math.sign(Math.floor(fi / per) - wPage));
+  wMark();
+}
+function wPageGo(d) {
+  const per = wColsN * 3, pages = Math.max(1, Math.ceil(fgames.length / per)), p = Math.max(0, Math.min(pages - 1, wPage + d));
+  if (p === wPage) return;
+  fi = Math.min(fgames.length - 1, p * per);
+  if (fgames[fi]) fpos[fcons[fci].key] = fgames[fi].id;
+  wiiRender(d); renderInfo(); scheduleRA(); sfx('cons');
+}
+// ouverture d'une chaîne : la case grandit jusqu'à remplir l'écran, puis la fiche apparaît
+function wOpen(g = cur(), el = $('#w-grid .wch.on')) {
+  if (!g) return;
+  const r = el && el.getBoundingClientRect();
+  if (!r || !r.width || matchMedia('(prefers-reduced-motion: reduce)').matches) return openSheet(g);
+  sfx('cons');
+  $('#w-tip').hidden = true;
+  const z = document.createElement('div'), u = artUrl(g);
+  z.id = 'w-zoom'; z.innerHTML = '<i></i>';
+  if (u) z.style.backgroundImage = `url('${cssU(u)}')`;
+  Object.assign(z.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  document.body.append(z); void z.offsetWidth;
+  z.classList.add('full'); Object.assign(z.style, { left: '0px', top: '0px', width: '100vw', height: '100vh' });
+  setTimeout(() => { openSheet(g); requestAnimationFrame(() => { z.classList.add('out'); setTimeout(() => z.remove(), 320); }); }, 430);
+}
+const homeA = () => (isWii() ? wOpen() : launch(cur()));
+// fiche dans le thème Wii : bannière = jaquette floutée, gros boutons Accueil / Jouer, flèches jeu précédent / suivant
+function wiiSheet() {
+  const g = sheetGame; if (!g || !isWii()) return;
+  const u = artUrl(g);
+  $('#ov-sheet').style.setProperty('--wban', u ? `url('${cssU(u)}')` : 'none');
+  $('#sh-wplay').disabled = !!g.virtual;
+  $('#sh-wfav').hidden = !!g.virtual; $('#sh-wfav').classList.toggle('on', !!g.favorite);
+  $('#sh-wmore').hidden = !!g.virtual;
+  $('#sh-wach').hidden = !(stats(g) && raOn());
+  const i = fgames.indexOf(g), nav = !sheetFrom && i >= 0;
+  $('#sh-wprev').hidden = !nav || i <= 0; $('#sh-wnext').hidden = !nav || i >= fgames.length - 1;
+}
+function wSheetStep(d) {
+  const i = fgames.indexOf(sheetGame) + d;
+  if (sheetFrom || i < 0 || i >= fgames.length) return;
+  fi = i; fpos[fcons[fci].key] = fgames[i].id;
+  sfx('move', i); openSheet(fgames[i]);
+}
+$('#w-chips').onclick = (e) => {
+  if (e.target.closest('#w-sort')) return openSort();
+  const b = e.target.closest('.wpill[data-i]'); if (!b) return;
+  const t = fcons[+b.dataset.i]; if (!t || +b.dataset.i === fci) return;
+  cfg.flowCons = t.key; save(); render(); scheduleRA();
+};
+$('#w-grid').onclick = (e) => { const el = e.target.closest('.wch[data-gid]'); if (!el) return; const g = find(el.dataset.gid); if (g) { focusIn(g); wOpen(g, el); } };
+$('#w-grid').oncontextmenu = (e) => { const el = e.target.closest('.wch[data-gid]'); if (!el) return; e.preventDefault(); const g = find(el.dataset.gid); if (g) { focusIn(g); openMenu(g); } };
+$('#w-grid').onmouseover = (e) => { const el = e.target.closest('.wch[data-gid]'); if (!el) return; const g = find(el.dataset.gid); if (g && g !== cur()) { focusIn(g); wMark(); } };
+function focusIn(g) { const i = fgames.indexOf(g); if (i < 0) return; fi = i; fpos[fcons[fci].key] = g.id; renderInfo(); scheduleRA(); }
+$('#w-prev').onclick = () => wPageGo(-1);
+$('#w-next').onclick = () => wPageGo(1);
+$('#w-dots').onclick = (e) => { const d = e.target.closest('[data-p]'); if (d) wPageGo(+d.dataset.p - wPage); };
+$('#wii').addEventListener('wheel', (e) => {
+  if (e.target.closest('#w-chips') || Date.now() - wWheel < 450 || Math.abs(e.deltaY) + Math.abs(e.deltaX) < 8) return;
+  wWheel = Date.now(); wPageGo(Math.sign(e.deltaY || e.deltaX));
+}, { passive: true });
+$('#w-menu').onclick = openSettingsPanel;
+$('#w-add').onclick = addFiles;
+$('#w-search').onclick = () => { document.body.classList.add('wsrch'); $('#q').focus(); };
+$('#searchbox').addEventListener('focusout', () => setTimeout(() => { if (!$('#searchbox').contains(document.activeElement)) document.body.classList.remove('wsrch'); }, 150));
+$('#w-tro').onclick = openTrophies;
+$('#w-pro').onclick = () => { proView = 'main'; proUser = null; openProfile(); };
+$('#w-fr').onclick = openFriends;
+$('#sh-whome').onclick = () => closeSheet();
+$('#sh-wplay').onclick = () => { const g = sheetGame; if (!g || g.virtual) return; closeOv(); launch(g); };
+$('#sh-wfav').onclick = () => { toggleFav(sheetGame); renderSheet(); wiiSheet(); };
+$('#sh-wach').onclick = openAchList;
+$('#sh-wmore').onclick = () => openMenu(sheetGame);
+$('#sh-wprev').onclick = () => wSheetStep(-1);
+$('#sh-wnext').onclick = () => wSheetStep(1);
+window.addEventListener('resize', () => { if (isWii()) { wBar(); if (wCols() !== wColsN) wiiRender(); } });
+setInterval(wClock, 5000);
 
 /* ---------- sons de navigation (générés, aucun fichier audio) ---------- */
 const snd = () => {
@@ -1922,6 +2271,14 @@ function sfx(kind, i = 0) {
   if (now - sfxT < 45) return;
   sfxT = now;
   const c = audio(), t = c.currentTime + 0.01;
+  if (cfg.theme === 'wii' && kind !== 'test') {   // thème Wii : petites bulles douces, montantes
+    const n = PENTA[i % 5];
+    if (kind === 'hover') tone(uiOut, t, mtof(86 + n), { d: 0.07, v: 0.1, f2: mtof(93 + n) });
+    else if (kind === 'move') tone(uiOut, t, mtof(81 + n), { d: 0.09, v: 0.16, f2: mtof(88 + n) });
+    else if (kind === 'cons') { tone(uiOut, t, mtof(76), { d: 0.12, v: 0.16, f2: mtof(83) }); tone(uiOut, t + 0.08, mtof(88), { d: 0.22, v: 0.12 }); }
+    else if (kind === 'launch') [76, 81, 86, 93].forEach((m, k) => tone(uiOut, t + k * 0.06, mtof(m), { d: 0.3, v: 0.14 }));
+    return;
+  }
   if (kind === 'hover') tone(uiOut, t, mtof(84 + PENTA[i % 5]), { d: 0.12, v: 0.12 });
   else if (kind === 'move') { tone(uiOut, t, mtof(79 + PENTA[i % 5]), { type: 'triangle', d: 0.14, v: 0.22 }); tone(uiOut, t, mtof(91 + PENTA[i % 5]), { d: 0.1, v: 0.06 }); }
   else if (kind === 'cons') { tone(uiOut, t, mtof(72), { type: 'triangle', d: 0.18, v: 0.2 }); tone(uiOut, t + 0.07, mtof(79), { type: 'triangle', d: 0.25, v: 0.2 }); }
@@ -1957,7 +2314,7 @@ function openAmbDlg() {
 // son au survol des jeux, des consoles et des boutons
 let hoverEl = null;
 document.addEventListener('mouseover', (e) => {
-  const el = e.target.closest('.fi, .ftab, .sset, .btile, .lcard');
+  const el = e.target.closest('.fi, .ftab, .sset, .btile, .lcard, .wch[data-gid], .wpill, .w-rb, .w-sb, .w-big, .w-arr');
   if (el === hoverEl) return;
   hoverEl = el;
   if (el && !el.classList.contains('cc') && !el.classList.contains('on')) sfx('hover', [...el.parentNode.children].indexOf(el));
@@ -2200,7 +2557,9 @@ function setTop(name) {
 }
 function closeOv() {
   $('#ov-pro').hidden = true; setTop('jeux');
-  $('#ov-lib').hidden = true; $('#ov-tro').hidden = true; $('#ov-fr').hidden = true; $('#ov-set').hidden = true; $('#ov-sheet').hidden = true; mode = 'home';
+  $('#ov-lib').hidden = true; $('#ov-tro').hidden = true; $('#ov-fr').hidden = true; $('#ov-set').hidden = true; $('#ov-sheet').hidden = true;
+  if (isWii() && mode !== 'home') { const w = $('#wii'); w.classList.remove('in'); void w.offsetWidth; w.classList.add('in'); }
+  mode = 'home';
 }
 
 /* ---------- fiche de jeu : infos RetroAchievements, résumé Wikipédia, durée de vie (temps médians RA) ---------- */
@@ -2215,7 +2574,7 @@ async function openSheet(g = cur(), from = '') {
   sheetFrom = from;
   if (from === 'friends') setTop('fr');
   mode = 'sheet'; sheetGame = g; hashAll = false; sheetTab = 'info'; achFilter = 'all'; $('#ov-sheet').hidden = false; $('#sh-body').scrollTop = 0;
-  renderSheet();
+  renderSheet(); wiiSheet();
   const x = sheetX[g.id] || (sheetX[g.id] = {});
   const jobs = [];
   if (g.virtual && raOn()) jobs.push((async () => {   // jeu d'un ami, absent de la bibliothèque : tout vient de RetroAchievements
@@ -2233,7 +2592,7 @@ async function openSheet(g = cur(), from = '') {
     x.wiki = r && r.ok ? r : { none: true, error: r && (r.offline ? 'hors ligne' : r.error) };
   })());
   if (raOn() && g.raId > 0 && !x.subs) jobs.push(Promise.allSettled(jobs.slice()).then(() => loadSubsets(g, x)));
-  for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) renderSheet(); }).catch(() => {});
+  for (const j of jobs) j.then(() => { if (mode === 'sheet' && sheetGame === g) { renderSheet(); wiiSheet(); } }).catch(() => {});
 }
 // subsets RetroAchievements du jeu : jeux « Titre [Subset - Nom] » de la même console (GetGameList, gardée 7 jours)
 const SUBSET_RX = /\s*\[\s*subset\s*-\s*([^\]]*?)\s*\]\s*/i;
@@ -3932,7 +4291,7 @@ document.addEventListener('keydown', (e) => {
     else if (k === 'ArrowDown') homeVert(1);
     else if (k === 'PageUp') flowCons(-1);
     else if (k === 'PageDown') flowCons(1);
-    else if (k === 'Enter') launch(cur());
+    else if (k === 'Enter') homeA();
     else if (kl === 'f') toggleFav();
     else if (kl === 'm') openMenu();
     else if (kl === 'i') openSheet();
@@ -3960,10 +4319,10 @@ function pad() {
     if (dlg) { if (b && !(tutoLock && dlg.id === 'dlg-tuto')) dlg.close(); }
     else if (mode === 'home') {
       if (dx && t - lastMove > 140) { lastMove = t; flowMove(dx); }
-      else if (dy && t - lastMove > (homeLayout() === 'grid' ? 170 : 260)) { lastMove = t; homeVert(dy); }
+      else if (dy && t - lastMove > (homeLayout() === 'grid' || isWii() ? 170 : 260)) { lastMove = t; homeVert(dy); }
       if (lb) flowCons(-1);
       if (rb) flowCons(1);
-      if (a) launch(cur());
+      if (a) homeA();
       if (x) openMenu();
       if (y) toggleFav();
       if (back) openTrophies();
