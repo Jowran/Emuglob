@@ -4409,7 +4409,8 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
     if (Date.now() - updLast >= 30 * 60000) {
       updLast = Date.now();
       const u = await api.updateCheck();
-      if (u.ok && u.available && u.latest !== updSeen) updWant = u.latest;
+      if (!u.ok) updLast -= 25 * 60000;   // hors ligne : nouvel essai dans 5 min
+      else if (u.available && u.latest !== updSeen) updWant = u.latest;
     }
     if (updWant && !playing && !document.querySelector('dialog[open]')) { updSeen = updWant; updWant = ''; openUpdate(); }
   };
