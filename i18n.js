@@ -259,7 +259,7 @@
     'fichier altéré (empreinte SHA-256 différente de celle de GitHub)': "tampered file (SHA-256 hash differs from GitHub's)", 'aucun jeu intégré': 'no embedded game',
     'ce fichier ne ressemble pas à un keys.txt (une clé de 32 caractères hexadécimaux par ligne)': "this file doesn't look like a keys.txt (one 32-character hex key per line)",
     'dossier de sauvegarde de Cemu inconnu pour ce jeu : lance-le une fois dans Cemu': "Cemu save folder unknown for this game: launch it once in Cemu",
-    'Retour à Emuglob': 'Back to Emuglob', 'Revenir à la bibliothèque sans fermer le jeu': 'Go back to the library without closing the game',
+    'Retour à Emuglob': 'Back to Emuglob', "Seulement l'image du jeu. F11 pour revenir": 'Game picture only. F11 to go back', 'Revenir à la bibliothèque sans fermer le jeu': 'Go back to the library without closing the game',
     'Reprendre': 'Resume', 'Revenir au jeu': 'Back to the game', 'Un jeu': 'A game',
     "Impossible de cacher l'émulateur : il n'est pas intégré à Emuglob.": "Can't hide the emulator: it isn't embedded in Emuglob.",
     'Aucun émulateur lié': 'No emulator linked', "Choisir l'exécutable…": 'Choose the executable…',

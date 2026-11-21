@@ -462,6 +462,7 @@ async function getHelper() {
   else if (process.platform !== 'win32') throw new Error("l'intégration n'existe que sous Windows");
   else h = new Helper(await compileHelper(), [], {});
   helperObj = h;
+  h.on((line) => { if (line === 'key f11' && win && !win.isDestroyed()) win.webContents.send('game:hotkey', 'f11'); });   // F11 pendant le jeu (le clavier est à l'émulateur)
   return h;
 }
 
@@ -588,6 +589,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           hideCover(true);
           streamSource = null;
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
+          setImmersive(false);   // le jeu est fini : affichage d'avant
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
           if (sync && sync.rom && sync.emu && sync.emu.id === 'cemu') {   // Wii U : copie du dossier de sauvegarde du jeu
@@ -936,6 +938,22 @@ ipcMain.handle('discord:status', () => discord.status);
 ipcMain.handle('embed:openlog', () => shell.openPath(embedLogPath()));
 app.on('before-quit', () => { discord.close(); if (helperObj && current && current.embedded) helperObj.send('close'); });
 
+// plein écran du jeu : Emuglob en plein écran, la barre en jeu est masquée côté page, le menu natif de l'émulateur est retiré ;
+// à la sortie, tout revient comme avant (Emuglob reste en plein écran s'il l'était déjà)
+let immersive = null;   // { wasFs }
+function setImmersive(on) {
+  if (!win || win.isDestroyed()) return false;
+  if (on) {
+    if (!immersive) immersive = { wasFs: win.isFullScreen() };
+    win.setFullScreen(true);
+  } else if (immersive) {
+    if (!immersive.wasFs) win.setFullScreen(false);
+    immersive = null;
+  }
+  if (helperObj && current && current.embedded) helperObj.send(on ? 'menu hide' : 'menu show');
+  return on;
+}
+ipcMain.handle('game:immersive', (_e, on) => setImmersive(!!on));
 ipcMain.handle('win:fullscreen', (_e, force) => {
   const next = typeof force === 'boolean' ? force : !win.isFullScreen();
   win.setFullScreen(next);

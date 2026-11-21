@@ -553,6 +553,7 @@
   #gbar button:hover { border-color:#8f7bff; }
   #g-state { color:var(--muted); font-size:13px; }
   #gview { flex:1; position:relative; background:#000; }
+  body.immersive #gbar, body.immersive #gquick { display:none; }   /* plein écran du jeu : seule l'image reste */
   #g-mirror { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; background:#000; }
   #g-volw { display:inline-flex; align-items:center; gap:8px; }
   #g-volw[hidden], #g-quick[hidden], #g-ctl[hidden], #gquick[hidden] { display:none; }
@@ -834,7 +835,7 @@
   <div id="gbar"><b id="g-title" translate="no"></b><span id="g-state"></span><span class="sp"></span>
     <span id="g-volw" hidden><button id="g-mute" title="Couper / remettre le son"><i data-ic="volume"></i></button><input id="g-vol" type="range" min="0" max="100" step="1" value="100" title="Volume de l'émulateur"><b id="g-voln">–</b></span>
     <button id="g-ctl" hidden title="Changer les touches de l'émulateur sans quitter le jeu"><i data-ic="gamepad"></i> Contrôles</button><button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
-    <button id="g-back" hidden title="Revenir à la bibliothèque sans fermer le jeu"><i data-ic="home"></i> Retour à Emuglob</button><button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
+    <button id="g-back" hidden title="Revenir à la bibliothèque sans fermer le jeu"><i data-ic="home"></i> Retour à Emuglob</button><button id="g-full" title="Seulement l'image du jeu. F11 pour revenir"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
   <div id="gquick" hidden><div id="gq-list"></div><div id="gq-note"></div></div>
   <div id="gview"><video id="g-mirror" muted playsinline hidden></video><div id="g-wait"></div></div>
 </div>
@@ -3490,6 +3491,7 @@ async function startMirror() {
 }
 function leaveGame() {
   stopMirror();
+  setImmersive(false);
   parked = false; $('#g-resume').hidden = true;
   $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true; $('#g-ctl').hidden = true; $('#g-back').hidden = true;
   if ($('#dlg-ctl').open) $('#dlg-ctl').close();
@@ -3498,6 +3500,7 @@ function leaveGame() {
 api.onGameEmbedded(({ ok, reason, stream }) => {
   if (ok) {
     $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools(); $('#g-back').hidden = false;
+    if (immersive) api.gameImmersive(true);   // plein écran demandé pendant le lancement : le menu de l'émulateur part maintenant
     if (stream) startMirror(); else if (cfg.streamMirror && (cfg.embedMode || 'overlay') === 'overlay') toast("Mode stream : fenêtre de l'émulateur introuvable pour la capture.");
     return;
   }
@@ -3505,11 +3508,23 @@ api.onGameEmbedded(({ ok, reason, stream }) => {
   toast(`Intégration impossible : ${reason}. L'émulateur tourne dans sa propre fenêtre (journal : Paramètres).`);
 });
 $('#g-stop').onclick = () => api.stopGame();
-$('#g-full').onclick = () => api.fullscreen();
+/* ---------- plein écran du jeu : Emuglob plein écran, barre en jeu et menu de l'émulateur masqués ; F11 / Échap pour revenir ---------- */
+let immersive = false;
+function setImmersive(on) {
+  on = !!on && mode === 'game';
+  if (on === immersive) return;
+  immersive = on;
+  document.body.classList.toggle('immersive', on);
+  api.gameImmersive(on);
+  if (mode === 'game') api.gameFocus();   // le clavier retourne au jeu
+}
+$('#g-full').onclick = () => setImmersive(!immersive);
+api.onGameHotkey((k) => { if (k === 'f11') { if (mode === 'game') setImmersive(!immersive); else setFullscreen(); } });
 /* ---------- retour à la bibliothèque sans fermer le jeu : la fenêtre de l'émulateur est cachée, le jeu continue (son coupé) ---------- */
 let parked = false, parkMuted = false;
 async function parkGame() {
   if (mode !== 'game' || !playing || parked) return;
+  setImmersive(false);
   if (!(await api.gamePark(true))) return toast("Impossible de cacher l'émulateur : il n'est pas intégré à Emuglob.");
   parked = true; $('#gquick').hidden = true;
   $('#game').hidden = true; mode = 'home';
@@ -3902,8 +3917,8 @@ const setFullscreen = () => api.fullscreen();
 const KEYS = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'F11') { e.preventDefault(); return setFullscreen(); }
-  if (mode === 'game') return;
+  if (e.key === 'F11') { e.preventDefault(); return mode === 'game' ? setImmersive(!immersive) : setFullscreen(); }
+  if (mode === 'game') { if (e.key === 'Escape' && immersive) setImmersive(false); return; }
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Escape' && mode === 'sheet') return closeSheet();
   if (e.key === 'Escape' && mode !== 'home') return closeOv();
