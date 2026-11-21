@@ -1949,6 +1949,23 @@ function openLayoutDlg() {
   };
   d.showModal();
 }
+// émulateurs en français : langue de l'interface et de la console émulée (la région n'est jamais changée)
+const EL_ST = { fr: 'passé en français', ok: 'déjà en français', manuel: 'autre langue choisie, laissée', absent: 'fichier absent (lance l\'émulateur une fois)', ouvert: 'ouvert : ferme-le d\'abord', erreur: 'erreur', vu: 'déjà réglé' };
+function openEmuLang(res) {
+  const d = $('#dlg-menu'), on = cfg.emuFr !== false;
+  $('#m-list').innerHTML = '<div class="mcap">Émulateurs en français</div>'
+    + '<div class="muted" style="padding:2px 14px 10px;max-width:460px;font-size:13px;line-height:1.45">Quand Emuglob est en français, chaque émulateur passe en français à son lancement : menus et langue de la console (DS, 3DS, Wii, GameCube, Wii U, PSP). Une seule fois par réglage : si tu changes la langue dans l\'émulateur, Emuglob la laisse. La région n\'est jamais changée (sauvegardes et jeux NTSC intacts). PS2 : la langue se règle dans le BIOS.</div>'
+    + (res ? '<div style="padding:0 14px 10px;font-size:13px;line-height:1.5">' + (res.length ? res.map((r) => `<div><b>${esc(r.emu)}</b>${r.label ? ' · ' + esc(r.label) : ''} : <span class="muted">${esc(EL_ST[r.status] || r.status)}${r.error ? ' (' + esc(r.error) + ')' : ''}</span></div>`).join('') : '<div class="muted">Aucun émulateur pris en charge configuré.</div>') + '</div>' : '')
+    + `<button data-a="t">${on ? '✓ Activé (cliquer pour désactiver)' : 'Désactivé (cliquer pour activer)'}</button>`
+    + '<button data-a="now">Tout mettre en français maintenant</button><button data-a="x">Fermer</button>';
+  d.onclick = async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.a === 't') { cfg.emuFr = !on; await save(); if (mode === 'settings') drawSetPane(); return openEmuLang(res); }
+    if (b.dataset.a === 'now') { b.disabled = true; b.textContent = 'Réglage…'; const r = await api.emuLang((cfg.emulators || []).map((x) => x.exe).filter(Boolean)); return openEmuLang(r); }
+    d.close();
+  };
+  if (!d.open) d.showModal();
+}
 // colonnes de la grille (Étagère)
 const gridCols = () => Math.max(1, getComputedStyle($('#f-items')).gridTemplateColumns.split(' ').filter(Boolean).length);
 function placeAlt(st) {
@@ -3338,6 +3355,7 @@ const SET_ITEMS = [
   { g:'lang', ic:'globe', t:'Automatique', get s() { return (langPick() === 'auto' ? '✓ Utilisée · ' : '') + 'Langue de Windows'; }, act:() => setLang('auto'), keep:true },
   { g:'lang', ic:'globe', t:'Français', get s() { return langPick() === 'fr' ? '✓ Utilisée' : 'Interface en français'; }, act:() => setLang('fr'), keep:true },
   { g:'lang', ic:'globe', t:'English', get s() { return langPick() === 'en' ? '✓ Utilisée' : 'Interface en anglais'; }, act:() => setLang('en'), keep:true },
+  { g:'lang', ic:'gamepad', t:'Émulateurs en français', get s() { return LANG !== 'fr' ? 'Seulement si Emuglob est en français' : cfg.emuFr === false ? 'Désactivé' : 'Activé · langue réglée au lancement'; }, act:() => openEmuLang(), keep:true },
   { g:'sys', ic:'shield', t:'Sauvegardes', s:'Restaurer, exporter, importer', act:() => openBackups() },
   { g:'sys', ic:'star', t:'Aide et tuto', s:'Comment marche chaque fonction', act:() => openTuto() },
   { g:'sys', ic:'download', t:'Mettre à jour', s:'En ligne ou fichier app.asar', act:() => openUpdate() },

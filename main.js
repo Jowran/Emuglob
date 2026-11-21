@@ -556,6 +556,27 @@ function emuEnv(exe) {
   embedLog(`${path.basename(exe)} lancé en mode HighDpiAware (échelle Windows ${Math.round(k * 100)} %)`);
   return { ...process.env, __COMPAT_LAYER: (cur.replace(/\b(dpiunaware|gdidpiscaling)\b/ig, '').trim() + ' HighDpiAware').trim() };
 }
+// émulateurs en français (Emuglob en français, réglage « Émulateurs en français » actif) : langue de l'interface et de la console émulée,
+// une fois par réglage ; la région n'est jamais changée (voir emulang.js)
+const emuLangPath = () => path.join(app.getPath('userData'), 'emulang.json');
+function emuFrench(exe, force) {
+  let c = {}; try { c = readCfg(); } catch { /* config illisible */ }
+  if (!force && (L('fr', 'en') !== 'fr' || c.emuFr === false)) return [];
+  let done = {}; try { done = JSON.parse(fs.readFileSync(emuLangPath(), 'utf-8')) || {}; } catch { /* premier passage */ }
+  const res = require('./emulang').localize(exe, { done, force });
+  try { fs.writeFileSync(emuLangPath(), JSON.stringify(done, null, 1)); } catch { /* sans importance */ }
+  const ch = res.filter((r) => r.status !== 'vu' && r.status !== 'absent');
+  if (ch.length) embedLog('émulateur en français : ' + ch.map((r) => `${r.emu} ${r.label} = ${r.status}${r.from !== undefined ? ' (avant : ' + r.from + ')' : ''}${r.error ? ' : ' + r.error : ''}`).join(' ; '));
+  return res;
+}
+ipcMain.handle('emulang:apply', (_e, exes) => {
+  const out = [];
+  for (const exe of [...new Set((exes || []).filter((x) => typeof x === 'string' && x && fs.existsSync(x)))]) {
+    if (emucfg.running(exe)) { out.push({ emu: path.basename(exe), label: '', status: 'ouvert' }); continue; }
+    try { out.push(...emuFrench(exe, true)); } catch (e) { out.push({ emu: path.basename(exe), label: '', status: 'erreur', error: e.message }); }
+  }
+  return out;
+});
 ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode, sync, stream, cover: coverInfo }) =>
   new Promise((resolve) => {
     if (!exe || !fs.existsSync(exe)) return resolve({ ok: false, error: 'Exécutable introuvable : ' + exe });
@@ -570,6 +591,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
       embedLog('sauvegardes : ' + JSON.stringify(saves));
     }
     try {
+      try { emuFrench(exe); } catch (err) { embedLog('émulateur en français : ' + err.message); }
       embedLog(`lancement : ${exe} ${args.join(' ')} (intégration : ${embed ? 'oui, mode ' + (mode || 'overlay') : 'non'})`);
       const child = spawn(exe, args, { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
       child.once('error', (err) => resolve({ ok: false, error: err.message }));

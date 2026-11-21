@@ -12,6 +12,14 @@
   document.documentElement.lang = 'en';
 
   const D = {
+    // émulateurs en français
+    'Émulateurs en français': 'Emulators in French', 'Seulement si Emuglob est en français': 'Only when Emuglob is in French', 'Désactivé': 'Off', 'Activé · langue réglée au lancement': 'On · language set at launch',
+    "Quand Emuglob est en français, chaque émulateur passe en français à son lancement : menus et langue de la console (DS, 3DS, Wii, GameCube, Wii U, PSP). Une seule fois par réglage : si tu changes la langue dans l'émulateur, Emuglob la laisse. La région n'est jamais changée (sauvegardes et jeux NTSC intacts). PS2 : la langue se règle dans le BIOS.":
+      'When Emuglob is in French, each emulator is switched to French when it launches: menus and console language (DS, 3DS, Wii, GameCube, Wii U, PSP). Only once per setting: if you change the language in the emulator, Emuglob leaves it. The region is never changed (saves and NTSC games stay intact). PS2: the language is set in the BIOS.',
+    '✓ Activé (cliquer pour désactiver)': '✓ On (click to turn off)', 'Désactivé (cliquer pour activer)': 'Off (click to turn on)', 'Tout mettre en français maintenant': 'Switch everything to French now',
+    'Réglage…': 'Applying…', 'passé en français': 'switched to French', 'déjà en français': 'already in French', 'autre langue choisie, laissée': 'other language chosen, left as is',
+    "fichier absent (lance l'émulateur une fois)": 'file missing (launch the emulator once)', "ouvert : ferme-le d'abord": 'open: close it first', 'erreur': 'error', 'déjà réglé': 'already set',
+    'Aucun émulateur pris en charge configuré.': 'No supported emulator configured.',
     // choisir une version
     'Choisir une version': 'Choose a version', 'Installer une version publiée, même plus ancienne': 'Install any published version, even an older one',
     'préversion': 'pre-release', 'installée': 'installed', 'sans app.asar': 'no app.asar', 'Aucune version publiée.': 'No published version.',
