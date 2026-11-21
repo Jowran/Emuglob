@@ -3684,7 +3684,7 @@ function captureInput() {
     captureInput.cancel = () => finish(null);
   });
 }
-const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra|ppsspp/i;   // émulateurs que emucfg.js sait modifier
+const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra|ppsspp|^cemu/i;   // émulateurs que emucfg.js sait modifier
 // en jeu : changements gardés ici et écrits juste après la fermeture de l'émulateur (il réécrit sa config en quittant)
 let ctlPending = null, relaunchId = null;   // { exe, name, list } ; jeu à relancer une fois les contrôles écrits
 const ctlEmu = (e) => !!(e && e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()));
@@ -3692,7 +3692,7 @@ async function openControls(pick, inGame = false) {
   const d = $('#dlg-ctl'), changes = new Map();
   const emus = inGame ? [pick] : cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
     .filter((e, i, a) => a.findIndex((x) => x.exe.toLowerCase() === e.exe.toLowerCase()) === i);   // même exécutable déclaré deux fois
-  if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin, Azahar ou PPSSPP). Renseigne son chemin dans Paramètres, Émulateurs.');
+  if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin, Azahar, PPSSPP ou Cemu). Renseigne son chemin dans Paramètres, Émulateurs.');
   let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '', dzSel = -1;
   $('#c-emu').disabled = inGame; $('#c-later').hidden = !inGame;
   $('#c-save').textContent = inGame ? 'Appliquer et relancer le jeu' : 'Enregistrer';
