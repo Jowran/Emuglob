@@ -277,8 +277,10 @@
   #dlg-tuto { width:min(760px, 94vw); }
   #dlg-cons { width:min(820px, 94vw); }
   #dlg-achl { width:min(860px, 94vw); } #al-sub { font-size:13px; }
-  #al-body { height:min(66vh, 680px); overflow:auto; scrollbar-width:none; } #al-body::-webkit-scrollbar { display:none; }
-  #al-body .sh-achf { margin-top:0; position:sticky; top:0; background:inherit; padding-bottom:6px; z-index:1; }
+  #al-body { height:min(66vh, 680px); display:flex; flex-direction:column; min-height:0; }
+  #al-body .sh-achf { margin-top:0; padding-bottom:6px; flex:none; }
+  #al-body .sh-achl { flex:1; min-height:0; overflow:auto; margin-bottom:0; scrollbar-width:none; } #al-body .sh-achl::-webkit-scrollbar { display:none; }
+  #al-body .sh-achr { flex:none; }
   .sh-h4b { display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .sh-lnk { background:none; border:1px solid rgba(255,255,255,.3); color:inherit; font:inherit; font-size:11.5px; letter-spacing:0; text-transform:none; padding:3px 10px; border-radius:8px; cursor:pointer; }
   .sh-lnk:hover, .sh-lnk:focus { border-color:var(--acc); background:color-mix(in srgb, var(--acc) 25%, transparent); outline:none; }
@@ -538,6 +540,14 @@
   @media (max-width:760px) { .pgrid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   #game { position:fixed; inset:0; z-index:50; background:#000; display:flex; flex-direction:column; }
   #game[hidden] { display:none; }
+  #g-resume { position:fixed; right:28px; bottom:24px; z-index:40; display:flex; align-items:center; gap:4px; padding:4px; background:#12102a; border:1px solid #3a3560; border-radius:999px; box-shadow:0 8px 28px rgba(0,0,0,.45); max-width:min(520px, calc(100vw - 56px)); }
+  #g-resume[hidden] { display:none; }
+  #g-resume button { display:inline-flex; align-items:center; gap:8px; min-width:0; background:none; color:#fff; border:0; padding:7px 14px; border-radius:999px; cursor:pointer; font:inherit; }
+  #g-resume #gr-go { background:#5b46d6; }
+  #g-resume #gr-go:hover, #g-resume #gr-go:focus-visible { background:#6d58ea; outline:none; }
+  #g-resume #gr-go b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  #g-resume #gr-stop { padding:7px 10px; color:rgba(255,255,255,.75); }
+  #g-resume #gr-stop:hover, #g-resume #gr-stop:focus-visible { color:#fff; background:#262046; outline:none; }
   #gbar { flex:none; height:48px; display:flex; align-items:center; gap:14px; padding:0 18px; background:#12102a; border-bottom:1px solid #2a2550; }
   #gbar button { display:inline-flex; align-items:center; gap:6px; background:#262046; color:#fff; border:1px solid #3a3560; padding:6px 12px; border-radius:10px; cursor:pointer; font:inherit; }
   #gbar button:hover { border-color:#8f7bff; }
@@ -620,6 +630,7 @@
   body.light dialog .ck, body.light #dlg-amb .ck, body.light dialog p, body.light dialog h2 { color:#1f2433; }
   .thc:focus { outline:none; }
   body.light dialog [style*="color:#fff"], body.light .crow .cnum, body.light #tu-body b, body.light .tmodes label, body.light #q { color:#1f2433 !important; }
+  body.light #g-resume { background:#fff; border-color:#dde1ea; } body.light #g-resume #gr-stop { color:#5a6072; } body.light #g-resume #gr-stop:hover { background:#f3f4f8; color:#1f2433; }
   body.light .tmodes label, body.light #gbar button, body.light #gq-list select { background:#f3f4f8; color:#1f2433; border-color:#dde1ea; }
   body.light .fb, body.light .farr { color:#1f2433; background:rgba(255,255,255,.75); border-color:rgba(0,0,0,.1); }
   body.light .hk { background:rgba(0,0,0,.1); color:#1f2433; }
@@ -823,10 +834,11 @@
   <div id="gbar"><b id="g-title" translate="no"></b><span id="g-state"></span><span class="sp"></span>
     <span id="g-volw" hidden><button id="g-mute" title="Couper / remettre le son"><i data-ic="volume"></i></button><input id="g-vol" type="range" min="0" max="100" step="1" value="100" title="Volume de l'émulateur"><b id="g-voln">–</b></span>
     <button id="g-ctl" hidden title="Changer les touches de l'émulateur sans quitter le jeu"><i data-ic="gamepad"></i> Contrôles</button><button id="g-quick" hidden><i data-ic="gear"></i> Réglages</button>
-    <button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
+    <button id="g-back" hidden title="Revenir à la bibliothèque sans fermer le jeu"><i data-ic="home"></i> Retour à Emuglob</button><button id="g-full"><i data-ic="expand"></i> Plein écran</button><button id="g-stop"><i data-ic="close"></i> Fermer le jeu</button></div>
   <div id="gquick" hidden><div id="gq-list"></div><div id="gq-note"></div></div>
   <div id="gview"><video id="g-mirror" muted playsinline hidden></video><div id="g-wait"></div></div>
 </div>
+<div id="g-resume" hidden><button id="gr-go" title="Revenir au jeu"><i data-ic="play"></i> Reprendre <b id="gr-title" translate="no"></b></button><button id="gr-stop" title="Fermer le jeu"><i data-ic="close"></i></button></div>
 
 <div class="overlay" id="ov-pro" hidden>
   <div class="ovh"><h2 id="pro-title">Mon profil</h2><button id="pro-bdg" title="Tous mes badges"><i data-ic="trophy"></i> Badges</button><button id="pro-acc" title="Organiser le profil"><i data-ic="user"></i> Compte</button><button id="pro-close"><i data-ic="close"></i> Fermer</button></div>
@@ -1078,6 +1090,13 @@
   <div class="row"><button id="rr-no">Annuler</button><button id="rr-yes" style="background:#c8323c">Supprimer définitivement</button></div>
 </dialog>
 
+<dialog id="dlg-needemu" style="max-width:520px">
+  <h2>Aucun émulateur lié</h2>
+  <p id="ne-msg"></p>
+  <p id="ne-hint" class="muted"></p>
+  <div class="row"><button id="ne-no">Annuler</button><button id="ne-yes" style="background:#5b46d6">Choisir l'exécutable…</button></div>
+</dialog>
+
 <dialog id="dlg-menu"><div id="m-list"></div></dialog>
 <div id="toast"></div>
 
@@ -1193,6 +1212,8 @@ const ICONS = {
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
   sort: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  home: '<path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>',
   flow: '<rect x="8.5" y="4" width="7" height="16" rx="1.2"/><path d="M4.5 7v10M19.5 7v10"/>',
 };
 const ic = (n, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -2032,8 +2053,28 @@ async function pickSubset(g, vars, opts, pend) {
   const sel = $('#m-list button.sel') || $('#m-list button'); if (sel) sel.focus();
 }
 
+// jeu lancé sans émulateur lié : on explique quoi choisir avant d'ouvrir l'explorateur
+function askEmuExe(g, emu) {
+  const d = $('#dlg-needemu');
+  const sys = hasLib(g) ? (SYSTEMS[g.system] ? sysName(g.system) : '') : labelOf(g);
+  $('#ne-msg').textContent = sys && sys !== emu.name ? `Pour lancer les jeux ${sys}, sélectionne l'exécutable (.exe) de ${emu.name}.` : `Pour lancer ce jeu, sélectionne l'exécutable (.exe) de ${emu.name}.`;
+  $('#ne-hint').textContent = emu.kind === 'libretro' ? "RALibretro sert pour toutes les consoles rétro (NES, SNES, Game Boy, PS1…). Emuglob le retiendra." : 'Emuglob le retiendra pour les prochains jeux de cette console.';
+  return new Promise((res) => {
+    let done = false;
+    const end = async (pick) => { if (done) return; done = true; d.close(); res(pick ? await api.pickExe() : ''); };
+    $('#ne-no').onclick = () => end(false);
+    $('#ne-yes').onclick = () => end(true);
+    d.onclose = () => end(false);
+    d.showModal();
+    $('#ne-yes').focus();
+  });
+}
 async function launch(g, opts = {}) {
   if (!g) return;
+  if (parked) {   // un jeu tourne en arrière-plan : on le reprend plutôt que d'en lancer un second
+    if (playing && g.id === playing.id) return resumeGame();
+    return toast(`${playing ? playing.title : 'Un jeu'} tourne encore : reprends-le ou ferme-le avant d'en lancer un autre.`);
+  }
   if (opts.rom === undefined) {   // jeu avec des subsets dans la bibliothèque : on demande lequel lancer
     const vars = subsetsOf(g);
     await nameSubsets(vars);
@@ -2047,7 +2088,7 @@ async function launch(g, opts = {}) {
     if (rom === g.path) { g.missing = false; render(); }
   }
   const emu = emuOf(g);
-  if (!emu.exe) { emu.exe = await api.pickExe(); if (!emu.exe) return; save(); }
+  if (!emu.exe) { emu.exe = await askEmuExe(g, emu); if (!emu.exe) return; save(); }
   if (['.wud', '.wux'].includes(extOf(rom)) && emu.exe && !(await api.cemuKeysStatus(emu.exe)).has) {   // jeux Wii U chiffrés : Cemu a besoin de keys.txt
     if (confirm("Ce jeu Wii U (.wud/.wux) est chiffré : Cemu a besoin de ton keys.txt (clés tirées de ta propre console), introuvable pour l'instant.\n\nImporter ton keys.txt maintenant ?")) {
       const r = await api.cemuKeysImport(emu.exe);
@@ -2360,7 +2401,7 @@ function openAchList() {
   $('#al-title').textContent = p.Title || g.title;
   $('#al-sub').textContent = `${s.got.length} / ${s.total} succès · ${s.pts} pts`;
   $('#al-body').innerHTML = achListHTML(s, p.NumDistinctPlayers || p.NumDistinctPlayersCasual);
-  const d = $('#dlg-achl'); if (!d.open) { d.showModal(); $('#al-body').scrollTop = 0; }
+  const d = $('#dlg-achl'); if (!d.open) { d.showModal(); }
 }
 $('#al-body').onclick = (e) => {
   const af = e.target.closest('[data-achf]'); if (af) { achFilter = af.dataset.achf; return openAchList(); }
@@ -2877,6 +2918,7 @@ const SET_ITEMS = [
   { g:'inst', ic:'download', t:'PCSX2', s:'PlayStation 2 · installer ou mettre à jour', act:() => openInstall('pcsx2') },
   { g:'inst', ic:'download', t:'Cemu', s:'Wii U · installer ou mettre à jour', act:() => openInstall('cemu') },
   { g:'inst', ic:'download', t:'Dolphin', s:'Wii / GameCube · installer ou mettre à jour', act:() => openInstall('dolphin') },
+  { g:'inst', ic:'download', t:'PPSSPP', s:'PSP · installer ou mettre à jour', act:() => openInstall('ppsspp') },
   { g:'inst', ic:'download', t:'Cores RALibretro', s:'Un core par console · installer, mettre à jour', act:() => openCores() },
   { g:'ctl', ic:'gamepad', t:'Contrôles', s:'Touches et raccourcis par émulateur', act:() => openControls() },
   { g:'look', ic:'music', t:'Thèmes et sons', s:'Couleurs, sons de navigation', act:() => openAmbDlg() },
@@ -3240,7 +3282,7 @@ function captureInput() {
     captureInput.cancel = () => finish(null);
   });
 }
-const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra/i;   // émulateurs que emucfg.js sait modifier
+const CTL_OK = /ralibretro|pcsx2|dolphin|azahar|lime3ds|citra|ppsspp/i;   // émulateurs que emucfg.js sait modifier
 // en jeu : changements gardés ici et écrits juste après la fermeture de l'émulateur (il réécrit sa config en quittant)
 let ctlPending = null, relaunchId = null;   // { exe, name, list } ; jeu à relancer une fois les contrôles écrits
 const ctlEmu = (e) => !!(e && e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()));
@@ -3248,7 +3290,7 @@ async function openControls(pick, inGame = false) {
   const d = $('#dlg-ctl'), changes = new Map();
   const emus = inGame ? [pick] : cfg.emulators.filter((e) => e.exe && CTL_OK.test(e.exe.split(/[\\/]/).pop()))
     .filter((e, i, a) => a.findIndex((x) => x.exe.toLowerCase() === e.exe.toLowerCase()) === i);   // même exécutable déclaré deux fois
-  if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin ou Azahar). Renseigne son chemin dans Paramètres, Émulateurs.');
+  if (!emus.length) return toast('Aucun émulateur compatible configuré (RALibretro, PCSX2, Dolphin, Azahar ou PPSSPP). Renseigne son chemin dans Paramètres, Émulateurs.');
   let emu = emus.find((e) => e === pick) || emus[0], data = null, tab = '', dzSel = -1;
   $('#c-emu').disabled = inGame; $('#c-later').hidden = !inGame;
   $('#c-save').textContent = inGame ? 'Appliquer et relancer le jeu' : 'Enregistrer';
@@ -3448,13 +3490,14 @@ async function startMirror() {
 }
 function leaveGame() {
   stopMirror();
-  $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true; $('#g-ctl').hidden = true;
+  parked = false; $('#g-resume').hidden = true;
+  $('#game').hidden = true; $('#gquick').hidden = true; $('#g-volw').hidden = true; $('#g-quick').hidden = true; $('#g-ctl').hidden = true; $('#g-back').hidden = true;
   if ($('#dlg-ctl').open) $('#dlg-ctl').close();
   if (mode === 'game') mode = 'home';
 }
 api.onGameEmbedded(({ ok, reason, stream }) => {
   if (ok) {
-    $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools();
+    $('#g-state').textContent = 'En jeu'; $('#g-wait').textContent = ''; api.gameFocus(); gameTools(); $('#g-back').hidden = false;
     if (stream) startMirror(); else if (cfg.streamMirror && (cfg.embedMode || 'overlay') === 'overlay') toast("Mode stream : fenêtre de l'émulateur introuvable pour la capture.");
     return;
   }
@@ -3463,6 +3506,33 @@ api.onGameEmbedded(({ ok, reason, stream }) => {
 });
 $('#g-stop').onclick = () => api.stopGame();
 $('#g-full').onclick = () => api.fullscreen();
+/* ---------- retour à la bibliothèque sans fermer le jeu : la fenêtre de l'émulateur est cachée, le jeu continue (son coupé) ---------- */
+let parked = false, parkMuted = false;
+async function parkGame() {
+  if (mode !== 'game' || !playing || parked) return;
+  if (!(await api.gamePark(true))) return toast("Impossible de cacher l'émulateur : il n'est pas intégré à Emuglob.");
+  parked = true; $('#gquick').hidden = true;
+  $('#game').hidden = true; mode = 'home';
+  $('#gr-title').textContent = playing.title; $('#g-resume').hidden = false;
+  parkMuted = false;
+  const v = await api.gameVol();   // le jeu continue derrière : on coupe son son le temps d'être dans la bibliothèque
+  if (parked && v && v.ok && !v.mute) { const r = await api.gameVol(undefined, true); parkMuted = !!(r && r.ok && r.mute); }
+  render();
+}
+async function resumeGame() {
+  if (!parked) return;
+  document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+  closeOv();
+  parked = false; $('#g-resume').hidden = true;
+  mode = 'game'; $('#game').hidden = false;
+  await api.gamePark(false);
+  api.gameMove(gameRect()); api.gameFocus();   // la fenêtre d'Emuglob a pu changer de taille entre-temps
+  if (parkMuted) { parkMuted = false; showVol(await api.gameVol(undefined, false)); }
+  if (cfg.streamMirror && $('#g-mirror').hidden) startMirror();
+}
+$('#g-back').onclick = () => parkGame();
+$('#gr-go').onclick = () => resumeGame();
+$('#gr-stop').onclick = async () => { await resumeGame(); api.stopGame(); };   // fermeture normale : l'émulateur visible peut demander de sauvegarder
 /* ---------- barre en jeu : volume (à chaud) et réglages rapides (écrits à la fermeture de l'émulateur) ---------- */
 let quickPending = null;   // { exe, values } : appliqué quand l'émulateur se ferme (sinon il réécrirait sa config par-dessus)
 const showVol = (r) => {
@@ -3920,6 +3990,7 @@ const INST_INFO = {
   ralibretro: { src: 'retroachievements.org', note: "Une mise à jour garde tes réglages, cores et sauvegardes.<br>RALibretro est un logiciel libre (GPL-3.0) de RetroAchievements, distinct d'Emuglob." },
   cemu: { src: 'github.com/cemu-project/Cemu', note: "Tes réglages et tes jeux installés restent en place. Cemu a besoin des <b>clés tirées de ta propre console</b> (keys.txt) pour les jeux chiffrés (.wud, .wux) : elles ne sont pas fournies. « Importer mon keys.txt » le copie au bon endroit pour Cemu. Les jeux extraits (.rpx) et .wua n'en ont généralement pas besoin.<br>Cemu est un logiciel libre (MPL-2.0), distinct d'Emuglob." },
   dolphin: { src: 'dolphin-emu.org', note: "Tes réglages et sauvegardes (Documents\\Dolphin Emulator) sont gardés. Wii et GameCube n'ont pas besoin de BIOS.<br>Dolphin est un logiciel libre (GPL-2.0+), distinct d'Emuglob." },
+  ppsspp: { src: 'ppsspp.org', note: "Tes réglages et sauvegardes (dossier memstick à côté de PPSSPP) sont gardés. La PSP n'a pas besoin de BIOS.<br>PPSSPP est un logiciel libre (GPL-2.0+), distinct d'Emuglob." },
   pcsx2: { src: 'github.com/PCSX2/pcsx2', note: "Tes réglages (Documents\\PCSX2) sont gardés. <b>Aucun BIOS n'est fourni</b> : PCSX2 a besoin du BIOS de ta propre console PS2 (à copier dans Documents\\PCSX2\\bios).<br>PCSX2 est un logiciel libre (GPL-3.0), distinct d'Emuglob." },
 };
 api.onInstProgress((p) => {   // progression des installations et des cores, dans la fenêtre ouverte
@@ -4165,8 +4236,8 @@ const TUTO = [
     <li>Dans <b>Entretien</b>, les dossiers surveillés ajoutent tes nouveaux jeux à chaque démarrage. Tu peux aussi y retirer les jeux introuvables et les doublons.</li></ol>
     <div class="tip">Un jeu mal reconnu : menu « … » du jeu, Modifier, pour changer sa console ou son titre.</div>` },
   { ic:'download', t:'Installer les émulateurs', go:() => openInstall('ralibretro'), h:`<ul><li><b>RALibretro</b> lance la plupart des consoles rétro (NES, SNES, GBA, Mega Drive, PS1, N64…). Paramètres, Installation : un clic pour l'installer ou le mettre à jour.</li>
-    <li><b>PCSX2</b> (PS2) et <b>Cemu</b> (Wii U) s'installent pareil. PCSX2 a besoin du <b>BIOS de ta propre PS2</b>, Cemu des <b>clés de ta console</b> pour les .wud/.wux : rien de tout ça n'est fourni.</li>
-    <li>Pour les autres (Dolphin, Azahar…) : pose-les dans le dossier <b>emulators</b> à côté d'Emuglob.exe (détectés seuls), ou règle leur chemin dans Paramètres, Émulateurs.</li></ul>` },
+    <li><b>PCSX2</b> (PS2), <b>Cemu</b> (Wii U), <b>Dolphin</b> (Wii / GameCube) et <b>PPSSPP</b> (PSP) s'installent pareil. PCSX2 a besoin du <b>BIOS de ta propre PS2</b>, Cemu des <b>clés de ta console</b> pour les .wud/.wux : rien de tout ça n'est fourni.</li>
+    <li>Pour les autres (Azahar, Eden…) : pose-les dans le dossier <b>emulators</b> à côté d'Emuglob.exe (détectés seuls), ou règle leur chemin dans Paramètres, Émulateurs.</li></ul>` },
   { ic:'list', t:'Les cores', go:() => openCores(), h:`RALibretro a besoin d'un <b>core</b> par console : c'est le moteur qui émule la machine (mGBA pour la GBA, Snes9x pour la SNES…).
     <ul><li>Paramètres, Installation, <b>Cores RALibretro</b> : installer, mettre à jour ou supprimer chaque core, ou « Installer les cores de base » (un par console).</li>
     <li>Si tu lances un jeu sans son core, Emuglob te propose de le <b>télécharger puis de jouer</b>.</li></ul>` },
@@ -4177,7 +4248,7 @@ const TUTO = [
     <div class="tip">« Lancement des jeux » (Paramètres) règle l'intégration de l'émulateur dans Emuglob et le partage des sauvegardes.</div>` },
   { ic:'gamepad', t:'Contrôles', go:() => openControls(), h:`Paramètres, <b>Contrôles</b> : choisis l'émulateur en haut, clique sur une action, puis appuie sur la touche ou le bouton de manette voulu.
     <ul><li>La <b>manette dessinée</b> s'allume quand tu appuies : tu vois tout de suite ce qui est réglé.</li>
-    <li>La <b>zone morte</b> des sticks se règle pour PCSX2, Dolphin et, dans RALibretro, les cores N64 et DS.</li>
+    <li>La <b>zone morte</b> des sticks se règle pour PCSX2, Dolphin, PPSSPP et, dans RALibretro, les cores N64 et DS.</li>
     <li>Une copie .bak de la config de l'émulateur est gardée. Ferme l'émulateur avant de modifier.</li></ul>` },
   { ic:'shield', t:'Sauvegardes', go:() => openFindSaves(), h:`<ul><li>Les sauvegardes « cartouche » (.srm, .sav…) sont <b>partagées entre émulateurs</b> : Emuglob donne toujours la plus récente à celui que tu lances.</li>
     <li>Chaque jeu a son <b>historique</b> (20 dernières versions) : rien n'est jamais perdu.</li>
@@ -4219,8 +4290,8 @@ const TUTO_EN = [
     <li>In <b>Maintenance</b>, watched folders add your new games at each startup. You can also remove missing games and duplicates there.</li></ol>
     <div class="tip">Game recognized wrong: the game's "…" menu, Edit, to change its console or title.</div>` },
   { t:'Install emulators', h:`<ul><li><b>RALibretro</b> runs most retro consoles (NES, SNES, GBA, Mega Drive, PS1, N64…). Settings, Installation: one click to install or update it.</li>
-    <li><b>PCSX2</b> (PS2) and <b>Cemu</b> (Wii U) install the same way. PCSX2 needs the <b>BIOS from your own PS2</b>, Cemu needs <b>your console's keys</b> for .wud/.wux: none of this is provided.</li>
-    <li>For the others (Dolphin, Azahar…): put them in the <b>emulators</b> folder next to Emuglob.exe (detected automatically), or set their path in Settings, Emulators.</li></ul>` },
+    <li><b>PCSX2</b> (PS2), <b>Cemu</b> (Wii U), <b>Dolphin</b> (Wii / GameCube) and <b>PPSSPP</b> (PSP) install the same way. PCSX2 needs the <b>BIOS from your own PS2</b>, Cemu needs <b>your console's keys</b> for .wud/.wux: none of this is provided.</li>
+    <li>For the others (Azahar, Eden…): put them in the <b>emulators</b> folder next to Emuglob.exe (detected automatically), or set their path in Settings, Emulators.</li></ul>` },
   { t:'Cores', h:`RALibretro needs one <b>core</b> per console: it's the engine that emulates the machine (mGBA for GBA, Snes9x for SNES…).
     <ul><li>Settings, Installation, <b>RALibretro cores</b>: install, update or delete each core, or "Install basic cores" (one per console).</li>
     <li>If you launch a game without its core, Emuglob offers to <b>download it and play</b>.</li></ul>` },
@@ -4231,7 +4302,7 @@ const TUTO_EN = [
     <div class="tip">"Launching games" (Settings) sets how the emulator is embedded in Emuglob and how saves are shared.</div>` },
   { t:'Controls', h:`Settings, <b>Controls</b>: pick the emulator at the top, click an action, then press the key or controller button you want.
     <ul><li>The <b>drawn controller</b> lights up when you press: you see right away what is assigned.</li>
-    <li>The sticks' <b>dead zone</b> can be set for PCSX2, Dolphin and, in RALibretro, the N64 and DS cores.</li>
+    <li>The sticks' <b>dead zone</b> can be set for PCSX2, Dolphin, PPSSPP and, in RALibretro, the N64 and DS cores.</li>
     <li>A .bak copy of the emulator's config is kept. Close the emulator before editing.</li></ul>` },
   { t:'Saves', h:`<ul><li>"Cartridge" saves (.srm, .sav…) are <b>shared between emulators</b>: Emuglob always gives the newest one to the emulator you launch.</li>
     <li>Each game has its <b>history</b> (last 20 versions): nothing is ever lost.</li>

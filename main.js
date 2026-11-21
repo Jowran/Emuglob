@@ -641,7 +641,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
 // contrôles et raccourcis des émulateurs, édités dans leurs fichiers de configuration
 const emuBase = () => (app.isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..'));
 ipcMain.handle('emus:detect', () => ({ found: emucfg.detect(emuBase()), dir: path.join(emuBase(), 'emulators') }));
-// ---------- installation / mise à jour d'émulateurs depuis leurs sources officielles (RALibretro, PCSX2) ----------
+// ---------- installation / mise à jour d'émulateurs depuis leurs sources officielles (RALibretro, PCSX2, Cemu, Dolphin, PPSSPP) ----------
 const RAL_REPO = 'RetroAchievements/RALibretro';
 function exeVersion(exe) {   // version inscrite dans l'exécutable Windows
   return new Promise((resolve) => {
@@ -708,11 +708,25 @@ async function latestDolphin() {
   try { const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(15000) }); size = Number(h.headers.get('content-length')) || 0; } catch { /* taille inconnue */ }
   return { tag: v, latest: v, date: '', size, asset: { name, browser_download_url: url, size } };
 }
+// PPSSPP : pas d'archive Windows dans les Releases GitHub ; la page officielle donne le zip portable (…/files/1_19_3/ppsspp_win.zip)
+async function latestPpsspp() {
+  const page = process.env.EMUGLOB_PPSSPP_PAGE || 'https://www.ppsspp.org/download/';
+  const r = await fetch(page, { headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error('ppsspp.org a répondu ' + r.status);
+  const html = await r.text();
+  const m = html.match(/(?:https?:\/\/(?:www\.)?ppsspp\.org)?\/files\/(\d+(?:_\d+)+)\/ppsspp_win\.zip/i);
+  if (!m) throw new Error('aucun lien Windows (ppsspp_win.zip) trouvé sur ppsspp.org');
+  const url = new URL(m[0], 'https://www.ppsspp.org/').href, v = m[1].replace(/_/g, '.');
+  let size = 0;
+  try { const h = await fetch(url, { method: 'HEAD', headers: { 'User-Agent': 'Emuglob' }, signal: AbortSignal.timeout(15000) }); size = Number(h.headers.get('content-length')) || 0; } catch { /* taille inconnue */ }
+  return { tag: 'v' + v, latest: v, date: '', size, asset: { name: 'ppsspp_win-' + v + '.zip', browser_download_url: url, size } };
+}
 const INSTALLERS = {
   ralibretro: { name: 'RALibretro', dir: 'RALibretro', exes: ['ralibretro.exe'], latest: latestRalib },
   pcsx2: { name: 'PCSX2', dir: 'PCSX2', exes: ['pcsx2-qt.exe', 'pcsx2.exe'], latest: latestPcsx2 },
   cemu: { name: 'Cemu', dir: 'Cemu', exes: ['cemu.exe'], latest: latestCemu },
   dolphin: { name: 'Dolphin', dir: 'Dolphin', exes: ['dolphin.exe'], latest: latestDolphin },
+  ppsspp: { name: 'PPSSPP', dir: 'PPSSPP', exes: ['ppssppwindows64.exe', 'ppssppwindows.exe'], latest: latestPpsspp },
 };
 const releases = {};
 const instDefaultDir = (id) => path.join(emuBase(), 'emulators', INSTALLERS[id].dir);
@@ -791,10 +805,12 @@ ipcMain.handle('inst:install', async (_e, { id, exe }) => {
     await extract(file, path.join(work, 'x'));
     const found = findFile(path.join(work, 'x'), ins.exes);
     if (!found) throw new Error(`${ins.exes[0]} introuvable dans ${asset.name}`);
+    // plusieurs exe possibles (PPSSPP 64 et 32 bits) : on garde le premier de la liste
+    const exeName = fs.readdirSync(path.dirname(found)).find((n) => n.toLowerCase() === ins.exes[0]) || path.basename(found);
     fs.cpSync(path.dirname(found), dest, { recursive: true, force: true });
     fs.rmSync(work, { recursive: true, force: true });
     embedLog(`${ins.name} ${rel.tag} installé dans ${dest}`);
-    return { ok: true, exe: path.join(dest, path.basename(found)), version: rel.latest, moved: !!exe && isInstExe(id, exe) && path.dirname(exe) !== dest };
+    return { ok: true, exe: path.join(dest, exeName), version: rel.latest, moved: !!exe && isInstExe(id, exe) && path.dirname(exe) !== dest };
   } catch (e) {
     embedLog(`installation ${ins.name} : ${e.message}`);
     try { fs.rmSync(work, { recursive: true, force: true }); } catch { /* ignoré */ }
