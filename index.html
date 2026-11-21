@@ -4403,11 +4403,17 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
   api.watchRoms(cfg.folders);   // puis surveillance tant qu'Emuglob tourne
   api.onRomsChanged(() => rescanFolders(true));
-  setTimeout(async () => {   // recherche de mise à jour à chaque lancement : propose de l'installer tant qu'elle n'est pas faite
-    const u = await api.updateCheck();
-    if (!u.ok || !u.available) return;
-    if (!playing) openUpdate(); else toast(`Emuglob ${u.latest} est disponible (Paramètres › Mettre à jour Emuglob).`);
-  }, 6000);
+  // mise à jour : vérifiée au lancement puis toutes les 30 min ; la pop-up s'ouvre dès que possible (après la partie si un jeu tourne)
+  let updSeen = '', updWant = '', updLast = 0;
+  const updTick = async () => {
+    if (Date.now() - updLast >= 30 * 60000) {
+      updLast = Date.now();
+      const u = await api.updateCheck();
+      if (u.ok && u.available && u.latest !== updSeen) updWant = u.latest;
+    }
+    if (updWant && !playing && !document.querySelector('dialog[open]')) { updSeen = updWant; updWant = ''; openUpdate(); }
+  };
+  setTimeout(() => { updTick(); setInterval(updTick, 60000); }, 6000);
   const net = () => { $('#offline').hidden = navigator.onLine; };
   net();
   window.addEventListener('offline', net);
