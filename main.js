@@ -279,6 +279,7 @@ async function pickImage(title, prefix) {
 ipcMain.handle('dialog:cover', (_e, id) => pickImage(L('Choisir une jaquette', 'Choose a cover'), id));
 ipcMain.handle('dialog:wallpaper', () => pickImage(L("Choisir un fond d'écran", 'Choose a wallpaper'), 'wallpaper'));
 
+const SKIP_NAME = /^[~.]|\.(part|partial|crdownload|download|tmp|temp|!ut|!qb|aria2)$|\[\s*subset\s*-/i;
 function scanDir(dir, wanted) {
   const files = [];
   const skipped = {};
@@ -288,8 +289,9 @@ function scanDir(dir, wanted) {
     try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
     for (const e of entries) {
       const p = path.join(d, e.name);
-      if (e.isDirectory()) { walk(p); continue; }
+      if (e.isDirectory()) { if (!/^(\$recycle\.bin|system volume information)$/i.test(e.name)) walk(p); continue; }
       const ext = path.extname(e.name).toLowerCase();
+      if (SKIP_NAME.test(e.name)) continue;   // fichier temporaire / caché, ISO patchée d'un subset (lancée depuis le jeu de base)
       if (ext === '.rpx') { if (wanted.has(ext) && path.basename(d).toLowerCase() === 'code' && !rpxDirs.has(d)) { rpxDirs.add(d); files.push(p); } continue; }
       if (wanted.has(ext)) files.push(p);
       else { try { if (fs.statSync(p).size >= 50 * 1024 * 1024) skipped[ext || '(sans extension)'] = (skipped[ext || '(sans extension)'] || 0) + 1; } catch { /* ignoré */ } }
@@ -304,6 +306,38 @@ ipcMain.handle('scan:folder', async (_e, extensions) => {
   return { ...scanDir(r.filePaths[0], new Set(extensions)), dir: r.filePaths[0] };
 });
 ipcMain.handle('scan:path', (_e, { dir, extensions }) => (fs.existsSync(dir) ? scanDir(dir, new Set(extensions)) : { files: [], skipped: {}, missing: true }));
+// fichiers prêts : taille stable et plus verrouillés en écriture (copie / extraction / téléchargement terminés)
+ipcMain.handle('files:ready', async (_e, paths) => {
+  const size = async (p) => { try { return (await fs.promises.stat(p)).size; } catch { return -1; } };
+  const locked = async (p) => { let h; try { h = await fs.promises.open(p, 'r+'); return false; } catch (e) { return e.code === 'EBUSY'; } finally { if (h) await h.close().catch(() => {}); } };
+  const a = await Promise.all(paths.map(size));
+  await new Promise((r) => setTimeout(r, 1500));
+  const b = await Promise.all(paths.map(size));
+  return Promise.all(paths.map(async (p, i) => a[i] > 0 && a[i] === b[i] && !(await locked(p))));
+});
+// surveillance des dossiers de ROMs : un changement → le renderer relance un scan (anti-rebond 2,5 s)
+const romWatch = new Map();
+let romDirs = [], romTimer = null, romRetry = null;
+const romsChanged = () => { clearTimeout(romTimer); romTimer = setTimeout(() => { if (win && !win.isDestroyed()) win.webContents.send('roms:changed'); }, 2500); };
+function watchRoms() {
+  for (const [d, w] of romWatch) if (!romDirs.includes(d)) { try { w.close(); } catch { /* fermé */ } romWatch.delete(d); }
+  let added = false;
+  for (const d of romDirs) {
+    if (romWatch.has(d)) continue;
+    try {
+      const w = fs.watch(d, { recursive: true }, (_ev, f) => { if (!(f && SKIP_NAME.test(path.basename(String(f))))) romsChanged(); });
+      w.on('error', () => { try { w.close(); } catch { /* fermé */ } romWatch.delete(d); romsChanged(); retryWatch(); });   // disque débranché
+      romWatch.set(d, w); added = true;
+    } catch { /* dossier absent : on réessaie plus tard */ }
+  }
+  if (romWatch.size < romDirs.length) retryWatch();
+  return added;
+}
+function retryWatch() {
+  if (romRetry) return;
+  romRetry = setTimeout(() => { romRetry = null; if (watchRoms()) romsChanged(); }, 60000);   // disque rebranché : nouveau scan
+}
+ipcMain.handle('roms:watch', (_e, dirs) => { romDirs = Array.isArray(dirs) ? dirs.filter((d) => typeof d === 'string' && d) : []; watchRoms(); });
 // titre d'un jeu Wii U extrait : <jeu>\meta\meta.xml (longname_fr, sinon longname_en) à côté du dossier code\
 ipcMain.handle('wiiu:title', (_e, rpx) => {
   try {

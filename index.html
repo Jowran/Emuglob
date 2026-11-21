@@ -2536,17 +2536,54 @@ async function checkFiles() {
     if (changed) render();
   } finally { checking = false; }
 }
+// dossiers surveillés : scan au démarrage, puis à chaque changement signalé par main.js (fs.watch + anti-rebond)
+// seuls les nouveaux fichiers sont lus (identifyDiscs/autoMatch ne traitent que les jeux pas encore reconnus)
+let rescanning = false, rescanAgain = false, rescanTimer = null;
+const keyOf = (p) => p.split(/[\\/]/).pop().toLowerCase();
+const underDir = (p, d) => { const a = p.toLowerCase().replace(/\//g, '\\'), b = d.toLowerCase().replace(/\//g, '\\').replace(/\\+$/, '') + '\\'; return a.startsWith(b); };
 async function rescanFolders(silent) {
-  let added = 0;
-  const exts = [...Object.keys(EXT), ...Object.keys(EXT_EMU)];
-  for (const dir of cfg.folders || []) {
-    const res = await api.scanPath(dir, exts);
-    if (res.missing) continue;   // dossier absent (disque débranché) : on ne touche à rien
+  if (rescanning) { rescanAgain = true; return 0; }
+  rescanning = true; clearTimeout(rescanTimer);
+  let added = 0, moved = 0, removed = 0, waiting = false;
+  try {
+    const exts = [...Object.keys(EXT), ...Object.keys(EXT_EMU)];
+    const found = new Set(), present = [];
+    for (const dir of cfg.folders || []) {
+      const res = await api.scanPath(dir, exts);
+      if (res.missing) continue;   // dossier absent (disque débranché) : on ne touche à rien
+      present.push(dir); res.files.forEach((p) => found.add(p));
+    }
     const known = new Set(cfg.games.map((g) => g.path));
-    for (const p of res.files) if (!known.has(p)) { cfg.games.push(makeGame(p)); added++; }
+    let fresh = [...found].filter((p) => !known.has(p));
+    if (fresh.length) {   // copie / extraction en cours : on attend qu'elle soit finie (sinon empreinte et identification faussées)
+      const ok = await api.filesReady(fresh);
+      waiting = ok.some((x) => !x);
+      fresh = fresh.filter((_, i) => ok[i]);
+    }
+    const gone = cfg.games.filter((g) => !found.has(g.path) && present.some((d) => underDir(g.path, d)));
+    const goneOk = gone.length ? await api.filesExist(gone.map((g) => g.path)) : [];
+    const lost = gone.filter((_, i) => !goneOk[i]);
+    for (const p of fresh) {
+      const k = keyOf(p), same = lost.filter((g) => keyOf(g.path) === k);
+      if (same.length === 1) { same[0].path = p; same[0].missing = false; lost.splice(lost.indexOf(same[0]), 1); moved++; }   // jeu déplacé / renommé de dossier : on garde temps de jeu, jaquette…
+      else { cfg.games.push(makeGame(p)); added++; }
+    }
+    // fichier supprimé d'un dossier surveillé : retiré s'il n'a jamais été joué, sinon gardé grisé (temps de jeu conservé)
+    const drop = new Set(lost.filter((g) => !g.favorite && !(g.playSeconds > 0) && !g.playCount));
+    lost.forEach((g) => { if (!drop.has(g)) g.missing = true; });
+    if (drop.size) { cfg.games = cfg.games.filter((g) => !drop.has(g)); removed = drop.size; }
+    if (added || moved || removed || lost.length) {
+      if (added) await identifyDiscs();
+      save(); render();
+      if (added) { autoMatch(); findThumbs(); }
+      const msg = [added && `${added} nouveau(x) jeu(x)`, moved && `${moved} jeu(x) déplacé(s)`, removed && `${removed} jeu(x) retiré(s)`].filter(Boolean).join(', ');
+      if (msg) toast(msg + '.');
+    } else if (!silent) toast((cfg.folders || []).length ? (waiting ? 'Copie en cours : les jeux seront ajoutés une fois terminée.' : 'Aucun nouveau jeu.') : 'Aucun dossier surveillé : utilise « Scanner un dossier ».');
+  } finally {
+    rescanning = false;
+    if (rescanAgain) { rescanAgain = false; rescanTimer = setTimeout(() => rescanFolders(true), 500); }
+    else if (waiting) rescanTimer = setTimeout(() => rescanFolders(true), 8000);
   }
-  if (added) { await identifyDiscs(); save(); render(); autoMatch(); findThumbs(); toast(`${added} nouveau(x) jeu(x) trouvé(s) dans tes dossiers.`); }
-  else if (!silent) toast((cfg.folders || []).length ? 'Aucun nouveau jeu.' : 'Aucun dossier surveillé : utilise « Scanner un dossier ».');
   return added;
 }
 function dupGroups() {
@@ -2570,7 +2607,7 @@ function openMaint() {
     $('#mt-dup').textContent = dups.length ? `${dups.length} jeu(x) en double (même titre, même console).` : 'Aucun doublon.';
     $('#mt-rmdup').disabled = !dups.length;
   };
-  $('#mt-dirs').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) { cfg.folders.splice(Number(b.dataset.rm), 1); save(); refresh(); } };
+  $('#mt-dirs').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) { cfg.folders.splice(Number(b.dataset.rm), 1); api.watchRoms(cfg.folders); save(); refresh(); } };
   $('#mt-now').onclick = async () => { await rescanFolders(false); await checkFiles(); refresh(); };
   $('#mt-check').onclick = async () => { await checkFiles(); refresh(); toast('Fichiers vérifiés.'); };
   $('#mt-rmmiss').onclick = () => {
@@ -3023,7 +3060,7 @@ async function addFiles() {
 async function scan() {
   const known = new Set(cfg.games.map((g) => g.path));
   const res = await api.scanFolder([...Object.keys(EXT), ...Object.keys(EXT_EMU)]);
-  if (res.dir) { cfg.folders = cfg.folders || []; if (!cfg.folders.includes(res.dir)) cfg.folders.push(res.dir); }
+  if (res.dir) { cfg.folders = cfg.folders || []; if (!cfg.folders.includes(res.dir)) { cfg.folders.push(res.dir); api.watchRoms(cfg.folders); } }
   const found = res.files.filter((p) => !known.has(p));
   found.forEach((p) => cfg.games.push(makeGame(p)));
   await identifyDiscs(); save(); render(); autoMatch(); findThumbs();
@@ -4293,6 +4330,8 @@ async function hintRalib() {   // première ouverture sans RALibretro : on indiq
   render(); scheduleRA(); refreshRA(); autoMatch(); findThumbs(); loadConsoleIcons();
   checkFiles();
   setTimeout(() => rescanFolders(true), 3000);   // nouveaux jeux déposés dans les dossiers surveillés
+  api.watchRoms(cfg.folders);   // puis surveillance tant qu'Emuglob tourne
+  api.onRomsChanged(() => rescanFolders(true));
   setTimeout(async () => {   // recherche de mise à jour à chaque lancement : propose de l'installer tant qu'elle n'est pas faite
     const u = await api.updateCheck();
     if (!u.ok || !u.available) return;
