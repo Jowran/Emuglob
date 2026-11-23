@@ -3,9 +3,10 @@
 //   embed <pid> <hwndParent> <x> <y> <w> <h> <timeoutMs> [child|overlay]   move <x> <y> <w> <h>   focus   close   release   quit
 //   (embed cache aussi, dès sa création, toute fenêtre du processus hors de l'écran jusqu'à l'intégration)
 //   menu hide|show   (plein écran du jeu : retire / remet le menu natif de l'émulateur)
+//   lkey <vk>   (touche « disposition des écrans » captée comme F11 ; 0 = aucune)   layout ralib|menu <idV>,<idH>|key <vk>[+<vk>…] → layout ok <tb|lr|key> ou layout fail <raison>
 //   vol <pid> <0-100 ou -1> <muet 0|1|-1>   (volume de l'émulateur dans le mélangeur de Windows ; -1 = ne pas changer) → vol <niveau> <muet> <sessions>
 // (x y w h = zone cliente d'Emuglob, en pixels physiques)
-// Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed | key f11
+// Événements : ready | found <hwnd> | parent <info> | embedded <hwnd> | error <message> | closed | key f11 | key layout
 //   (key f11 : F11 pressée pendant que l'émulateur intégré ou Emuglob est au premier plan ; la touche n'est pas transmise à l'émulateur)
 // Deux modes :
 //   child   : la fenêtre devient une VRAIE fenêtre enfant (SetParent) du moteur de rendu d'Emuglob. Peut rester noire avec OpenGL / Vulkan / DirectX.
@@ -110,6 +111,10 @@ public static class EmbedHelper
     static IntPtr savedMenu = IntPtr.Zero;  // menu natif retiré pendant le plein écran du jeu (remis ensuite)
     static KeyProc keyProc;                 // gardé en champ (ramasse-miettes)
     static bool f11Down = false;
+    static int layoutVk = 0;                // touche « disposition des écrans » (DS / 3DS), 0 = aucune
+    static bool layoutDown = false;
+    static int dlgPid = 0;                  // réglages du core ouverts par Emuglob : la fenêtre est envoyée hors de l'écran
+    static bool lastHoriz = false;          // DeSmuME sans menu lisible : dernier état connu
     static int rx, ry, rw, rh;              // zone de jeu (pixels physiques, relative à la zone cliente d'Emuglob)
 
     // ---------- masquage : les fenêtres de l'émulateur sont envoyées hors de l'écran dès leur création, jusqu'à l'intégration ----------
@@ -139,11 +144,17 @@ public static class EmbedHelper
 
     static IntPtr OnKey(int code, IntPtr wParam, ref KBDLLHOOKSTRUCT k)
     {
-        if (code >= 0 && k.vkCode == 0x7A)   // VK_F11
+        int lv;
+        lock (gate) { lv = layoutVk; }
+        // les touches envoyées par ce module (SendInput, flag LLKHF_INJECTED) passent sans être interceptées
+        string ev = code < 0 || (k.flags & 0x10) != 0 ? null : k.vkCode == 0x7A ? "f11" : lv != 0 && k.vkCode == lv ? "layout" : null;
+        if (ev != null)
         {
+            bool isF11 = ev == "f11";
             int msg = wParam.ToInt32();
             bool down = msg == 0x0100 || msg == 0x0104;
-            if (!down && f11Down) { f11Down = false; return new IntPtr(1); }
+            bool was = isF11 ? f11Down : layoutDown;
+            if (!down && was) { if (isF11) f11Down = false; else layoutDown = false; return new IntPtr(1); }
             if (down)
             {
                 IntPtr emb, top; bool off;
@@ -151,8 +162,8 @@ public static class EmbedHelper
                 IntPtr fg = GetForegroundWindow();
                 if (emb != IntPtr.Zero && !off && fg != IntPtr.Zero && (fg == emb || fg == top || GetAncestor(fg, 3) == top || GetAncestor(fg, 2) == emb || SameProcess(fg, emb) || SameProcess(fg, top)))
                 {
-                    if (!f11Down) Out("key f11");   // pas de répétition si la touche reste enfoncée
-                    f11Down = true;
+                    if (!was) Out("key " + ev);   // pas de répétition si la touche reste enfoncée
+                    if (isF11) f11Down = true; else layoutDown = true;
                     return new IntPtr(1);
                 }
             }
@@ -197,8 +208,17 @@ public static class EmbedHelper
     {
         if (idObject != 0 || idChild != 0 || hwnd == IntPtr.Zero) return;
         if (ev != 0x8000 && ev != 0x8002 && ev != 0x800B) return;
-        int want; string name;
-        lock (gate) { want = hidePid; name = hideName; }
+        int want; string name; int dp;
+        lock (gate) { want = hidePid; name = hideName; dp = dlgPid; }
+        if (dp != 0 && GetAncestor(hwnd, 2) == hwnd)
+        {
+            uint wp;
+            GetWindowThreadProcessId(hwnd, out wp);
+            RECT dr;
+            if ((int)wp == dp && ClassOf(hwnd) == "#32770" && GetWindowRect(hwnd, out dr) && dr.Left > OFF + 1000)
+                SetWindowPos(hwnd, IntPtr.Zero, OFF, OFF, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            if ((int)wp == dp) return;
+        }
         if (want == 0) return;
         if (GetAncestor(hwnd, 2) != hwnd) return;   // fenêtres de premier niveau seulement (GA_ROOT)
         uint pid;
@@ -312,6 +332,20 @@ public static class EmbedHelper
                 break;
             case "release":
                 Release();
+                break;
+            case "lkey":
+                lock (gate) { layoutVk = int.Parse(p[1]); layoutDown = false; }
+                break;
+            case "layout":
+                string kind = p[1], arg = p.Length > 2 ? p[2] : "";
+                Thread lt = new Thread(delegate ()
+                {
+                    string res;
+                    try { res = Layout(kind, arg); } catch (Exception ex) { res = "fail " + ex.Message; }
+                    Out("layout " + res.Replace('\n', ' ').Replace('\r', ' '));
+                });
+                lt.IsBackground = true;
+                lt.Start();
                 break;
             case "vol":
                 Out(Volume(int.Parse(p[1]), p.Length > 2 ? int.Parse(p[2]) : -1, p.Length > 3 ? int.Parse(p[3]) : -1));
@@ -588,6 +622,177 @@ public static class EmbedHelper
         // ASYNCWINDOWPOS : la demande est postée au thread de l'émulateur, on n'attend pas qu'il ait fini de dessiner son image
         SetWindowPos(win, IntPtr.Zero, p.X, p.Y, w, h, SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_ASYNCWINDOWPOS);
         return true;
+    }
+
+    // ---------- disposition des écrans (DS / 3DS) : options natives de l'émulateur ----------
+    const uint WM_COMMAND = 0x0111, WM_GETTEXT = 0x000D, CB_GETCOUNT = 0x0146, CB_GETCURSEL = 0x0147, CB_SETCURSEL = 0x014E, CB_GETLBTEXT = 0x0148, CB_GETLBTEXTLEN = 0x0149;
+    [DllImport("user32.dll")] static extern IntPtr GetDlgItem(IntPtr dlg, int id);
+    [DllImport("user32.dll")] static extern uint GetMenuState(IntPtr menu, uint id, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder s, int max);
+    [DllImport("user32.dll", EntryPoint = "SendMessageTimeoutW")] static extern IntPtr SendMessageTimeout(IntPtr hwnd, uint msg, IntPtr w, IntPtr l, uint flags, uint ms, out IntPtr res);
+    [DllImport("user32.dll", EntryPoint = "SendMessageTimeoutW", CharSet = CharSet.Unicode)] static extern IntPtr SendMessageTimeoutS(IntPtr hwnd, uint msg, IntPtr w, System.Text.StringBuilder l, uint flags, uint ms, out IntPtr res);
+    delegate bool EnumProc(IntPtr hwnd, IntPtr l);
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc proc, IntPtr l);
+    [StructLayout(LayoutKind.Sequential)] struct KEYBDINPUT { public ushort vk, scan; public uint flags, time; public IntPtr extra; }
+    [StructLayout(LayoutKind.Sequential)] struct INPUT { public uint type; public KEYBDINPUT ki; public long pad; }
+    [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint n, INPUT[] inputs, int size);
+
+    static string ClassOf(IntPtr hwnd)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder(64);
+        GetClassName(hwnd, sb, 64);
+        return sb.ToString();
+    }
+    static int SM(IntPtr hwnd, uint msg, int w, IntPtr l)
+    {
+        IntPtr r;
+        if (SendMessageTimeout(hwnd, msg, new IntPtr(w), l, 0x0002, 1500, out r) == IntPtr.Zero) return -1;   // SMTO_ABORTIFHUNG
+        return r.ToInt32();
+    }
+    static string SMText(IntPtr hwnd, uint msg, int w, int len)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder(Math.Max(len, 0) + 2);
+        IntPtr r;
+        SendMessageTimeoutS(hwnd, msg, new IntPtr(w), sb, 0x0002, 1500, out r);
+        return sb.ToString().Trim();
+    }
+    static int FindItem(IntPtr combo, System.Text.RegularExpressions.Regex re)
+    {
+        int n = SM(combo, CB_GETCOUNT, 0, IntPtr.Zero);
+        for (int i = 0; i < n; i++)
+        {
+            int len = SM(combo, CB_GETLBTEXTLEN, i, IntPtr.Zero);
+            if (len > 0 && re.IsMatch(SMText(combo, CB_GETLBTEXT, i, len))) return i;
+        }
+        return -1;
+    }
+    static string Items(IntPtr combo)
+    {
+        int n = SM(combo, CB_GETCOUNT, 0, IntPtr.Zero);
+        System.Text.StringBuilder all = new System.Text.StringBuilder(n + " :");
+        for (int i = 0; i < n && i < 12; i++) all.Append(" [" + SMText(combo, CB_GETLBTEXT, i, Math.Max(SM(combo, CB_GETLBTEXTLEN, i, IntPtr.Zero), 64)) + "]");
+        return all.ToString();
+    }
+    static IntPtr FindDialog(uint pid)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows(delegate (IntPtr h, IntPtr l)
+        {
+            uint wp;
+            GetWindowThreadProcessId(h, out wp);
+            if (wp == pid && IsWindowVisible(h) && ClassOf(h) == "#32770") { found = h; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+    static void Keys(string arg)
+    {
+        string[] parts = arg.Split('+');
+        INPUT[] ins = new INPUT[parts.Length * 2];
+        for (int i = 0; i < parts.Length; i++)
+        {
+            ushort vk = (ushort)int.Parse(parts[i]);
+            ins[i].type = 1; ins[i].ki.vk = vk;
+            ins[ins.Length - 1 - i].type = 1; ins[ins.Length - 1 - i].ki.vk = vk; ins[ins.Length - 1 - i].ki.flags = 0x0002;   // KEYEVENTF_KEYUP, dans l'ordre inverse
+        }
+        int size = Marshal.SizeOf(typeof(INPUT));
+        SendInput((uint)parts.Length, ins, size);
+        Thread.Sleep(60);   // l'émulateur doit voir la touche enfoncée au moins une image
+        INPUT[] up = new INPUT[parts.Length];
+        Array.Copy(ins, parts.Length, up, 0, parts.Length);
+        SendInput((uint)parts.Length, up, size);
+    }
+
+    static string Layout(string kind, string arg)
+    {
+        IntPtr win;
+        lock (gate) { win = embedded; }
+        if (win == IntPtr.Zero || !IsWindow(win)) return "fail fenêtre de l'émulateur introuvable";
+        if (kind == "key")   // raccourci de l'émulateur (Azahar : « Toggle Screen Layout »)
+        {
+            Focus();
+            Thread.Sleep(80);
+            Keys(arg);
+            return "ok key";
+        }
+        if (kind == "menu")   // DeSmuME : commandes du menu Affichage > Disposition (vertical / horizontal)
+        {
+            string[] ids = arg.Split(',');
+            uint v = uint.Parse(ids[0]), h = uint.Parse(ids[1]);
+            IntPtr m = GetMenu(win);
+            if (m == IntPtr.Zero) lock (gate) { m = savedMenu; }
+            bool horiz = lastHoriz;
+            if (m != IntPtr.Zero)
+            {
+                uint st = GetMenuState(m, h, 0);   // MF_BYCOMMAND, cherche aussi dans les sous-menus
+                if (st != 0xFFFFFFFF) horiz = (st & 0x8) != 0;   // MF_CHECKED
+            }
+            PostMessage(win, WM_COMMAND, new IntPtr(horiz ? v : h), IntPtr.Zero);
+            lastHoriz = !horiz;
+            Focus();
+            return "ok " + (horiz ? "tb" : "lr");
+        }
+        if (kind != "ralib") return "fail mode inconnu";
+        // RALibretro : réglages du core (Settings > Core Config, IDM_CORE_CONFIG 40003) ouverts hors de l'écran,
+        // option « Screen Layout (#1) » basculée entre Top/Bottom et Left/Right (#2 = l'inverse, pour garder le bouton R3 de melonDS DS), puis OK
+        uint pid;
+        GetWindowThreadProcessId(win, out pid);
+        System.Text.RegularExpressions.RegexOptions ci = System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+        System.Text.RegularExpressions.Regex L1 = new System.Text.RegularExpressions.Regex(@"^(screens?\s*)?layout(\s*#?\s*1)?$", ci);
+        System.Text.RegularExpressions.Regex L2 = new System.Text.RegularExpressions.Regex(@"^(screens?\s*)?layout\s*#?\s*2$", ci);
+        System.Text.RegularExpressions.Regex TB = new System.Text.RegularExpressions.Regex(@"^(top\s*[/\-]\s*bottom|vertical)\b", ci);
+        System.Text.RegularExpressions.Regex LR = new System.Text.RegularExpressions.Regex(@"^(left\s*[/\-]\s*right|horizontal)\b", ci);
+        lock (gate) { dlgPid = (int)pid; }
+        IntPtr dlg = IntPtr.Zero;
+        try
+        {
+            PostMessage(win, WM_COMMAND, new IntPtr(40003), IntPtr.Zero);
+            for (int i = 0; i < 80 && dlg == IntPtr.Zero; i++) { Thread.Sleep(40); dlg = FindDialog(pid); }
+            if (dlg == IntPtr.Zero) return "fail réglages du core introuvables";
+            Thread.Sleep(60);
+            IntPtr c1 = IntPtr.Zero, c2 = IntPtr.Zero;
+            IntPtr cat = GetDlgItem(dlg, 49999);
+            int ncat = cat == IntPtr.Zero ? 1 : Math.Max(1, SM(cat, CB_GETCOUNT, 0, IntPtr.Zero));
+            for (int c = 0; c < ncat && c1 == IntPtr.Zero; c++)
+            {
+                if (cat != IntPtr.Zero)
+                {
+                    SM(cat, CB_SETCURSEL, c, IntPtr.Zero);
+                    SM(dlg, WM_COMMAND, (1 << 16) | 49999, cat);   // CBN_SELCHANGE : la page de la catégorie est affichée
+                }
+                for (int id = 0; id < 400; id++)
+                {
+                    IntPtr lb = GetDlgItem(dlg, 50000 + id);
+                    if (lb == IntPtr.Zero || !IsWindowVisible(lb)) break;
+                    string t = SMText(lb, WM_GETTEXT, 256, 256);
+                    if (c1 == IntPtr.Zero && L1.IsMatch(t)) c1 = GetDlgItem(dlg, 51000 + id);
+                    else if (c2 == IntPtr.Zero && L2.IsMatch(t)) c2 = GetDlgItem(dlg, 51000 + id);
+                }
+            }
+            if (c1 == IntPtr.Zero) { PostMessage(dlg, WM_COMMAND, new IntPtr(2), IntPtr.Zero); return "fail option de disposition introuvable dans ce core"; }
+            int tb1 = FindItem(c1, TB), lr1 = FindItem(c1, LR);
+            int n1 = SM(c1, CB_GETCOUNT, 0, IntPtr.Zero);
+            if ((tb1 < 0 || lr1 < 0) && n1 >= 3) { tb1 = 0; lr1 = 2; }   // textes illisibles : ordre des cores DS (Top/Bottom, Bottom/Top, Left/Right…)
+            if (tb1 < 0 || lr1 < 0) { PostMessage(dlg, WM_COMMAND, new IntPtr(2), IntPtr.Zero); return "fail valeurs de disposition inconnues (" + Items(c1) + ")"; }
+            bool toLR = SM(c1, CB_GETCURSEL, 0, IntPtr.Zero) != lr1;
+            SM(c1, CB_SETCURSEL, toLR ? lr1 : tb1, IntPtr.Zero);
+            if (c2 != IntPtr.Zero)
+            {
+                int tb2 = FindItem(c2, TB), lr2 = FindItem(c2, LR);
+                if ((tb2 < 0 || lr2 < 0) && SM(c2, CB_GETCOUNT, 0, IntPtr.Zero) >= 3) { tb2 = 0; lr2 = 2; }
+                if (tb2 >= 0 && lr2 >= 0) SM(c2, CB_SETCURSEL, toLR ? tb2 : lr2, IntPtr.Zero);
+            }
+            PostMessage(dlg, WM_COMMAND, new IntPtr(1), IntPtr.Zero);   // IDOK : RALibretro envoie les nouvelles options au core
+            dlg = IntPtr.Zero;
+            return "ok " + (toLR ? "lr" : "tb") + " " + Items(c1);
+        }
+        finally
+        {
+            if (dlg != IntPtr.Zero && IsWindow(dlg)) PostMessage(dlg, WM_COMMAND, new IntPtr(2), IntPtr.Zero);   // IDCANCEL
+            Thread.Sleep(250);   // la fenêtre se ferme encore cachée
+            lock (gate) { dlgPid = 0; }
+            Focus();
+        }
     }
 
     static void Focus()

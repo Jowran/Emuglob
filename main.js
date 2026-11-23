@@ -462,7 +462,10 @@ async function getHelper() {
   else if (process.platform !== 'win32') throw new Error("l'intégration n'existe que sous Windows");
   else h = new Helper(await compileHelper(), [], {});
   helperObj = h;
-  h.on((line) => { if (line === 'key f11') gameHotkey(); });   // F11 pendant le jeu (le clavier est à l'émulateur)
+  h.on((line) => {
+    if (line === 'key f11') gameHotkey();   // F11 pendant le jeu (le clavier est à l'émulateur)
+    else if (line === 'key layout' && win && !win.isDestroyed()) win.webContents.send('game:hotkey', 'layout');   // touche « écrans DS »
+  });
   return h;
 }
 
@@ -569,6 +572,26 @@ function emuFrench(exe, force) {
   if (ch.length) embedLog('émulateur en français : ' + ch.map((r) => `${r.emu} ${r.label} = ${r.status}${r.from !== undefined ? ' (avant : ' + r.from + ')' : ''}${r.error ? ' : ' + r.error : ''}`).join(' ; '));
   return res;
 }
+// melonDS DS dans RALibretro : meilleure image par défaut (polygones améliorés + filtrage linéaire), une seule fois par réglage ;
+// une valeur changée ensuite à la main dans RALibretro est laissée (même principe que les émulateurs en français)
+const DS_QUALITY = { melonds_opengl_better_polygons: 'enabled', melonds_opengl_filtering: 'linear' };
+function dsQuality(exe) {
+  if (!/^ralibretro/i.test(path.basename(exe))) return;
+  const file = path.join(path.dirname(exe), 'Cores', 'melondsds_libretro.json');
+  if (!fs.existsSync(file)) return;   // core jamais lancé : RALibretro créera le fichier, réglé au lancement suivant
+  const mark = path.join(app.getPath('userData'), 'dsquality.json');
+  let done = {}; try { done = JSON.parse(fs.readFileSync(mark, 'utf-8')) || {}; } catch { /* premier passage */ }
+  const j = JSON.parse(fs.readFileSync(file, 'utf-8'));
+  j.core = j.core || {};
+  const set = Object.entries(DS_QUALITY).filter(([k, v]) => !done[k] && j.core[k] !== v);
+  if (set.length) {
+    set.forEach(([k, v]) => { j.core[k] = v; });
+    fs.writeFileSync(file, JSON.stringify(j));
+    embedLog('melonDS DS : ' + set.map(([k, v]) => `${k} = ${v}`).join(', '));
+  }
+  Object.keys(DS_QUALITY).forEach((k) => { done[k] = true; });
+  fs.writeFileSync(mark, JSON.stringify(done));
+}
 ipcMain.handle('emulang:apply', (_e, exes) => {
   const out = [];
   for (const exe of [...new Set((exes || []).filter((x) => typeof x === 'string' && x && fs.existsSync(x)))]) {
@@ -592,6 +615,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
     }
     try {
       try { emuFrench(exe); } catch (err) { embedLog('émulateur en français : ' + err.message); }
+      try { dsQuality(exe); } catch (err) { embedLog('melonDS DS qualité : ' + err.message); }
       embedLog(`lancement : ${exe} ${args.join(' ')} (intégration : ${embed ? 'oui, mode ' + (mode || 'overlay') : 'non'})`);
       const child = spawn(exe, args, { cwd: path.dirname(exe), detached: true, stdio: 'ignore', env: emuEnv(exe) });
       child.once('error', (err) => resolve({ ok: false, error: err.message }));
@@ -612,6 +636,7 @@ ipcMain.handle('game:launch', (_e, { exe, args, gameId, hide, embed, rect, mode,
           streamSource = null;
           if (current && current.child === child) { try { powerSaveBlocker.stop(current.psb); } catch { /* déjà arrêté */ } current = null; }
           setImmersive(false);   // le jeu est fini : affichage d'avant
+          if (helperObj && helperObj.alive) helperObj.send('lkey 0');   // touche « écrans DS » rendue
           embedLog(`émulateur fermé après ${seconds}s (code ${code})`);
           let saved = null;
           if (sync && sync.rom && sync.emu && sync.emu.id === 'cemu') {   // Wii U : copie du dossier de sauvegarde du jeu
@@ -1008,6 +1033,53 @@ function setImmersive(on) {
   return on;
 }
 ipcMain.handle('game:immersive', (_e, on) => setImmersive(!!on));
+
+/* ---------- disposition des écrans DS / 3DS (vertical <-> côte à côte), avec les options de l'émulateur lui-même ----------
+   ralib   : RALibretro (melonDS DS, DeSmuME) : option « Screen Layout » du core, via ses réglages (fenêtre ouverte hors de l'écran)
+   desmume : DeSmuME : menu Affichage > LCDs Layout (Vertical 40055 / Horizontal 40056)
+   azahar  : raccourci « Toggle Screen Layout » d'Azahar (F10 par défaut, lu dans sa config) */
+const QT_VK = { Ctrl: 0x11, Shift: 0x10, Alt: 0x12, Space: 0x20, Tab: 0x09, Return: 0x0D, Enter: 0x0D, Backspace: 0x08, Insert: 0x2D, Del: 0x2E, Delete: 0x2E, Home: 0x24, End: 0x23, PgUp: 0x21, PgDown: 0x22, Left: 0x25, Up: 0x26, Right: 0x27, Down: 0x28 };
+function azaharLayoutKeys(exe) {
+  const files = [path.join(path.dirname(exe), 'user', 'config', 'qt-config.ini'), path.join(process.env.APPDATA || '', 'Azahar', 'config', 'qt-config.ini')];
+  let seq = 'F10';
+  for (const f of files) {
+    try {
+      const m = fs.readFileSync(f, 'latin1').match(/^Shortcuts\\Main%20Window\\Toggle%20Screen%20Layout\\KeySeq=(.*)$/m);
+      if (m) { seq = m[1].trim(); break; }
+    } catch { /* config absente : suivante */ }
+  }
+  if (!seq) return null;   // raccourci retiré dans Azahar
+  const vks = seq.split(',')[0].trim().split('+').map((k) => {
+    if (QT_VK[k]) return QT_VK[k];
+    const f = /^F(\d{1,2})$/.exec(k); if (f) return 0x6F + +f[1];
+    return /^[A-Z0-9]$/i.test(k) ? k.toUpperCase().charCodeAt(0) : 0;
+  });
+  return vks.length && vks.every(Boolean) ? vks.join('+') : null;
+}
+let layoutBusy = null;
+ipcMain.handle('game:dskey', (_e, vk) => { if (helperObj && helperObj.alive) helperObj.send('lkey ' + (Number.isInteger(vk) && vk > 0 && vk < 256 ? vk : 0)); });
+ipcMain.handle('game:layout', async (_e, { kind, exe }) => {
+  if (!current || !current.embedded || !helperObj || !helperObj.alive) return { ok: false, error: "l'émulateur n'est pas intégré à Emuglob" };
+  let cmd;
+  if (kind === 'ralib') cmd = 'layout ralib';
+  else if (kind === 'desmume') cmd = 'layout menu 40055,40056';
+  else if (kind === 'azahar') { const k = azaharLayoutKeys(String(exe || '')); if (!k) return { ok: false, error: 'aucun raccourci « Toggle Screen Layout » dans Azahar' }; cmd = 'layout key ' + k; }
+  else return { ok: false, error: 'émulateur non pris en charge' };
+  if (layoutBusy) return layoutBusy;   // appuis rapprochés : un seul changement à la fois
+  const h = helperObj;
+  layoutBusy = new Promise((resolve) => {
+    let t;
+    const off = h.on((line) => {
+      if (!line.startsWith('layout ')) return;
+      off(); clearTimeout(t);
+      const r = line.slice(7);
+      resolve(r.startsWith('ok') ? { ok: true, state: r.slice(3) } : { ok: false, error: r.replace(/^fail\s*/, '') });
+    });
+    t = setTimeout(() => { off(); resolve({ ok: false, error: 'délai dépassé' }); }, 8000);
+    h.send(cmd);
+  }).finally(() => { layoutBusy = null; });
+  return layoutBusy;
+});
 ipcMain.handle('win:fullscreen', (_e, force) => {
   const next = typeof force === 'boolean' ? force : !win.isFullScreen();
   win.setFullScreen(next);

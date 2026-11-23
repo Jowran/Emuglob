@@ -268,6 +268,11 @@
     'fichier altéré (empreinte SHA-256 différente de celle de GitHub)': "tampered file (SHA-256 hash differs from GitHub's)", 'aucun jeu intégré': 'no embedded game',
     'ce fichier ne ressemble pas à un keys.txt (une clé de 32 caractères hexadécimaux par ligne)': "this file doesn't look like a keys.txt (one 32-character hex key per line)",
     'dossier de sauvegarde de Cemu inconnu pour ce jeu : lance-le une fois dans Cemu': "Cemu save folder unknown for this game: launch it once in Cemu",
+    // écrans DS en jeu
+    'Écrans': 'Screens', "Changer la disposition des écrans : l'un sur l'autre ou côte à côte": 'Switch screen layout: stacked or side by side', 'Écrans DS en jeu': 'DS screens in game',
+    'Pas de touche · bouton Écrans seulement': 'No key · Screens button only', 'Pas de touche (bouton seulement)': 'No key (button only)', 'Appuie sur la touche voulue pour la changer.': 'Press the key you want to change it.',
+    "En jeu, le bouton Écrans ou cette touche passe les deux écrans de l'un sur l'autre à côte à côte, et inversement, même en plein écran. RALibretro (melonDS DS, DeSmuME), DeSmuME et Azahar (3DS).": 'In game, the Screens button or this key switches the two screens from stacked to side by side and back, even in full screen. RALibretro (melonDS DS, DeSmuME), DeSmuME and Azahar (3DS).',
+    'Touche non prise en charge : F1 à F12, lettre ou chiffre.': 'Unsupported key: F1 to F12, letter or digit.', 'F11 sert déjà au plein écran.': 'F11 is already used for full screen.', 'aucune': 'none',
     'Retour à Emuglob': 'Back to Emuglob', "Seulement l'image du jeu. F11 pour revenir": 'Game picture only. F11 to go back', 'Revenir à la bibliothèque sans fermer le jeu': 'Go back to the library without closing the game',
     'Reprendre': 'Resume', 'Revenir au jeu': 'Back to the game', 'Un jeu': 'A game',
     "Impossible de cacher l'émulateur : il n'est pas intégré à Emuglob.": "Can't hide the emulator: it isn't embedded in Emuglob.",
@@ -279,6 +284,7 @@
 
   // modèles : {} = trou, traduit à son tour ; {1} {2}… pour changer l'ordre en anglais
   const P = [
+    ["Touche {} · l'un sur l'autre ou côte à côte", '{} key · stacked or side by side'], ['Touche : {}', 'Key: {}'], ['Remettre {}', 'Reset to {}'], ['Disposition des écrans : {}.', 'Screen layout: {}.'],
     ['Installer la version {} ? Emuglob va se fermer puis se relancer. La version actuelle est gardée.', 'Install version {}? Emuglob will close and restart. The current version is kept.'],
     ["{} tourne encore : reprends-le ou ferme-le avant d'en lancer un autre.", '{} is still running: resume or close it before starting another one.'],
     ["Pour lancer les jeux {}, sélectionne l'exécutable (.exe) de {}.", 'To play {} games, select the {} executable (.exe).'], ["Pour lancer ce jeu, sélectionne l'exécutable (.exe) de {}.", 'To play this game, select the {} executable (.exe).'],
