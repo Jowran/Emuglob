@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('api', {
   fullscreen: (force) => ipcRenderer.invoke('win:fullscreen', force),
   gameImmersive: (on) => ipcRenderer.invoke('game:immersive', !!on),
   onGameHotkey: (cb) => ipcRenderer.on('game:hotkey', (_e, k) => cb(k)),
+  gameLayout: (kind, exe) => ipcRenderer.invoke('game:layout', { kind, exe }),
+  gameDsKey: (vk) => ipcRenderer.invoke('game:dskey', vk),
   quit: () => ipcRenderer.invoke('app:quit'),
   relaunch: () => ipcRenderer.invoke('app:relaunch'),
   ra: (endpoint, params, ttl) => ipcRenderer.invoke('ra:call', { endpoint, params, ttl }),
